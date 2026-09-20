@@ -74,8 +74,8 @@ repository가 서버로 이동하고, `/api/chat`이 command를 직접 적용하
 LLM은 **fallback이다.** 기본 경로에서는 호출되지 않는다.
 
 ```
-1. 로컬 dataset 매칭 + 결정론적 수량 파싱
-        ↓ 후보 없음
+1. 로컬 dataset 매칭 + 결정론적 수량 파싱      ← Phase 5A 구현 완료
+        ↓ 후보 없음 / 후보 여럿
 2. Jev candidate selection (동적 criteria + none 탈출 옵션)
         ↓ none 또는 낮은 confidence
 3. LLM fallback — 음식명 + 수량 추출만
@@ -85,7 +85,62 @@ LLM은 **fallback이다.** 기본 경로에서는 호출되지 않는다.
 
 `삶은 계란 두 개` 같은 입력은 1단계에서 끝난다. `아아 한잔에 크림 조금` 같은 입력만 3단계로 간다.
 
-데이터 출처는 식약처 표준데이터 파일을 로컬에 번들하는 방식으로 시작하고, 공공데이터포털 OpenAPI는 동일한 `NutritionResolver` 인터페이스의 다른 구현체로 나중에 추가한다.
+**불변 규칙: 칼로리는 조회하는 것이지 생성하는 것이 아니다.** 데이터셋이 모르는 음식의 답은 `unknown`이고, 그럴듯한 숫자를 만들어내지 않는다. `PhraseResolution`에 `resolved | ambiguous | unknown` 세 상태만 있는 이유다.
+
+### 데이터 확보 상태 (미해결)
+
+식약처 데이터는 **익명으로 내려받을 수 없다.** 세 경로 모두 사용자 계정이나 키가 필요하다.
+
+| 경로 | 필요한 것 | 조건 |
+| --- | --- | --- |
+| 공공데이터포털 OpenAPI (`15127578`) | 활용신청 → 인증키 | 무료, 이용허락범위 제한 없음, 개발계정 일 10,000건, 개발단계 자동승인 |
+| 공공데이터포털 파일데이터 (`15047698`) | 포털 로그인 | 통합 자료집 파일 |
+| 식품안전나라 DB 내려받기 | 세션 (JS 기반 선택 흐름, EUC-KR) | 영양성분 선택 후 엑셀 |
+
+익명 접근을 확인한 결과: 표준데이터 직접 다운로드 URL은 404, 내려받기 페이지는 JS 플로우. 계정 생성은 사용자만 할 수 있으므로 **데이터 투입은 사용자 작업**이다.
+
+### 데이터셋 계약 (`dataset.ts`)
+
+투입될 데이터가 맞춰야 할 형태. 로드 시 zod로 검증하고, 깨진 행은 버리되 나머지는 살린다.
+
+```ts
+{
+  version: 1,
+  source: { name, retrievedAt, license },   // 출처 추적 가능해야 함
+  entries: [{
+    id, name,
+    aliases?,                  // 아아 → 아이스 아메리카노, 공기밥 → 흰쌀밥
+    caloriesPer100g,           // 식약처가 발행하는 단위
+    servings?: [{ unit, grams }],  // 한 공기 = 210 g. 첫 항목이 기본값
+    source,
+  }]
+}
+```
+
+`servings`가 없는 항목은 무게를 계산할 수 없으므로 `unknown`으로 처리된다 — 추정하지 않는다.
+
+## 3.1 검증 상태 — Jev
+
+> **Jev integration implemented, real Korean accuracy not yet validated.**
+
+`TYPESAFE_API_KEY`가 없어 **Jev를 한 번도 호출하지 못했습니다.** 아래 확신도 표와 reference 전략은 전부 문서 기반 출발점이며 측정값이 아닙니다.
+
+| 항목 | 상태 |
+| --- | --- |
+| SDK 연동 (`@typesafe-ai/sdk` 0.6.0) | 구현 완료 |
+| 질문 정의 · Command 매핑 · 확신도 정책 | 구현 완료 |
+| mock fallback | 구현 완료, 골든셋 60건 통과 |
+| **실제 Jev 한국어 정확도** | **미검증** |
+| **확신도 임계값** | **미확정 (baseline)** |
+| **reference 전략 (A/B/C)** | **미결정** |
+
+해제 조건: `.env.local`에 키를 넣고 `pnpm eval:jev` 실행 → 결과에 따라 아래 셋 중 하나 선택.
+
+- **A. Jev reference 유지** — 한국어 reference 정확도가 안정적일 때
+- **B. Hybrid** — intent/consumption/clarification은 Jev, reference는 코드 휴리스틱 우선
+- **C. reference 전면 코드 이동** — Jev reference가 불안정할 때
+
+B와 C에 필요한 코드는 이미 있습니다 (`mockJudge.resolveReferenceByName`). 측정 없이 고르지 않습니다.
 
 ## 4. 확신도 정책 (Phase 4)
 
@@ -112,8 +167,16 @@ src/
   ai/
     judgment/           Jev 경계 + 한국어 골든셋
       types.ts          intent 어휘 — 질문 criteria와 fixture의 단일 출처
+      questions.ts      Jev 질문 정의 (영문 instructions/criteria)
+      jevJudge.ts       TypeSafe 연동  ·  mockJudge.ts  규칙 기반 fallback
+      confidence.ts     임계값 단일 출처
       goldenSet.ts      골든셋 스키마·로더
-    nutrition/          NutritionResolver와 구현체들           (Phase 5)
+    nutrition/          음식 → 칼로리
+      quantity.ts       한국어 수량 파서 (하나/한 공기/반/200ml)
+      foodPhrases.ts    문장 → 음식 구문 분해
+      dataset.ts        데이터셋 스키마 + 이름 매칭
+      localDatasetResolver.ts   NutritionResolver 로컬 구현
+      types.ts          FoodEntry · NutritionResolver 포트
   infrastructure/       repository 구현                        (Phase 3)
   env.ts                환경변수 스키마 (서버 전용)
 fixtures/

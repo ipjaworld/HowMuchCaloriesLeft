@@ -13,10 +13,15 @@ import type { Intent } from "./types";
  * value through `classifyConfidence` would be reading "70% sure the answer is
  * yes" as "70% confident", which is a different claim.
  *
- * STATUS: these are the documented starting points, not measured values. The
- * golden-set run (`pnpm eval:jev`) is what settles them, and it needs an API
- * key. Until that has been run against real Jev output, treat every number
- * here as provisional.
+ * STATUS: **Jev integration implemented, real Korean accuracy not yet
+ * validated.** There has been no `TYPESAFE_API_KEY`, so Jev has never
+ * actually been called and every number below is a documented starting
+ * point rather than a measurement.
+ *
+ * What settles them is `pnpm eval:jev` against the 60-case Korean golden
+ * set. Until that has run, do not read these as tuned, and do not treat the
+ * mock's scores as evidence about Jev — those rules were written against
+ * the same fixture they are scored on.
  */
 
 export type ConfidenceDecision = "auto" | "confirm" | "clarify";

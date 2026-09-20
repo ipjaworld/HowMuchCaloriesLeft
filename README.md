@@ -96,9 +96,20 @@ Jev는 ChatGPT 같은 생성형 챗봇의 대체재가 아니다. **문장을 �
 | 1 | 프로젝트 기반, 환경변수 스키마, 한국어 골든셋 | 완료 |
 | 2 | UI shell (mock data) | |
 | 3 | 도메인 — MealRecord CRUD, 칼로리 계산, 저장소, 테스트 | |
-| 4 | Jev 연동 — intent 판단, 확신도 정책, mock fallback | |
-| 5 | NutritionResolver — 식약처 데이터, 수량 파싱, LLM fallback | |
+| 4 | Jev 연동 — intent 판단, 확신도 정책, mock fallback | 완료 |
+| 4.5 | **Jev 한국어 실측** | **대기 — API 키 필요** |
+| 5A | 수량 파서, NutritionResolver, 데이터셋 계약 | 완료 |
+| 5B | 식약처 데이터 투입 + LLM fallback | 대기 — 데이터 필요 |
 | 6 | 자연어 end-to-end | |
+
+### 지금 막혀 있는 것
+
+> 이어서 작업한다면 [`docs/HANDOFF.md`](docs/HANDOFF.md) 부터 읽으세요.
+
+
+**Jev integration implemented, real Korean accuracy not yet validated.** `TYPESAFE_API_KEY`가 없어 Jev를 한 번도 호출하지 못했습니다. 확신도 임계값과 reference 전략은 `pnpm eval:jev` 실측 전까지 확정하지 않습니다. 앱은 그동안 결정론적 mock 판단으로 동작합니다.
+
+**칼로리 데이터가 없습니다.** 식약처 데이터는 익명 다운로드가 불가능하고 계정이나 인증키가 필요합니다. 수량 파서·매칭·스케일링은 전부 완성돼 있고, 데이터셋 파일만 넣으면 동작합니다. 자세한 경로는 [`docs/architecture.md`](docs/architecture.md#데이터-확보-상태-미해결) 참고.
 
 ### 한국어 골든셋
 
