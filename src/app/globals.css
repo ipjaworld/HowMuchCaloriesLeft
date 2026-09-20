@@ -1,9 +1,37 @@
 @import "tailwindcss";
 
+/**
+ * A light personal assistant, not a health dashboard.
+ *
+ * The palette is warm rather than cold grey: the same layout in pure neutral
+ * reads clinical, which is the one impression this app is trying not to make.
+ * There is exactly one accent, and it only appears when the goal is passed.
+ */
 @theme {
+  /* Latin comes from Inter; Hangul falls through to the platform face, which
+     is already good on every target and costs nothing to load. A Korean
+     webfont would be hundreds of KB against an app whose whole promise is
+     being fast. */
   --font-sans:
-    "Pretendard", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    var(--font-inter), "Pretendard", ui-sans-serif, system-ui, -apple-system,
     "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+
+  --color-canvas: #f5f4f1;
+  --color-surface: #ffffff;
+  --color-raised: #f7f6f3;
+
+  --color-line: #eceae5;
+  --color-line-strong: #ddd9d1;
+
+  --color-ink: #1b1917;
+  --color-ink-soft: #6b665e;
+  /* 2.48:1 — non-text only. It is here for the thinking dots and nothing
+     else; a meal label or an amount carries meaning and gets `ink-soft`. */
+  --color-ink-faint: #a9a49b;
+
+  --color-accent: #a4550c;
+  --color-accent-soft: #e08b2c;
+  --color-accent-tint: #fdf4e8;
 }
 
 :root {
@@ -15,4 +43,45 @@ body {
   font-family: var(--font-sans);
   /* Single mobile-first column; nothing should ever scroll sideways. */
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers are the point of this screen, so they never jitter as they change. */
+.numeric {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* The reply appears rather than blinking into place — the one cue that
+     something answered you. */
+  .animate-rise {
+    animation: rise 220ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  @keyframes blink {
+    0%,
+    80%,
+    100% {
+      opacity: 0.25;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+
+  .thinking-dot {
+    animation: blink 1.2s ease-in-out infinite;
+  }
 }

@@ -31,8 +31,11 @@ type Props = {
 
 export function TodaySummary({ summary, goalAction, isLoading = false }: Props) {
   return (
-    <section aria-labelledby="today-heading" className="px-5 pt-8 pb-6">
-      <h1 id="today-heading" className="text-sm font-medium text-neutral-500">
+    <section aria-labelledby="today-heading" className="px-6 pt-11 pb-7">
+      <h1
+        id="today-heading"
+        className="text-[0.8125rem] font-medium tracking-[0.02em] text-ink-soft"
+      >
         오늘
       </h1>
 
@@ -47,15 +50,25 @@ export function TodaySummary({ summary, goalAction, isLoading = false }: Props) 
   );
 }
 
+/** The hero number, in the one size and weight the whole screen is built around. */
+function Figure({ value, unit, tone }: { value: string; unit: string; tone: string }) {
+  return (
+    <p className="mt-2.5 flex items-baseline gap-2">
+      <span
+        className={`numeric text-[4.25rem] leading-[0.92] font-semibold ${tone}`}
+      >
+        {value}
+      </span>
+      <span className={`text-[1.375rem] font-medium ${tone}`}>{unit}</span>
+    </p>
+  );
+}
+
 function LoadingFigure() {
   return (
     <>
-      <p className="mt-2 flex items-baseline gap-1.5" aria-hidden="true">
-        <span className="text-6xl leading-none font-semibold tracking-tight text-neutral-200">
-          &mdash;
-        </span>
-        <span className="text-2xl font-medium text-neutral-200">kcal</span>
-      </p>
+      <div className="mt-3.5 h-[3.9rem] w-40 rounded-xl bg-raised" aria-hidden="true" />
+      <div className="mt-3 h-[1.125rem] w-20 rounded-md bg-raised" aria-hidden="true" />
       <p className="sr-only">불러오는 중</p>
     </>
   );
@@ -70,20 +83,20 @@ function NoGoal({
 }) {
   return (
     <>
-      <p className="mt-2 flex items-baseline gap-1.5">
-        <span className="text-6xl leading-none font-semibold tracking-tight text-neutral-900 tabular-nums">
-          {numberFormat.format(consumedCalories)}
-        </span>
-        <span className="text-2xl font-medium text-neutral-900">kcal</span>
-      </p>
+      <Figure
+        value={numberFormat.format(consumedCalories)}
+        unit="kcal"
+        tone="text-ink"
+      />
+      <p className="mt-2 text-[1.0625rem] text-ink-soft">먹었어요</p>
 
-      <p className="mt-1.5 text-lg text-neutral-700">먹었어요</p>
-
-      <p className="mt-4 text-sm text-neutral-500">
-        목표를 정하면 얼마나 더 먹을 수 있는지 알려드려요.
-      </p>
-
-      {goalAction !== undefined && <div className="mt-3">{goalAction}</div>}
+      <div className="mt-7 rounded-2xl bg-raised px-4 py-3.5">
+        {/* break-keep so Korean wraps between words, not after 알려드려. */}
+        <p className="text-sm break-keep text-ink-soft">
+          목표를 정하면 남은 칼로리를 알려드려요.
+        </p>
+        {goalAction !== undefined && <div className="mt-2.5">{goalAction}</div>}
+      </div>
     </>
   );
 }
@@ -99,53 +112,40 @@ function WithGoal({
   if (calorieTarget === null || remainingCalories === null) return null;
 
   const remaining = describeRemaining(remainingCalories);
+  const tone = remaining.isOver ? "text-accent" : "text-ink";
   const progress =
-    calorieTarget > 0
-      ? Math.min(consumedCalories / calorieTarget, 1) * 100
-      : 0;
+    calorieTarget > 0 ? Math.min(consumedCalories / calorieTarget, 1) * 100 : 0;
 
   return (
     <>
-      <p className="mt-2 flex items-baseline gap-1.5">
-        <span
-          className={`text-6xl leading-none font-semibold tracking-tight tabular-nums ${
-            remaining.isOver ? "text-amber-700" : "text-neutral-900"
-          }`}
-        >
-          {numberFormat.format(remaining.amount)}
-        </span>
-        <span
-          className={`text-2xl font-medium ${
-            remaining.isOver ? "text-amber-700" : "text-neutral-900"
-          }`}
-        >
-          kcal
-        </span>
-      </p>
-
+      <Figure
+        value={numberFormat.format(remaining.amount)}
+        unit="kcal"
+        tone={tone}
+      />
       <p
-        className={`mt-1.5 text-lg ${
-          remaining.isOver ? "text-amber-700" : "text-neutral-700"
+        className={`mt-2 text-[1.0625rem] ${
+          remaining.isOver ? "text-accent" : "text-ink-soft"
         }`}
       >
         {remaining.caption}
       </p>
 
-      {/* The numbers below say the same thing; announcing the bar too is noise. */}
+      {/* The numbers under it say the same thing; announcing the bar is noise. */}
       <div
         aria-hidden="true"
-        className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-neutral-200"
+        className="mt-7 h-1 w-full overflow-hidden rounded-full bg-line"
       >
         <div
-          className={`h-full rounded-full ${
-            remaining.isOver ? "bg-amber-500" : "bg-neutral-900"
+          className={`h-full rounded-full transition-[width] duration-500 ease-out ${
+            remaining.isOver ? "bg-accent-soft" : "bg-ink"
           }`}
           style={{ width: `${progress}%` }}
         />
       </div>
 
-      <div className="mt-2 flex items-baseline justify-between gap-3">
-        <p className="text-sm text-neutral-500 tabular-nums">
+      <div className="mt-2.5 flex items-center justify-between gap-3">
+        <p className="numeric text-[0.8125rem] text-ink-soft">
           {numberFormat.format(consumedCalories)} /{" "}
           {numberFormat.format(calorieTarget)} kcal
         </p>

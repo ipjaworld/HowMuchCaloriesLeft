@@ -19,17 +19,20 @@ type Props = {
 };
 
 /**
- * Deliberately not a settings page: a text button that swaps into a small
- * inline field, inside the summary the user is already looking at.
+ * Deliberately not a settings page: a small control that swaps into an inline
+ * field, inside the summary the user is already looking at.
  *
- * There is no suggested default. Putting "2100" in the field would read as a
- * recommended intake, which this app does not give.
+ * Before a goal exists it reads as an invitation; afterwards it recedes to a
+ * quiet link beside the totals. There is no suggested default — a prefilled
+ * 2100 would read as a recommended intake, which this app does not give.
  */
 export function GoalEditor({ currentTarget, onSubmit }: Props) {
   const inputId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const isFirstTime = currentTarget === null;
 
   function open() {
     setValue(currentTarget === null ? "" : String(currentTarget));
@@ -60,15 +63,23 @@ export function GoalEditor({ currentTarget, onSubmit }: Props) {
   }
 
   if (!isOpen) {
-    return (
-      // The negative margin cancels the padding, so the tap area is 44px tall
-      // without the text moving off the totals line.
+    return isFirstTime ? (
       <button
         type="button"
         onClick={open}
-        className="-m-3 shrink-0 rounded p-3 text-sm text-neutral-500 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:outline-none"
+        className="h-11 rounded-full bg-ink px-4 text-[0.875rem] font-medium text-surface transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:outline-none"
       >
-        {currentTarget === null ? "목표 설정" : "목표 수정"}
+        목표 설정
+      </button>
+    ) : (
+      // The negative margin cancels the padding, so the tap area is 44px tall
+      // without the text drifting off the totals line.
+      <button
+        type="button"
+        onClick={open}
+        className="-m-3 shrink-0 rounded p-3 text-[0.8125rem] text-ink-soft underline decoration-line-strong underline-offset-[3px] transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
+      >
+        목표 수정
       </button>
     );
   }
@@ -96,12 +107,12 @@ export function GoalEditor({ currentTarget, onSubmit }: Props) {
           placeholder="목표 kcal"
           aria-invalid={error !== null}
           aria-describedby={error === null ? undefined : `${inputId}-error`}
-          className="h-11 w-32 min-w-0 rounded-full border border-neutral-300 bg-white px-4 text-base text-neutral-900 placeholder:text-neutral-500 focus-visible:border-neutral-900 focus-visible:ring-1 focus-visible:ring-neutral-900 focus-visible:outline-none"
+          className="numeric h-11 w-32 min-w-0 rounded-full border border-line-strong bg-surface px-4 text-base text-ink placeholder:text-ink-soft focus-visible:border-ink focus-visible:outline-none"
         />
 
         <button
           type="submit"
-          className="h-11 shrink-0 rounded-full bg-neutral-900 px-4 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="h-11 shrink-0 rounded-full bg-ink px-4 text-[0.875rem] font-medium text-surface focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           확인
         </button>
@@ -109,14 +120,14 @@ export function GoalEditor({ currentTarget, onSubmit }: Props) {
         <button
           type="button"
           onClick={close}
-          className="h-11 shrink-0 px-2 text-sm text-neutral-500 focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:outline-none"
+          className="h-11 shrink-0 px-2 text-[0.8125rem] text-ink-soft transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
         >
           취소
         </button>
       </div>
 
       {error !== null && (
-        <p id={`${inputId}-error`} role="alert" className="mt-2 text-sm text-amber-700">
+        <p id={`${inputId}-error`} role="alert" className="mt-2 text-sm text-accent">
           {error}
         </p>
       )}

@@ -221,7 +221,7 @@ export function TodayScreen() {
         }
       />
 
-      <div className="flex-1 pb-6">
+      <div className="flex-1 pb-8">
         <MealList records={records} isLoading={isLoading} />
       </div>
 
