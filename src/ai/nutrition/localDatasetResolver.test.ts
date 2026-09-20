@@ -51,6 +51,15 @@ const ENTRIES: FoodEntry[] = [
     source: "test-fixture",
   },
   {
+    id: "f-egg",
+    name: "삶은 계란",
+    aliases: ["계란", "달걀"],
+    caloriesPer100g: 155,
+    // One egg. This is what makes a bare "계란" resolve to 1개.
+    servings: [{ unit: "개", grams: 50 }],
+    source: "test-fixture",
+  },
+  {
     // Deliberately has no portion table — some source rows will not.
     id: "f-seaweed",
     name: "미역",
@@ -60,6 +69,13 @@ const ENTRIES: FoodEntry[] = [
 ];
 
 const resolver = createLocalDatasetResolver(ENTRIES);
+
+/** By id, so inserting a fixture entry never silently shifts a test. */
+function entry(id: string) {
+  const found = ENTRIES.find((candidate) => candidate.id === id);
+  if (found === undefined) throw new Error(`no fixture entry ${id}`);
+  return found;
+}
 
 function only(sentence: string) {
   const phrase = parseFoodPhrases(sentence)[0];
@@ -99,10 +115,8 @@ describe("findByName", () => {
   });
 
   it("matches despite spacing", () => {
-    const found = findByName([...ENTRIES, {
-      id: "f-egg", name: "삶은계란", caloriesPer100g: 155,
-      servings: [{ unit: "개", grams: 50 }], source: "test-fixture",
-    }], "삶은 계란");
+    // The entry is stored as "삶은 계란"; people type it either way.
+    const found = findByName(ENTRIES, "삶은계란");
     expect(found.kind === "one" && found.entry.id).toBe("f-egg");
   });
 
@@ -125,22 +139,22 @@ describe("findByName", () => {
 });
 
 describe("toGrams", () => {
-  const rice = ENTRIES[0]!;
-  const seaweed = ENTRIES[5]!;
+  const rice = entry("f-rice");
+  const seaweed = entry("f-seaweed");
 
   it("scales a known counter from the portion table", () => {
     expect(toGrams({ value: 2, unit: "공기", text: "두 공기", assumed: false }, rice))
-      .toEqual({ grams: 400, estimated: false });
+      .toEqual({ grams: 400, estimated: false, unit: "공기" });
   });
 
   it("takes grams at face value", () => {
     expect(toGrams({ value: 150, unit: "g", text: "150g", assumed: false }, rice))
-      .toEqual({ grams: 150, estimated: false });
+      .toEqual({ grams: 150, estimated: false, unit: "g" });
   });
 
   it("marks millilitres as an approximation", () => {
     expect(toGrams({ value: 200, unit: "ml", text: "200ml", assumed: false }, rice))
-      .toEqual({ grams: 200, estimated: true });
+      .toEqual({ grams: 200, estimated: true, unit: "ml" });
   });
 
   it("falls back to the default portion for a counter it does not know", () => {
@@ -148,13 +162,14 @@ describe("toGrams", () => {
       { value: 1, unit: "접시", text: "한 접시", assumed: false },
       rice,
     );
-    expect(weighed).toEqual({ grams: 200, estimated: true });
+    expect(weighed).toEqual({ grams: 200, estimated: true, unit: "공기" });
   });
 
-  it("marks an assumed serving as estimated", () => {
+  it("counts a bare name as one of the entry's natural portion", () => {
     expect(toGrams(assumedQuantity(), rice)).toEqual({
       grams: 200,
       estimated: true,
+      unit: "공기",
     });
   });
 
@@ -165,7 +180,7 @@ describe("toGrams", () => {
 
 describe("caloriesFor", () => {
   it("scales the dataset figure and rounds to whole calories", () => {
-    const rice = ENTRIES[0]!;
+    const rice = entry("f-rice");
     const match = caloriesFor(
       { value: 1, unit: "공기", text: "한 공기", assumed: false },
       rice,
@@ -176,12 +191,51 @@ describe("caloriesFor", () => {
   });
 
   it("halves a half portion", () => {
-    const rice = ENTRIES[0]!;
+    const rice = entry("f-rice");
     const match = caloriesFor(
       { value: 0.5, unit: "공기", text: "반 공기", assumed: false },
       rice,
     );
     expect(match?.calories).toBe(150);
+  });
+});
+
+describe("a bare food name resolves to one natural unit", () => {
+  it("counts 계란 as 1개 without being asked", async () => {
+    const result = await resolver.resolve(only("계란"));
+    if (result.status !== "resolved") throw new Error("expected resolved");
+
+    expect(result.match.entry.id).toBe("f-egg");
+    expect(result.match.amount).toEqual({ value: 1, unit: "개", text: "1개" });
+    // 155 kcal/100g × 50 g
+    expect(result.match.calories).toBe(78);
+  });
+
+  it("counts 갈비탕 as 1그릇, not 1개 — the counter comes from the entry", async () => {
+    const result = await resolver.resolve(only("갈비탕 먹었어"));
+    if (result.status !== "resolved") throw new Error("expected resolved");
+    expect(result.match.amount).toEqual({ value: 1, unit: "그릇", text: "1그릇" });
+  });
+
+  it("always flags the assumption so it can be corrected", async () => {
+    const result = await resolver.resolve(only("계란"));
+    if (result.status !== "resolved") throw new Error("expected resolved");
+    expect(result.match.estimated).toBe(true);
+  });
+
+  it("keeps the user's own wording when they gave an amount", async () => {
+    const result = await resolver.resolve(only("계란 두 개 먹었어"));
+    if (result.status !== "resolved") throw new Error("expected resolved");
+
+    expect(result.match.amount).toEqual({ value: 2, unit: "개", text: "두 개" });
+    expect(result.match.calories).toBe(155);
+    expect(result.match.estimated).toBe(false);
+  });
+
+  it("will not invent a count for a food with no portion", async () => {
+    // 미역 is sold by weight; "1개 of 미역" is not a thing.
+    const result = await resolver.resolve(only("미역"));
+    expect(result.status).toBe("unknown");
   });
 });
 

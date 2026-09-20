@@ -38,6 +38,14 @@ export type NutritionMatch = {
   /** Calories for the parsed quantity, already scaled. */
   calories: number;
   /**
+   * The amount this was actually counted as, ready to display: "1개" for a
+   * bare "계란", or the user's own "한 공기" when they said one.
+   *
+   * Always shown. An assumption the user cannot see is one they cannot
+   * correct, and correcting it is the whole interaction this app is built on.
+   */
+  amount: { value: number; unit: string | null; text: string };
+  /**
    * True when the portion had to be assumed or converted — no amount given,
    * an unfamiliar counter, or millilitres read as grams.
    */

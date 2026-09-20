@@ -24,47 +24,90 @@ const KILOGRAM_UNITS = new Set(["kg", "킬로"]);
 const MILLILITRE_UNITS = new Set(["ml", "mL"]);
 const LITRE_UNITS = new Set(["리터"]);
 
-type Weighed = { grams: number; estimated: boolean } | null;
+type Weighed = {
+  grams: number;
+  estimated: boolean;
+  /** The counter the portion was read in, or null for a raw weight. */
+  unit: string | null;
+} | null;
 
 /**
  * Turns "두 공기" into grams using the entry's own portion table. Returns
  * null when the food has no portion we can scale, which is a real answer:
  * the app asks rather than inventing one.
+ *
+ * A bare food name lands in the last branch, and that is the case this
+ * function exists for. "계란" carries no amount, so it is counted as one of
+ * whatever the entry's first portion is — one 개 for an egg, one 그릇 for a
+ * soup. The counter comes from the dataset, so it is a lookup, not a guess.
  */
 export function toGrams(quantity: Quantity, entry: FoodEntry): Weighed {
   const { value, unit } = quantity;
 
   if (unit !== null) {
-    if (GRAM_UNITS.has(unit)) return { grams: value, estimated: false };
-    if (KILOGRAM_UNITS.has(unit)) return { grams: value * 1000, estimated: false };
-    if (MILLILITRE_UNITS.has(unit)) return { grams: value, estimated: true };
-    if (LITRE_UNITS.has(unit)) return { grams: value * 1000, estimated: true };
+    if (GRAM_UNITS.has(unit)) return { grams: value, estimated: false, unit };
+    if (KILOGRAM_UNITS.has(unit)) {
+      return { grams: value * 1000, estimated: false, unit };
+    }
+    if (MILLILITRE_UNITS.has(unit)) {
+      return { grams: value, estimated: true, unit };
+    }
+    if (LITRE_UNITS.has(unit)) {
+      return { grams: value * 1000, estimated: true, unit };
+    }
 
     const serving = entry.servings?.find((candidate) => candidate.unit === unit);
     if (serving !== undefined) {
-      return { grams: value * serving.grams, estimated: quantity.assumed };
+      return { grams: value * serving.grams, estimated: quantity.assumed, unit };
     }
   }
 
-  // A count with no counter ("삼각김밥 하나"), or a counter this food does
-  // not have a figure for — fall back to its default portion and say so.
+  // A count with no counter ("계란", "삼각김밥 하나"), or a counter this food
+  // has no figure for — use its natural portion and report which one.
   const fallback = entry.servings?.[0];
   if (fallback === undefined) return null;
 
   return {
     grams: value * fallback.grams,
+    // An unfamiliar counter was silently swapped for the default one, so that
+    // is an approximation even when the user did give an amount.
     estimated: quantity.assumed || unit !== null,
+    unit: fallback.unit,
+  };
+}
+
+/** How the amount reads back to the user once it has been resolved. */
+function describeAmount(
+  quantity: Quantity,
+  weighed: NonNullable<Weighed>,
+): NutritionMatch["amount"] {
+  // The user said it themselves — keep their wording.
+  if (!quantity.assumed && quantity.text.length > 0) {
+    return { value: quantity.value, unit: quantity.unit, text: quantity.text };
+  }
+
+  return {
+    value: quantity.value,
+    unit: weighed.unit,
+    text:
+      weighed.unit === null
+        ? `${quantity.value}`
+        : `${quantity.value}${weighed.unit}`,
   };
 }
 
 /** Rounded to whole calories: a tenth of a kcal is noise, not information. */
-export function caloriesFor(quantity: Quantity, entry: FoodEntry): NutritionMatch | null {
+export function caloriesFor(
+  quantity: Quantity,
+  entry: FoodEntry,
+): NutritionMatch | null {
   const weighed = toGrams(quantity, entry);
   if (weighed === null) return null;
 
   return {
     entry,
     calories: Math.round((entry.caloriesPer100g * weighed.grams) / 100),
+    amount: describeAmount(quantity, weighed),
     estimated: weighed.estimated,
     score: 0,
   };
