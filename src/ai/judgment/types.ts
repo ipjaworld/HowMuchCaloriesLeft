@@ -17,9 +17,9 @@ export const INTENTS = [
 
 export type Intent = (typeof INTENTS)[number];
 
-export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
-
-export type MealType = (typeof MEAL_TYPES)[number];
+/** Meal types live in the domain; the golden set reuses them rather than
+ * keeping a second copy that could drift. */
+export { MEAL_TYPES, type MealType } from "@/domain/meal";
 
 /**
  * A judgment as the application consumes it, after schema validation and the
