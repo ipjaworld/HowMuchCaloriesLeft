@@ -2,21 +2,17 @@
 
 @theme {
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Pretendard",
+    "Pretendard", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
 :root {
-  color-scheme: light dark;
-}
-
-html,
-body {
-  height: 100%;
+  /* Dark mode is out of scope for now — keep one rendering to reason about. */
+  color-scheme: light;
 }
 
 body {
   font-family: var(--font-sans);
-  /* The app is a single mobile-first column; never scroll sideways. */
+  /* Single mobile-first column; nothing should ever scroll sideways. */
   overflow-x: hidden;
 }
