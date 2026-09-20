@@ -1,0 +1,569 @@
+{
+  "version": 1,
+  "contexts": [
+    {
+      "id": "empty",
+      "now": "2026-09-20T09:00:00+09:00",
+      "dailyGoalCalories": 2100,
+      "recentItems": []
+    },
+    {
+      "id": "breakfast",
+      "now": "2026-09-20T09:40:00+09:00",
+      "dailyGoalCalories": 2100,
+      "recentItems": [
+        {
+          "id": "i-gimbap",
+          "mealType": "breakfast",
+          "name": "삼각김밥",
+          "amount": "2개",
+          "calories": 420,
+          "consumedAt": "2026-09-20T09:10:00+09:00"
+        },
+        {
+          "id": "i-soymilk",
+          "mealType": "breakfast",
+          "name": "두유",
+          "amount": "1팩",
+          "calories": 120,
+          "consumedAt": "2026-09-20T09:12:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "lunch",
+      "now": "2026-09-20T13:20:00+09:00",
+      "dailyGoalCalories": 2100,
+      "recentItems": [
+        {
+          "id": "i-gimbap-1",
+          "mealType": "breakfast",
+          "name": "삼각김밥",
+          "amount": "1개",
+          "calories": 210,
+          "consumedAt": "2026-09-20T09:10:00+09:00"
+        },
+        {
+          "id": "i-galbitang",
+          "mealType": "lunch",
+          "name": "갈비탕",
+          "amount": "1그릇",
+          "calories": 650,
+          "consumedAt": "2026-09-20T12:40:00+09:00"
+        },
+        {
+          "id": "i-rice",
+          "mealType": "lunch",
+          "name": "흰쌀밥",
+          "amount": "1공기",
+          "calories": 320,
+          "consumedAt": "2026-09-20T12:41:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "coffee",
+      "now": "2026-09-20T15:10:00+09:00",
+      "dailyGoalCalories": 2100,
+      "recentItems": [
+        {
+          "id": "i-galbitang",
+          "mealType": "lunch",
+          "name": "갈비탕",
+          "amount": "1그릇",
+          "calories": 650,
+          "consumedAt": "2026-09-20T12:40:00+09:00"
+        },
+        {
+          "id": "i-americano",
+          "mealType": "snack",
+          "name": "아메리카노",
+          "amount": "1잔",
+          "calories": 10,
+          "consumedAt": "2026-09-20T14:50:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "eggs",
+      "now": "2026-09-20T16:30:00+09:00",
+      "dailyGoalCalories": 2100,
+      "recentItems": [
+        {
+          "id": "i-egg",
+          "mealType": "snack",
+          "name": "삶은 계란",
+          "amount": "2개",
+          "calories": 140,
+          "consumedAt": "2026-09-20T16:05:00+09:00"
+        },
+        {
+          "id": "i-quail",
+          "mealType": "snack",
+          "name": "메추리알",
+          "amount": "3개",
+          "calories": 45,
+          "consumedAt": "2026-09-20T16:20:00+09:00"
+        }
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "add-001",
+      "category": "add",
+      "input": "삼각김밥 하나 먹었어",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "add-002",
+      "category": "add",
+      "input": "점심에 갈비탕 먹음",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "add-003",
+      "category": "add",
+      "input": "아아 한잔 마셨어",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null },
+      "note": "아아 = 아이스 아메리카노. 로컬 dataset 매칭이 실패하기 쉬운 줄임말이라 LLM fallback 경로를 타는지 확인하는 사례."
+    },
+    {
+      "id": "add-004",
+      "category": "add",
+      "input": "메추리알 세개",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null },
+      "note": "동사가 없는 명사구만으로도 섭취 기록으로 읽혀야 한다."
+    },
+    {
+      "id": "add-005",
+      "category": "add",
+      "input": "갈비탕이랑 밥 한 공기 먹음",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null },
+      "note": "한 문장에 음식 2개. 분해는 NutritionResolver 책임이고 intent는 하나다."
+    },
+    {
+      "id": "add-006",
+      "category": "add",
+      "input": "삶은 계란 두 개 먹었어",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "add-007",
+      "category": "add",
+      "input": "아메리카노 마셨어",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "add-008",
+      "category": "add",
+      "input": "커피 한잔 마심",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "add-009",
+      "category": "add",
+      "input": "점심으로 김치찌개에 공기밥 먹었어요",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "add-010",
+      "category": "add",
+      "input": "편의점에서 컵라면 하나 먹음",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "add-011",
+      "category": "add",
+      "input": "저녁에 제육볶음 먹었어",
+      "contextId": "breakfast",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null },
+      "note": "기존 기록이 있어도 새 음식이면 수정이 아니라 추가다."
+    },
+    {
+      "id": "add-012",
+      "category": "add",
+      "input": "방금 바나나 한 개 먹었음",
+      "contextId": "breakfast",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "add-013",
+      "category": "add",
+      "input": "우유 200ml 마셨어",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null },
+      "note": "개수가 아닌 용량 단위. 수량 파서가 ml을 다뤄야 한다."
+    },
+    {
+      "id": "add-014",
+      "category": "add",
+      "input": "치킨 두 조각 먹었어",
+      "contextId": "lunch",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": null }
+    },
+
+    {
+      "id": "mod-001",
+      "category": "modify",
+      "input": "아까 밥 반만 먹었어",
+      "contextId": "lunch",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": "i-rice" },
+      "note": "핵심 사례. 새 기록이 아니라 기존 흰쌀밥의 양 수정이다."
+    },
+    {
+      "id": "mod-002",
+      "category": "modify",
+      "input": "아까 밥은 절반 정도 남겼어",
+      "contextId": "lunch",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": "i-rice" },
+      "note": "남겼다는 섭취량 감소. 먹었다의 반대 방향인데 같은 대상을 가리킨다."
+    },
+    {
+      "id": "mod-003",
+      "category": "modify",
+      "input": "삼각김밥 두개 아니고 하나였어",
+      "contextId": "breakfast",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": "i-gimbap" }
+    },
+    {
+      "id": "mod-004",
+      "category": "modify",
+      "input": "갈비탕은 국물만 먹었어",
+      "contextId": "lunch",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": "i-galbitang" }
+    },
+    {
+      "id": "mod-005",
+      "category": "modify",
+      "input": "계란 두개 아니라 세개 먹었어",
+      "contextId": "eggs",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": "i-egg" },
+      "note": "메추리알(i-quail)도 개 단위 계란류라 오선택 위험이 있는 사례."
+    },
+    {
+      "id": "mod-006",
+      "category": "modify",
+      "input": "아메리카노 말고 라떼였어",
+      "contextId": "coffee",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": "i-americano" },
+      "note": "음식 자체가 교체됨. 칼로리 재조회가 필요한 수정."
+    },
+    {
+      "id": "mod-007",
+      "category": "modify",
+      "input": "점심 갈비탕은 어제 먹은 거야",
+      "contextId": "lunch",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": "i-galbitang" },
+      "note": "날짜 이동. 오늘 합계에서 빠져야 하지만 삭제는 아니다."
+    },
+    {
+      "id": "mod-008",
+      "category": "modify",
+      "input": "그 김밥 반만 먹었어",
+      "contextId": "breakfast",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": "i-gimbap" },
+      "note": "삼각김밥을 김밥으로 줄여 부름. 부분 문자열 매칭에 의존하면 위험한 사례."
+    },
+    {
+      "id": "mod-009",
+      "category": "modify",
+      "input": "메추리알 세개가 아니고 다섯개였어",
+      "contextId": "eggs",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": "i-quail" }
+    },
+    {
+      "id": "mod-010",
+      "category": "modify",
+      "input": "두유는 반만 마셨어",
+      "contextId": "breakfast",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": false, "referenceTargetId": "i-soymilk" }
+    },
+
+    {
+      "id": "del-001",
+      "category": "delete",
+      "input": "방금 계란 먹었다고 한거 취소",
+      "contextId": "eggs",
+      "expected": { "intent": "delete_food", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": "i-egg" },
+      "note": "취소 요청 자체는 섭취 진술이 아니므로 isActualConsumption은 false다."
+    },
+    {
+      "id": "del-002",
+      "category": "delete",
+      "input": "아까 커피 먹었다고 한 거 취소",
+      "contextId": "coffee",
+      "expected": { "intent": "delete_food", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": "i-americano" }
+    },
+    {
+      "id": "del-003",
+      "category": "delete",
+      "input": "커피는 안 마셨음",
+      "contextId": "coffee",
+      "expected": { "intent": "delete_food", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": "i-americano" },
+      "note": "부정 진술이지만 결과는 기록 삭제다. 수정으로 처리하면 0 kcal 항목이 남는다."
+    },
+    {
+      "id": "del-004",
+      "category": "delete",
+      "input": "방금 넣은 거 취소해줘",
+      "contextId": "eggs",
+      "expected": { "intent": "delete_food", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": "i-quail" },
+      "note": "방금 = 가장 최근 기록. 시간순 해석이 필요하다."
+    },
+    {
+      "id": "del-005",
+      "category": "delete",
+      "input": "두유 기록 삭제",
+      "contextId": "breakfast",
+      "expected": { "intent": "delete_food", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": "i-soymilk" }
+    },
+    {
+      "id": "del-006",
+      "category": "delete",
+      "input": "갈비탕 잘못 입력했어 지워줘",
+      "contextId": "lunch",
+      "expected": { "intent": "delete_food", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": "i-galbitang" }
+    },
+    {
+      "id": "del-007",
+      "category": "delete",
+      "input": "점심 기록 지워줘",
+      "contextId": "lunch",
+      "expected": { "intent": "delete_food", "isActualConsumption": false, "needsClarification": true, "referenceTargetId": null },
+      "note": "점심 항목이 갈비탕/흰쌀밥 둘이라 단일 대상이 결정되지 않는다. 확인이 필요하다."
+    },
+    {
+      "id": "del-008",
+      "category": "delete",
+      "input": "오늘 기록 다 지워줘",
+      "contextId": "lunch",
+      "expected": { "intent": "delete_food", "isActualConsumption": false, "needsClarification": true, "referenceTargetId": null },
+      "note": "전체 삭제는 가장 파괴적인 동작이다. 임계값과 무관하게 항상 확인한다."
+    },
+
+    {
+      "id": "q-001",
+      "category": "question",
+      "input": "오늘 몇칼로리 남음?",
+      "contextId": "lunch",
+      "expected": { "intent": "ask_status", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "q-002",
+      "category": "question",
+      "input": "지금 얼마나 먹었어?",
+      "contextId": "lunch",
+      "expected": { "intent": "ask_status", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null },
+      "note": "먹었어가 들어가지만 질문이다. 기록으로 저장되면 안 된다."
+    },
+    {
+      "id": "q-003",
+      "category": "question",
+      "input": "오늘 얼마나 더 먹어도 돼?",
+      "contextId": "lunch",
+      "expected": { "intent": "ask_status", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "q-004",
+      "category": "question",
+      "input": "나 지금 몇 칼로리 먹었지?",
+      "contextId": "coffee",
+      "expected": { "intent": "ask_status", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "q-005",
+      "category": "question",
+      "input": "오늘 얼마나 남았어?",
+      "contextId": "eggs",
+      "expected": { "intent": "ask_status", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "q-006",
+      "category": "question",
+      "input": "내가 오늘 뭐 먹었지?",
+      "contextId": "lunch",
+      "expected": { "intent": "ask_status", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "q-007",
+      "category": "question",
+      "input": "목표까지 얼마나 남았어?",
+      "contextId": "breakfast",
+      "expected": { "intent": "ask_status", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "q-008",
+      "category": "question",
+      "input": "아침에 먹은 거 칼로리 얼마야?",
+      "contextId": "breakfast",
+      "expected": { "intent": "ask_status", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null },
+      "note": "기존 기록을 가리키지만 변경 요청이 아니라 조회다."
+    },
+
+    {
+      "id": "rec-001",
+      "category": "recommendation",
+      "input": "저녁 뭐 먹는 게 좋을까?",
+      "contextId": "lunch",
+      "expected": { "intent": "ask_recommendation", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "rec-002",
+      "category": "recommendation",
+      "input": "저녁 뭐 먹지?",
+      "contextId": "lunch",
+      "expected": { "intent": "ask_recommendation", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "rec-003",
+      "category": "recommendation",
+      "input": "지금 야식 먹어도 돼?",
+      "contextId": "eggs",
+      "expected": { "intent": "ask_recommendation", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "rec-004",
+      "category": "recommendation",
+      "input": "남은 칼로리로 뭐 먹을 수 있어?",
+      "contextId": "coffee",
+      "expected": { "intent": "ask_recommendation", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null },
+      "note": "ask_status와 가장 혼동되기 쉬운 사례. 잔량이 아니라 선택지를 원한다."
+    },
+    {
+      "id": "rec-005",
+      "category": "recommendation",
+      "input": "단백질 뭐로 채우면 좋을까?",
+      "contextId": "lunch",
+      "expected": { "intent": "ask_recommendation", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+
+    {
+      "id": "non-001",
+      "category": "not_consumption",
+      "input": "갈비탕 칼로리 높은 편이야?",
+      "contextId": "empty",
+      "expected": { "intent": "other", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null },
+      "note": "요구사항 13절의 대표 사례. 절대 섭취 기록으로 저장하면 안 된다."
+    },
+    {
+      "id": "non-002",
+      "category": "not_consumption",
+      "input": "갈비탕 살 많이 쪄?",
+      "contextId": "empty",
+      "expected": { "intent": "other", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "non-003",
+      "category": "not_consumption",
+      "input": "삼각김밥 몇칼로리야?",
+      "contextId": "empty",
+      "expected": { "intent": "other", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null },
+      "note": "몇 칼로리가 q-001과 겹치지만 대상이 오늘의 내가 아니라 일반 음식이다."
+    },
+    {
+      "id": "non-004",
+      "category": "not_consumption",
+      "input": "제육 먹어도 될까?",
+      "contextId": "lunch",
+      "expected": { "intent": "ask_recommendation", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null },
+      "note": "intent는 추천으로 읽는 게 맞지만, 검증 핵심은 isActualConsumption=false다. 저장되면 실패."
+    },
+    {
+      "id": "non-005",
+      "category": "not_consumption",
+      "input": "다이어트 할 때 야식 어때?",
+      "contextId": "empty",
+      "expected": { "intent": "other", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "non-006",
+      "category": "not_consumption",
+      "input": "편의점 도시락 괜찮아?",
+      "contextId": "empty",
+      "expected": { "intent": "other", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "non-007",
+      "category": "not_consumption",
+      "input": "단백질 하루에 얼마나 먹어야 돼?",
+      "contextId": "lunch",
+      "expected": { "intent": "other", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null }
+    },
+    {
+      "id": "non-008",
+      "category": "not_consumption",
+      "input": "내일 갈비탕 먹을까 생각중",
+      "contextId": "empty",
+      "expected": { "intent": "other", "isActualConsumption": false, "needsClarification": false, "referenceTargetId": null },
+      "note": "미래 계획. 시제 구분 실패 시 오늘 기록으로 들어간다."
+    },
+
+    {
+      "id": "amb-001",
+      "category": "ambiguous",
+      "input": "밥 먹었어",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": true, "referenceTargetId": null },
+      "note": "밥이 흰쌀밥인지 식사 전반인지 불명. 양도 없다. 추정 저장 금지."
+    },
+    {
+      "id": "amb-002",
+      "category": "ambiguous",
+      "input": "좀 먹었음",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": true, "referenceTargetId": null },
+      "note": "음식명 자체가 없다."
+    },
+    {
+      "id": "amb-003",
+      "category": "ambiguous",
+      "input": "아까 그거 절반",
+      "contextId": "lunch",
+      "expected": { "intent": "modify_food", "isActualConsumption": true, "needsClarification": true, "referenceTargetId": null },
+      "note": "수정 의도는 분명하나 갈비탕/흰쌀밥 중 무엇인지 결정 불가. 짧게 되물어야 한다."
+    },
+    {
+      "id": "amb-004",
+      "category": "ambiguous",
+      "input": "그거 취소",
+      "contextId": "lunch",
+      "expected": { "intent": "delete_food", "isActualConsumption": false, "needsClarification": true, "referenceTargetId": null },
+      "note": "del-004(방금 넣은 거)와 달리 시간 단서가 없어 대상이 좁혀지지 않는다."
+    },
+    {
+      "id": "amb-005",
+      "category": "ambiguous",
+      "input": "점심 먹었어",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": true, "referenceTargetId": null },
+      "note": "끼니만 알 뿐 음식을 모른다."
+    },
+    {
+      "id": "amb-006",
+      "category": "ambiguous",
+      "input": "라면",
+      "contextId": "empty",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": true, "referenceTargetId": null },
+      "note": "음식명 한 단어. 섭취인지 질문인지도 모호하고 양도 없다."
+    },
+    {
+      "id": "amb-007",
+      "category": "ambiguous",
+      "input": "많이 먹었어",
+      "contextId": "breakfast",
+      "expected": { "intent": "add_food", "isActualConsumption": true, "needsClarification": true, "referenceTargetId": null },
+      "note": "기존 기록 수정으로 오인될 수 있다. 어느 쪽이든 확인 없이는 변경 금지."
+    }
+  ]
+}

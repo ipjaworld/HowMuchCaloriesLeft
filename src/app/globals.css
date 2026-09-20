@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Pretendard",
+    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  /* The app is a single mobile-first column; never scroll sideways. */
+  overflow-x: hidden;
+}
