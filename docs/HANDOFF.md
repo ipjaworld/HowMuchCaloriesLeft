@@ -1,6 +1,6 @@
 # HANDOFF
 
-> 마지막 갱신: **2026-09-24** · 상태: **MVP v0.1 — 배포 대기.** 다음 세션은 Vercel 배포.
+> 마지막 갱신: **2026-09-24** · 상태: **MVP v0.1 — production 배포 완료.**
 
 다음 세션에서 이 파일부터 읽으면 컨텍스트 없이 바로 이어갈 수 있습니다.
 
@@ -10,11 +10,11 @@
 
 | | |
 | --- | --- |
-| HEAD | `dd833cf` feat: log, correct and delete food from natural language |
+| production 기준 | `d9c7328` chore: ignore Vercel project metadata |
 | working tree | clean |
 | 완료 Phase | 0 · 1 · 2 · 3 · 4 · 4.5 · 5A · 5B · 6A · 6B |
-| 상태 | **MVP v0.1.** 자연어 기록·수정·삭제가 실제로 동작 |
-| 다음 할 일 | **Vercel 배포** (§18) |
+| 상태 | **MVP v0.1 production 배포 완료.** 자연어 기록·수정·삭제가 실제로 동작 |
+| 다음 할 일 | 실제로 며칠 사용하면서 반복되는 `unknown`만 기록 (§19) |
 
 ### 런타임 환경변수 — 하나뿐
 
@@ -503,7 +503,7 @@ c54420f  feat: add deterministic nutrition resolution pipeline
 
 6A와 6B는 한 커밋으로 묶었다. `editFood.ts` 외의 파일은 6B가 6A의 코드를 같은 함수 안에서 고쳤기 때문에, 분리하려면 중간 상태를 손으로 복원하고 따로 검증해야 했고 얻는 것은 이력의 모양뿐이었다. Phase 경계는 `architecture.md` §4.1·§4.2에 문서로 남아 있다.
 
-push는 하지 않았다 (사용자 지시 없음).
+`main`은 production 배포 기준 commit `d9c7328`까지 GitHub에 push했다.
 
 ## 17. 🚫 다음 작업자가 절대 하면 안 되는 것
 
@@ -527,9 +527,22 @@ push는 하지 않았다 (사용자 지시 없음).
 
 ---
 
-## 18. Vercel 배포 전 체크리스트
+## 18. Vercel 배포 체크리스트 및 결과
 
-실제 배포는 하지 않았다. 아래는 코드를 직접 확인한 결과이며, 배포 담당자가 다시 검증할 항목이다.
+### Production 배포 결과
+
+| 항목 | 결과 |
+| --- | --- |
+| 배포일 | **2026-09-24** |
+| Production URL | **https://how-much-calories-left.vercel.app** |
+| 배포 상태 | **READY** |
+| 배포·스모크 기준 commit | `d9c732802c635688196039268acb234c2a3020fd` |
+| Runtime env | `TYPESAFE_API_KEY` — Production Secret |
+| 영양 데이터 | `data/korean-foods.json` bundled file 사용. MFDS runtime 호출 없음 |
+| Production smoke test | **PASS** — 목표·추가·모호성 질문·양 후속 질문·상태 조회·수정·삭제·unknown 미저장·새로고침 복원 |
+| 기술 확인 | `/api/chat` Jev path, `/api/resolve`, localStorage, pending interaction, sticky input, 375px·430px·desktop 모두 PASS |
+
+아래는 배포 전에 코드에서 확인한 체크리스트다.
 
 ### 확인된 것 (이 세션에서 실제로 검사함)
 
@@ -549,10 +562,10 @@ push는 하지 않았다 (사용자 지시 없음).
 | `NEXT_PUBLIC_*` secret | ✅ 하나도 없음 |
 | `src/env.ts` 클라이언트 유출 | ✅ import하는 곳은 `/api/chat` 하나뿐 |
 
-### 배포 담당자가 직접 확인할 것
+### 배포 시 확인한 설정
 
-1. **Vercel 프로젝트 설정** — Framework: Next.js, Build: `pnpm build`, Install: `pnpm install`. Node 20+ 선택.
-2. **`TYPESAFE_API_KEY`를 Vercel 환경변수에 등록** (Production/Preview). 넣지 않아도 배포는 성공하고 앱은 mock 판단으로 동작하므로, **키 없이 한 번 배포해 보고 나중에 추가해도 된다.**
+1. **Vercel 프로젝트 설정** — Framework: Next.js, Build: `pnpm build`, Install: `pnpm install`, Node: `engines.node >=20` 자동 감지.
+2. **`TYPESAFE_API_KEY`를 Vercel Production Secret으로 등록 완료.** Preview에는 등록하지 않았다.
 3. **MFDS 키는 넣지 말 것** — 런타임에서 쓰지 않는다. 넣어도 해는 없지만 불필요한 secret이다.
 4. `pnpm-lock.yaml`이 커밋되어 있으므로 `--frozen-lockfile` 기본 동작으로 설치된다. corepack 버전 이슈가 나면 Vercel의 `packageManager` 필드 존중 여부를 확인할 것.
 5. 배포 후 스모크: 목표 설정 → `갈비탕 하나 먹었어` → 새로고침 후 기록 유지.
@@ -567,11 +580,10 @@ push는 하지 않았다 (사용자 지시 없음).
 
 ## 19. 다음 단계 우선순위 (구현하지 말 것, 순서만)
 
-1. **Vercel 배포** — 위 체크리스트
-2. **실제로 며칠 써 보기** — 이게 3번의 입력이 된다
-3. **usage-driven 음식 seed 확장** — `unknown`이 반복된 음식부터. 반드시 행을 눈으로 보고 `FOOD_CD` 추가 (→ §7의 함정)
-4. **UI polish** — 실사용에서 걸린 것만
-5. **추천** — 남은 칼로리 + 부족한 것 정도. 생성형 코칭 금지
-6. **사진 입력** — 가장 나중
+1. **실제로 며칠 써 보기** — 이 결과가 2번 seed 확장의 입력이 된다
+2. **usage-driven 음식 seed 확장** — `unknown`이 반복된 음식부터. 반드시 행을 눈으로 보고 `FOOD_CD` 추가 (→ §7의 함정)
+3. **UI polish** — 실사용에서 걸린 것만
+4. **추천** — 남은 칼로리 + 부족한 것 정도. 생성형 코칭 금지
+5. **사진 입력** — 가장 나중
 
 ---
