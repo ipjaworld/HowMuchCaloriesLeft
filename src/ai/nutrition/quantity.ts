@@ -223,6 +223,38 @@ export function normalizeSpacing(text: string): string {
 }
 
 /**
+ * Reads a string that is *only* an amount: "200ml", "210g", "한 공기".
+ *
+ * Deliberately separate from `parseTrailingQuantity`, which refuses exactly
+ * this input. Inside a sentence, a phrase that is nothing but a quantity has
+ * no food name left in it and so is not a quantity at all — "하나" on its own
+ * is the thing being talked about. But when the app has just asked "how much
+ * of it?", the food is already settled and the whole answer is the amount.
+ * Same patterns, opposite assumption about what the caller already knows.
+ */
+export function parseAmountOnly(text: string): Quantity | null {
+  const trimmed = normalizeSpacing(text);
+  if (trimmed.length === 0) return null;
+
+  for (const { re, read } of PATTERNS) {
+    const match = trimmed.match(re);
+    if (match?.index === undefined) continue;
+
+    const quantity = read(match);
+    if (quantity === null) continue;
+
+    // The amount has to account for the whole answer. "커피 200ml" would
+    // leave "커피" over, which means this was not a bare amount and the
+    // caller should not treat it as one.
+    if (trimmed.slice(0, match.index).trim().length > 0) return null;
+
+    return quantity;
+  }
+
+  return null;
+}
+
+/**
  * Finds a quantity at the *end* of a phrase, which is where Korean puts it.
  * Returns null when there is none — the caller decides whether to assume one.
  */

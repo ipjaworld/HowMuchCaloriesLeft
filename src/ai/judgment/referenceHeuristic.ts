@@ -39,14 +39,17 @@ export function foodLikeTokens(message: string): string[] {
 }
 
 /**
- * Name match first, then recency. When several entries share the matched
- * text — "밥" is inside both 삼각김밥 and 흰쌀밥 — the most recent one wins,
- * which is what "아까 밥" almost always means.
+ * Every logged item the message could be naming, most recent first.
+ *
+ * Kept separate from picking a winner because how many matched is itself
+ * information. "밥" is inside both 김밥 and 쌀밥, and for a delete that is the
+ * difference between removing 322 kcal and 351 kcal — a caller that only
+ * receives the winner cannot tell that it was a coin toss.
  */
-export function resolveReferenceByName(
+export function findReferenceMatches(
   message: string,
   recentItems: RecentItem[],
-): string | null {
+): RecentItem[] {
   const byRecency = recentItems
     .slice()
     .sort((a, b) => b.consumedAt.localeCompare(a.consumedAt));
@@ -68,10 +71,28 @@ export function resolveReferenceByName(
         (form.length >= 2 && form.includes(item.name)),
     ),
   );
-  if (matched.length > 0) return matched[0]?.id ?? null;
+  if (matched.length > 0) return matched;
 
   // "방금 넣은 거 취소해줘" names nothing, but says which one it means.
-  if (MOST_RECENT_RE.test(message)) return byRecency[0]?.id ?? null;
+  if (MOST_RECENT_RE.test(message)) {
+    const newest = byRecency[0];
+    return newest === undefined ? [] : [newest];
+  }
 
-  return null;
+  return [];
+}
+
+/**
+ * Name match first, then recency. When several entries share the matched
+ * text — "밥" is inside both 삼각김밥 and 흰쌀밥 — the most recent one wins,
+ * which is what "아까 밥" almost always means.
+ *
+ * That tiebreak is fine for a correction, which is visible and reversible.
+ * A delete asks instead; see `decideCommand`.
+ */
+export function resolveReferenceByName(
+  message: string,
+  recentItems: RecentItem[],
+): string | null {
+  return findReferenceMatches(message, recentItems)[0]?.id ?? null;
 }

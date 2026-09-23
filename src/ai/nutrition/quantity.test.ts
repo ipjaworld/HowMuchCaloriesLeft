@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assumedQuantity, normalizeSpacing, parseTrailingQuantity } from "./quantity";
+import { assumedQuantity, normalizeSpacing, parseTrailingQuantity, parseAmountOnly } from "./quantity";
 
 function parse(phrase: string) {
   return parseTrailingQuantity(phrase)?.quantity ?? null;
@@ -121,5 +121,34 @@ describe("a food name is never eaten by the unit pattern", () => {
 
   it("does not read 만두 as 만 + 두", () => {
     expect(parseTrailingQuantity("만두")).toBeNull();
+  });
+});
+
+describe("parseAmountOnly — answering 'how much of it?'", () => {
+  it.each([
+    ["200ml", 200, "ml"],
+    ["210g", 210, "g"],
+    ["100 g", 100, "g"],
+    ["한 공기", 1, "공기"],
+  ] as const)("reads %s", (text, value, unit) => {
+    const quantity = parseAmountOnly(text);
+    expect(quantity?.value).toBe(value);
+    expect(quantity?.unit).toBe(unit);
+  });
+
+  it("refuses an answer that still carries a food name", () => {
+    // That is a new sentence, not an answer to the open question.
+    expect(parseAmountOnly("커피 200ml")).toBeNull();
+  });
+
+  it("refuses text with no amount in it at all", () => {
+    expect(parseAmountOnly("몰라")).toBeNull();
+    expect(parseAmountOnly("")).toBeNull();
+  });
+
+  it("still lets parseTrailingQuantity refuse a bare amount", () => {
+    // The two functions disagree on purpose: inside a sentence a bare
+    // quantity is the food being named, not its amount.
+    expect(parseTrailingQuantity("200ml")).toBeNull();
   });
 });

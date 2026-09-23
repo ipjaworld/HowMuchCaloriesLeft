@@ -312,11 +312,147 @@ noul: `actualConsumption ≥ 0.5` (유지), `clarificationNeeded ≥ **0.85**` (
 
 **표본은 60건 한 번**이다. delete·other는 예측 건수가 한 자리라 수렴한 추정치가 아니라 근거 있는 운용점이다. 같은 픽스처 두 번 실행에서 confidence가 최대 0.03 흔들렸으므로, 0.01 단위로 맞춘 임계값은 노이즈를 맞추는 것이다.
 
+## 4.1 add_food end-to-end (Phase 6A)
+
+자연어 한 문장이 실제 `MealRecord`가 되기까지.
+
+```
+"갈비탕 하나랑 밥 한 공기 먹었어"
+        │
+        ▼  POST /api/chat
+   Jev judgment → decideCommand → add_candidate{needsConfirmation}
+        │
+        ▼  서버에서 조회 (여기서만 async)
+   parseFoodPhrases → NutritionResolver → AddPart[]
+        │
+        ▼  { type:"add", sourceText, parts, needsConfirmation }
+   ─────────────── 서버는 여기까지. 아무것도 바꾸지 않는다 ───────────────
+        │
+        ▼  브라우저
+   PendingAdd  ──질문이 남았으면─→ 되묻기 → 답변 반영 → 다시 검사
+        │ 전부 해결됨
+        ▼
+   addMealRecord (Phase 3 함수 그대로) → repository → 재조회 → 합계 재계산
+```
+
+**서버가 보내는 건 문장이 아니라 타입이다.** `AddPart`는 음식 구문 하나당 하나이고, 상태가 `resolved`/`ambiguous`/`unmeasurable`/`unknown` 넷 중 하나다. 클라이언트가 문장을 해석해서 행동을 정하는 경로는 없다.
+
+### PendingInteraction
+
+```ts
+type PendingAdd = {
+  sourceText: string;      // 원문. 그대로 기록에 남는다
+  now: string;             // 브라우저 시계
+  parts: AddPart[];        // 답이 들어올 때마다 갱신
+  needsConfirmation: boolean;
+};
+
+type PendingQuestion =
+  | { type: "confirm_add";      names: string[] }
+  | { type: "choose_food";      partIndex; phraseName; candidates }
+  | { type: "provide_quantity"; partIndex; phraseName; entries; reason };
+```
+
+두 가지가 설계의 핵심이다.
+
+1. **parts가 곧 상태다.** 질문 큐를 따로 두지 않고 `nextQuestion()`이 parts에서 파생한다. 서로 맞춰야 하는 구조가 둘이면 언젠가 어긋난다.
+2. **한 문장은 한 기록이다.** 두 음식이 든 문장에서 아는 것만 먼저 저장하고 나머지를 묻지 않는다. 전부 해결될 때까지 기다렸다가 `MealRecord` 하나를 쓴다. 그래야 취소했을 때 되돌릴 게 남지 않는다.
+
+**클라이언트 상태다.** 서버 세션도 localStorage도 아니다. 새로고침하면 진행 중이던 질문은 사라지고, 그 비용은 문장 하나를 다시 치는 것뿐이다. 반쯤 끝난 질문은 데이터가 아니다.
+
+### 다음 입력은 열린 질문이 가져간다
+
+`provide_quantity`가 열려 있으면 다음 메시지는 **Jev를 거치지 않고** `/api/resolve`로 간다. `200ml`을 독립 문장으로 판단시키면 `other`가 나오고, 왕복 한 번을 써서 "도와줄 수 없다"는 답을 받게 된다.
+
+`/api/resolve`는 음식이 이미 정해진 상태에서 양만 묻는 엔드포인트다. 조회는 여전히 서버에 있고, 이 핸들러도 stateless다.
+
+`quantity.ts`에는 그래서 함수가 둘이다. `parseTrailingQuantity`는 문장 속에서 수량을 찾고 **수량이 전부인 입력을 거부한다** — 문장 안에서 `하나`만 있으면 그건 음식 이름이다. `parseAmountOnly`는 반대로 그것만 받는다. 같은 패턴, 호출자가 이미 아는 것에 대한 반대 가정.
+
+### add_food에서는 clarification Noul을 쓰지 않는다
+
+Phase 4.5 실측에서 이 noul은 한국어에서 넷 중 가장 약했다(분포가 거의 완전히 겹침). 반면 "어떤 음식을 얼마나"는 resolver가 **데이터로 확정적으로** 답한다.
+
+| add_food 상황 | 판단 주체 |
+| --- | --- |
+| resolved | 질문 없음 → 저장 |
+| ambiguous | resolver → 후보 선택 질문 |
+| unmeasurable | resolver → 수량 질문 |
+| unknown | resolver → 저장하지 않음 |
+| intent 자체가 애매 | **intent confidence** (noul 아님) |
+
+`ClarifyReason`에서 `unclear_food`를 지웠다. 만들어낼 주체가 없어졌기 때문이다. modify/delete에서는 noul을 계속 쓴다 — 어떤 *기록*을 가리키는지는 데이터셋이 모른다.
+
+### 중간 확신도는 버리지 않고 물어본다
+
+intent confidence가 confirm 구간(add 0.5~0.9)이면 **조회는 그대로 하고** 확인만 덧붙인다. 실측에서 `갈비탕 하나랑 밥 한 공기 먹었어`가 0.65로 나왔는데, 여기서 문장을 버리고 "기록할까요?"만 물으면 "네"를 받아도 실행할 게 남지 않는다. 조회 결과를 들고 물으므로 왕복도 늘지 않고, 질문이 무엇을 기록할지 이름을 댈 수 있다 — `갈비탕과 밥을 기록할까요?`
+
+### 아직 아닌 것
+
+- 추천은 문구만 있다
+- mealType을 추론하지 않는다. 시계로 점심을 맞히는 규칙은 아무도 요구하지 않았다
+- 모르는 음식에 사용자가 직접 kcal를 넣는 경로는 만들지 않았다 — 수동 CRUD가 생기고 "조회한다" 원칙이 흐려진다
+
+## 4.2 modify / delete (Phase 6B)
+
+### 건너야 했던 틈 — item과 record
+
+Jev는 **FoodItem**을 가리킨다. 사람이 그렇게 말하기 때문이다("아까 먹은 갈비탕"). 저장소는 **MealRecord** 단위이고, 한 문장이 한 기록이므로 record 하나에 item이 여럿일 수 있다. 그래서 모든 편집은 먼저 *그 item이 어느 record에 있는지* 찾아야 한다.
+
+```
+삭제:  record에 item이 하나뿐  → deleteMealRecord(record)
+       다른 item이 남음        → updateMealRecord(record, { items: 나머지 })
+수정:  해당 item만 교체        → updateMealRecord(record, { items: 교체본 })
+```
+
+**새 CRUD는 만들지 않았다.** `updateMealRecord` / `deleteMealRecord`는 Phase 3부터 있던 것이고, `editFood.ts`는 둘 중 무엇을 부를지만 정한다. 수정해도 item의 `id`와 record의 `sourceText`는 유지된다 — 원래 한 말은 기록이지 정정이 덮어쓸 대상이 아니다.
+
+### 삭제는 스스로 동점을 깨지 않는다
+
+되돌리기 어려운데 사용자가 눈치채지 못할 수 있는 유일한 동작이므로, **지목이 갈리면 코드가 되묻는다.**
+
+실측에서 발견한 실제 사고: 쌀밥(351)과 김밥(322)이 있는 날 `밥 지워줘` 하면 **묻지 않고 쌀밥을 지웠다.** "밥"은 둘 다에 들어 있고 29 kcal가 다르다.
+
+```
+delete_food + 문장이 가리키는 item이 둘 이상 + 그것들이 서로 구별됨
+  → 언제나 "어떤 기록을 취소할까요?"
+```
+
+모델이 골랐든 코드 휴리스틱이 골랐든 **상관없이** 적용한다. 확신도 문제가 아니라 삭제가 해도 되는 일의 문제다. 다만 이름도 칼로리도 같은 항목끼리는 어느 쪽을 지워도 결과가 같으므로 묻지 않는다 — 사용자가 답할 수 없는 질문이다.
+
+수정에는 적용하지 않는다. `아까 밥`은 대개 최근 것을 뜻하고, 수정은 화면에 보이며 되돌릴 수 있다.
+
+### 수정은 add 파이프라인을 그대로 쓴다
+
+평행 구조를 만들지 않았다. 정정도 문장이므로 `parseFoodPhrases` → `NutritionResolver` → `AddPart[]` → `PendingAdd`를 똑같이 지난다. `PendingAdd`에 `target`이 붙어 있으면 마지막에 record를 만드는 대신 item을 교체할 뿐이다.
+
+그 위에 얹은 것은 딱 둘이다.
+
+1. **`preferTargetFood`** — `아까 밥 반만 먹었어`에서 "밥"은 네 음식에 걸리지만 고치려는 항목이 이미 쌀밥이므로 물을 게 없다. 후보 중 대상과 같은 음식이 있으면 거기로 확정한다.
+2. **`namesASubstitution`** — `말고 / 아니고 / 아니라`가 있으면 사용자가 *다른 음식으로 바꾸겠다*는 뜻이므로 1번을 적용하지 않고 `무엇으로 바꿀까요?`로 되묻는다. 문법 셋뿐인 고정 목록이고, **무엇을 저장할지가 아니라 물을지 말지만 정한다.**
+
+### 읽지 못하는 정정은 되묻는다
+
+`foodPhrases`는 add 문법(`X 하나 먹었어`)에 맞춰 만든 것이라 정정 문법을 다 읽지 못한다. `갈비탕 반 그릇만 먹었어`는 문장 전체가 이름이 되고 1인분으로 가정되어, **이미 저장된 값이 그대로 다시 나온다.**
+
+그래서 `isSameAs`로 "바뀐 게 없음"을 감지하고 `고쳤어요`라고 말하는 대신 **양을 묻는다.** 파서를 무리하게 늘리는 대신, Phase 6A가 이미 가진 질문을 재사용한다. 대상을 칩으로 고른 경우도 같은 자리로 들어온다.
+
+수량 후속 입력은 `/api/resolve`가 처리하며, **음식을 이름으로 찾는다.** 저장된 `name`이 곧 데이터셋의 정식 이름이고 이름은 데이터셋에서 유일하므로(seeds 테스트가 고정), add 경로와 modify 경로가 같은 한 가지 방법을 쓴다.
+
+### 중간 확신도
+
+| | confirm 구간(0.5~0.95)에서 |
+| --- | --- |
+| add · modify | **조회를 마친 뒤** 확인을 묻는다 — "네"에 적용할 것이 남아 있어야 한다 |
+| delete | 조회할 것이 없으므로 그냥 묻는다 |
+
+
 ## 5. 폴더 구조
 
 ```
 src/
   app/                  Next.js App Router — 화면과 route handler
+    api/chat/           판단 + add 조회
+    api/resolve/        수량 후속 입력 전용 (Jev 거치지 않음)   (Phase 6A)
   domain/               순수 타입과 계산. 의존성 없음          (Phase 3)
   application/          유스케이스 오케스트레이션, 확신도 정책  (Phase 3~4)
   ai/
@@ -327,6 +463,11 @@ src/
       confidence.ts     임계값 단일 출처 (실측 확정)
       referenceHeuristic.ts  코드 기반 reference 해석 (저확신 fallback)
       goldenSet.ts      골든셋 스키마·로더
+  application/          mealRecords · dailyGoal · commands
+                        · addFood      문장 → AddPart[]        (Phase 6A)
+                        · pendingAdd   여러 턴에 걸친 대화 상태  (Phase 6A)
+                        · editFood     item → record 찾아 수정/삭제 (Phase 6B)
+  ai/
     nutrition/          음식 → 칼로리
       quantity.ts       한국어 수량 파서 (하나/한 공기/반/200ml)
       foodPhrases.ts    문장 → 음식 구문 분해

@@ -18,6 +18,9 @@ build/
 # typescript
 *.tsbuildinfo
 
+# vitest cache / reporter output
+.vitest/
+
 # misc
 .DS_Store
 *.log

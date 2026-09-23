@@ -4,7 +4,11 @@ import {
   classifyIntentConfidence,
   isProbable,
 } from "@/ai/judgment/confidence";
-import { resolveReferenceByName } from "@/ai/judgment/referenceHeuristic";
+import type { AddPart } from "./addFood";
+import {
+  findReferenceMatches,
+  resolveReferenceByName,
+} from "@/ai/judgment/referenceHeuristic";
 import type { Intent, Judgment, JudgmentInput, RecentItem } from "@/ai/judgment/types";
 
 /**
@@ -17,9 +21,15 @@ import type { Intent, Judgment, JudgmentInput, RecentItem } from "@/ai/judgment/
  */
 
 export type ClarifyReason =
-  /** add_food, but which food or how much cannot be told. */
-  | "unclear_food"
-  /** modify/delete, but which existing entry is meant cannot be told. */
+  /**
+   * modify/delete, but which existing entry is meant cannot be told.
+   *
+   * There is deliberately no "unclear food" reason. That question belongs to
+   * the NutritionResolver, which answers it from data as `ambiguous`,
+   * `unmeasurable` or `unknown` and says which food it is stuck on — so a
+   * vaguer version of it, decided from a probability, would have no producer
+   * and nothing useful to say.
+   */
   | "unknown_target"
   /** The intent itself was not read confidently enough to act on. */
   | "low_confidence"
@@ -34,8 +44,39 @@ export type ClarifyCandidate = {
 
 export type Command =
   | { type: "answer"; kind: "status" | "recommendation" }
-  | { type: "add_candidate"; sourceText: string }
-  | { type: "modify_candidate"; targetId: string; sourceText: string }
+  | { type: "add_candidate"; sourceText: string; needsConfirmation: boolean }
+  /**
+   * `add_candidate` with the nutrition lookup done. `decideCommand` never
+   * returns this — it judges intent and knows nothing about food — so the
+   * route expands its `add_candidate` into this before replying. The split
+   * keeps the confidence policy a pure function while the part that needs a
+   * dataset stays async and out of it.
+   */
+  | {
+      type: "add";
+      sourceText: string;
+      parts: AddPart[];
+      /**
+       * The intent was read confidently enough to look the food up, but not
+       * confidently enough to store it unasked. The lookup still happens, so
+       * a "yes" needs no second round trip — and the question can name what
+       * would be added.
+       */
+      needsConfirmation: boolean;
+    }
+  | {
+      type: "modify_candidate";
+      targetId: string;
+      sourceText: string;
+      /** Read confidently enough to look up, not to apply unasked. */
+      needsConfirmation: boolean;
+      /**
+       * The correction run through the same lookup an add uses. Empty until
+       * the route fills it in, for the same reason `add` is filled in there:
+       * `decideCommand` stays a pure function over the judgment.
+       */
+      parts: AddPart[];
+    }
   | { type: "delete_candidate"; targetId: string }
   | {
       type: "clarify";
@@ -90,6 +131,26 @@ function usableTarget(judgment: Judgment, input: JudgmentInput): string | null {
   return resolveReferenceByName(input.message, input.recentItems);
 }
 
+/**
+ * Logged items the message names that a delete must not choose between.
+ *
+ * Deleting is the one action the user may not notice, so it does not get to
+ * break a tie. When the wording matches several entries that differ in what
+ * they would remove, the answer is a question — whoever supplied the target,
+ * the model or the rule.
+ *
+ * Matches that are indistinguishable (same food, same figure) are not
+ * ambiguity in any way the user could act on: either choice removes the same
+ * number from the same day, so asking would be friction for nothing.
+ */
+function contestedDeleteTargets(input: JudgmentInput): RecentItem[] {
+  const matches = findReferenceMatches(input.message, input.recentItems);
+  if (matches.length <= 1) return [];
+
+  const distinct = new Set(matches.map((item) => `${item.name}|${item.calories}`));
+  return distinct.size > 1 ? matches : [];
+}
+
 export function decideCommand(
   judgment: Judgment,
   input: JudgmentInput,
@@ -102,11 +163,6 @@ export function decideCommand(
   if (decision === "clarify") {
     return { type: "clarify", reason: "low_confidence", intent: judgment.intent };
   }
-
-  const mustAsk = isProbable(
-    judgment.clarificationProbability,
-    NOUL_THRESHOLDS.clarificationNeeded,
-  );
 
   switch (judgment.intent) {
     case "ask_status":
@@ -128,18 +184,47 @@ export function decideCommand(
       ) {
         return { type: "ignore", reason: "not_consumption" };
       }
-      if (mustAsk) {
-        return { type: "clarify", reason: "unclear_food", intent: "add_food" };
-      }
-      if (decision === "confirm") {
-        return { type: "clarify", reason: "confirm_action", intent: "add_food" };
-      }
-      return { type: "add_candidate", sourceText: input.message };
+      // Deliberately does *not* consult `mustAsk`. Whether the food and the
+      // amount are clear is a question the NutritionResolver answers from
+      // data — resolved, ambiguous, unmeasurable or unknown — and Phase 4.5
+      // measured this noul as the weakest of the four in Korean, firing on
+      // plain reports like "점심에 갈비탕 먹음". Asking it here would add a
+      // guess in front of an answer. The confidence check below stays,
+      // because that is a different question: whether this is a food report
+      // at all.
+      // A middling reading still gets looked up. Turning it into a bare
+      // "shall I?" would throw the sentence away and leave a yes with
+      // nothing to act on; carrying the flag lets the lookup happen and the
+      // confirmation be asked over the top of it.
+      return {
+        type: "add_candidate",
+        sourceText: input.message,
+        needsConfirmation: decision === "confirm",
+      };
     }
 
     case "modify_food":
     case "delete_food": {
+      if (judgment.intent === "delete_food") {
+        const contested = contestedDeleteTargets(input);
+        if (contested.length > 0) {
+          return {
+            type: "clarify",
+            reason: "unknown_target",
+            intent: "delete_food",
+            candidates: toCandidates(contested),
+          };
+        }
+      }
+
       const targetId = usableTarget(judgment, input);
+
+      // Still consulted here, where there is no resolver to ask instead:
+      // which existing entry is meant is not something the dataset knows.
+      const mustAsk = isProbable(
+        judgment.clarificationProbability,
+        NOUL_THRESHOLDS.clarificationNeeded,
+      );
 
       if (targetId === null || mustAsk) {
         return {
@@ -150,19 +235,30 @@ export function decideCommand(
         };
       }
 
-      if (decision === "confirm") {
+      // A delete asks first and carries nothing with it: there is nothing to
+      // look up, and the question is the whole point of the confirmation.
+      if (decision === "confirm" && judgment.intent === "delete_food") {
         return {
           type: "clarify",
           reason: "confirm_action",
-          intent: judgment.intent,
+          intent: "delete_food",
           candidates: toCandidates(input.recentItems).filter(
             (candidate) => candidate.id === targetId,
           ),
         };
       }
 
+      // A modify carries its lookup through the confirmation, for the same
+      // reason an add does: throwing the sentence away would leave a "yes"
+      // with nothing to apply.
       return judgment.intent === "modify_food"
-        ? { type: "modify_candidate", targetId, sourceText: input.message }
+        ? {
+            type: "modify_candidate",
+            targetId,
+            sourceText: input.message,
+            needsConfirmation: decision === "confirm",
+            parts: [],
+          }
         : { type: "delete_candidate", targetId };
     }
   }

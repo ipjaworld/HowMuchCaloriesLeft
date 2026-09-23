@@ -75,6 +75,7 @@ describe("decideCommand", () => {
       expect(command).toEqual({
         type: "add_candidate",
         sourceText: "삼각김밥 하나 먹었어",
+        needsConfirmation: false,
       });
     });
 
@@ -86,23 +87,45 @@ describe("decideCommand", () => {
       expect(command).toEqual({ type: "ignore", reason: "not_consumption" });
     });
 
-    it("asks when the food or the amount is unclear", () => {
+    it("does not let the clarification noul override the resolver", () => {
+      // Phase 4.5 measured this noul as the weakest of the four in Korean:
+      // its two distributions overlap almost end to end, and it fires on
+      // plain reports. Which food and how much is a question the dataset
+      // answers with certainty, so the add goes through and the resolver
+      // decides whether anything needs asking.
       const command = decideCommand(
-        judgment({ clarificationProbability: 0.9 }),
+        judgment({ clarificationProbability: 0.99 }),
         input("밥 먹었어"),
       );
-      expect(command).toMatchObject({ type: "clarify", reason: "unclear_food" });
+      expect(command).toMatchObject({ type: "add_candidate" });
     });
 
-    it("asks for confirmation on a middling reading", () => {
+    it("still consults it for a modify, where no resolver can answer", () => {
+      // Which existing entry is meant is not something the dataset knows.
+      const command = decideCommand(
+        judgment({
+          intent: "modify_food",
+          referenceTargetId: "i-rice",
+          referenceConfidence: 0.9,
+          clarificationProbability: 0.99,
+        }),
+        input("아까 밥 반만 먹었어"),
+      );
+      expect(command).toMatchObject({ type: "clarify", reason: "unknown_target" });
+    });
+
+    it("flags a middling reading for confirmation but still looks it up", () => {
+      // Turning this into a bare "shall I?" would throw the sentence away and
+      // leave a yes with nothing to act on. The lookup happens either way and
+      // the confirmation is asked over the top of it.
       const command = decideCommand(
         judgment({ intentConfidence: 0.6 }),
         input("라면"),
       );
-      expect(command).toMatchObject({
-        type: "clarify",
-        reason: "confirm_action",
-        intent: "add_food",
+      expect(command).toEqual({
+        type: "add_candidate",
+        sourceText: "라면",
+        needsConfirmation: true,
       });
     });
 
@@ -129,6 +152,10 @@ describe("decideCommand", () => {
         type: "modify_candidate",
         targetId: "i-rice",
         sourceText: "아까 밥 반만 먹었어",
+        needsConfirmation: false,
+        // Filled in by the route, which owns the dataset; `decideCommand`
+        // stays a pure function over the judgment.
+        parts: [],
       });
     });
 
@@ -319,6 +346,137 @@ describe("decideCommand", () => {
         expect(command.type).not.toBe("modify");
         expect(command.type).not.toBe("delete");
       }
+    });
+  });
+});
+
+describe("a delete never breaks a tie by itself", () => {
+  const twoRices: RecentItem[] = [
+    { id: "i-rice", name: "쌀밥", amount: "한 공기", calories: 351, consumedAt: "2026-09-20T12:00:00+09:00" },
+    { id: "i-gimbap", name: "김밥", amount: "한 줄", calories: 322, consumedAt: "2026-09-20T13:00:00+09:00" },
+  ];
+
+  function withItems(message: string, items: RecentItem[]): JudgmentInput {
+    return { message, now: "2026-09-20T14:00:00+09:00", dailyGoalCalories: 2100, recentItems: items };
+  }
+
+  it("asks which one when the wording fits two different entries", () => {
+    // "밥" is inside both 김밥 and 쌀밥, and they are 29 kcal apart. Picking
+    // by recency here removes the wrong food and the wrong number.
+    const command = decideCommand(
+      judgment({
+        intent: "delete_food",
+        intentConfidence: 1,
+        referenceTargetId: "i-rice",
+        referenceConfidence: 0.99,
+      }),
+      withItems("밥 지워줘", twoRices),
+    );
+
+    expect(command).toMatchObject({
+      type: "clarify",
+      reason: "unknown_target",
+      intent: "delete_food",
+    });
+    if (command.type !== "clarify") return;
+    expect(command.candidates?.map((c) => c.id).sort()).toEqual(["i-gimbap", "i-rice"]);
+  });
+
+  it("overrides even a confident pick from the model", () => {
+    // The guard is about what a delete is allowed to do, not about how sure
+    // the judge was — so it applies whoever supplied the target.
+    const command = decideCommand(
+      judgment({
+        intent: "delete_food",
+        intentConfidence: 1,
+        referenceTargetId: "i-gimbap",
+        referenceConfidence: 1,
+      }),
+      withItems("밥 지워줘", twoRices),
+    );
+    expect(command).toMatchObject({ type: "clarify", reason: "unknown_target" });
+  });
+
+  it("does not ask when only one entry fits", () => {
+    const command = decideCommand(
+      judgment({
+        intent: "delete_food",
+        intentConfidence: 1,
+        referenceTargetId: "i-gimbap",
+        referenceConfidence: 0.99,
+      }),
+      withItems("김밥 지워줘", twoRices),
+    );
+    expect(command).toEqual({ type: "delete_candidate", targetId: "i-gimbap" });
+  });
+
+  it("does not ask between entries that are indistinguishable", () => {
+    // Same food, same figure: either choice removes the same number from the
+    // same day, so a question would be friction for nothing.
+    const twins: RecentItem[] = [
+      { id: "a", name: "갈비탕", amount: "하나", calories: 362, consumedAt: "2026-09-20T12:00:00+09:00" },
+      { id: "b", name: "갈비탕", amount: "하나", calories: 362, consumedAt: "2026-09-20T13:00:00+09:00" },
+    ];
+    const command = decideCommand(
+      judgment({
+        intent: "delete_food",
+        intentConfidence: 1,
+        referenceTargetId: "b",
+        referenceConfidence: 0.99,
+      }),
+      withItems("갈비탕 지워줘", twins),
+    );
+    expect(command).toEqual({ type: "delete_candidate", targetId: "b" });
+  });
+
+  it("leaves a modify free to take the most recent match", () => {
+    // A correction is visible and reversible; "아까 밥" almost always means
+    // the recent one, and asking every time would be noise.
+    const command = decideCommand(
+      judgment({
+        intent: "modify_food",
+        intentConfidence: 1,
+        referenceTargetId: "i-rice",
+        referenceConfidence: 0.99,
+      }),
+      withItems("밥 반만 먹었어", twoRices),
+    );
+    expect(command).toMatchObject({ type: "modify_candidate", targetId: "i-rice" });
+  });
+});
+
+describe("a middling correction is confirmed, not discarded", () => {
+  it("still carries its lookup, so a yes has something to apply", () => {
+    const command = decideCommand(
+      judgment({
+        intent: "modify_food",
+        intentConfidence: 0.6,
+        referenceTargetId: "i-rice",
+        referenceConfidence: 0.99,
+      }),
+      input("아까 밥 반만 먹었어"),
+    );
+    expect(command).toMatchObject({
+      type: "modify_candidate",
+      targetId: "i-rice",
+      needsConfirmation: true,
+    });
+  });
+
+  it("but a middling delete asks outright, having nothing to carry", () => {
+    const command = decideCommand(
+      judgment({
+        intent: "delete_food",
+        intentConfidence: 0.8,
+        referenceTargetId: "i-rice",
+        referenceConfidence: 0.99,
+      }),
+      input("아까 밥 취소"),
+    );
+    expect(command).toMatchObject({
+      type: "clarify",
+      reason: "confirm_action",
+      intent: "delete_food",
     });
   });
 });

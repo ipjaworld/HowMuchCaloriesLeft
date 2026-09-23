@@ -1,6 +1,6 @@
 # HANDOFF
 
-> 마지막 갱신: **2026-09-23** · 상태: **Phase 4.5 / 5B 완료. 다음은 Phase 6.**
+> 마지막 갱신: **2026-09-23** · 상태: **Phase 6A·6B 완료. 자연어 CRUD가 end-to-end로 동작함.**
 
 다음 세션에서 이 파일부터 읽으면 컨텍스트 없이 바로 이어갈 수 있습니다.
 
@@ -43,7 +43,8 @@ TypeScript        계산하고 바꾼다 — 합산, 잔량, 상태 변경
 | 5A | deterministic nutrition pipeline | `c54420f` |
 | **4.5** | **Jev 한국어 실측 · 임계값 확정 · reference 전략 A** | **이번 커밋** |
 | **5B** | **식약처 OpenAPI 연결 · 번들 데이터셋** | **이번 커밋** |
-| 6 | 자연어 end-to-end | 미착수 ← **다음** |
+| **6A** | **add_food end-to-end — 실제 저장까지** | **이번 커밋** |
+| **6B** | **modify / delete 실제 반영** | **이번 커밋** |
 
 ---
 
@@ -175,7 +176,7 @@ noul 값에 confidence라는 이름을 **쓰지 않습니다.** 이름이 다르
 
 분포가 거의 완전히 겹친다 — 물어야 할 케이스 0.34~0.94, 물 필요 없는 케이스 0.19~0.93. **어떤 임계값도 못 가른다.** 0.85는 운용점이지 분리점이 아니고, 골든셋에서 여전히 8건을 불필요하게 되묻는다 (`점심에 갈비탕 먹음` 0.86 등).
 
-**Phase 6에서 할 일**: `add_food`의 경우 "어떤 음식을 얼마나"는 `NutritionResolver`가 `resolved`/`ambiguous`/`unknown`으로 **확정적으로** 답한다. noul이 추측할 일이 아니다. add 경로에서는 clarification noul 대신 resolver 결과로 되묻기를 결정하는 쪽이 옳다.
+**Phase 6A에서 그렇게 했다**: `add_food`의 "어떤 음식을 얼마나"는 `NutritionResolver`가 `resolved`/`ambiguous`/`unmeasurable`/`unknown`으로 **확정적으로** 답하므로, add 경로는 이 noul을 아예 보지 않는다. `ClarifyReason.unclear_food`도 만들어낼 주체가 없어져 지웠다. modify/delete에서는 계속 쓴다 — 어떤 *기록*을 가리키는지는 데이터셋이 모른다.
 
 ### 남은 약점 (고치지 않았음, 영향 없음)
 
@@ -184,9 +185,9 @@ noul 값에 confidence라는 이름을 **쓰지 않습니다.** 이름이 다르
 
 ## 6. Phase 5A — NutritionResolver 구현 상태 (완료)
 
-데이터 없이도 완성 가능한 deterministic 부분 전부. **85 tests.**
+데이터 없이도 완성 가능한 deterministic 부분 전부. 아래 개수는 **현재 기준**이며, 5A 이후 단계에서 같은 파일에 테스트가 더 붙었다 (5A 시점에는 85개였다).
 
-### `quantity.ts` — 한국어 수량 파서 (34 tests)
+### `quantity.ts` — 한국어 수량 파서 (41 tests)
 
 | 입력 | 결과 |
 | --- | --- |
@@ -211,7 +212,7 @@ noul 값에 confidence라는 이름을 **쓰지 않습니다.** 이름이 다르
 
 **이름에서 조사를 떼지 않습니다** — `오이`·`포도`가 `오`·`포`가 되기 때문입니다. 매처가 원형과 조사 제거형을 둘 다 데이터셋에 던져 **데이터가 판정**합니다.
 
-### `dataset.ts` + `localDatasetResolver.ts` (26 tests)
+### `dataset.ts` + `localDatasetResolver.ts` (38 tests)
 
 ```ts
 type PhraseResolution =
@@ -354,42 +355,83 @@ Jev가 고르고, 확신이 낮으면(`< 0.5`) 코드 휴리스틱이 받는다.
 
 **표본은 60건 한 번**이다. delete·other는 예측 건수가 한 자리다. 같은 픽스처 두 실행에서 confidence가 최대 0.03 흔들렸으므로 **0.01 단위 튜닝은 노이즈를 맞추는 것.**
 
-## 13. Phase 6 TODO — 다음 세션
+## 13. Phase 6A·6B 결과 · 다음 TODO
 
-Phase 4.5와 5B는 끝났다. 남은 것은 **연결**이다.
+### 연결된 것
 
-- [ ] `add_candidate` → 실제 `AddMealRecord` 연결. `addMealRecord`/`updateMealRecord`/`deleteMealRecord`는 Phase 3부터 구현·테스트되어 있고 **호출부만 없다**
-- [ ] `/api/chat`에 `koreanFoodResolver` 연결 — 지금은 judgment까지만 하고 영양 조회를 하지 않는다
-- [ ] **delete는 NutritionResolver 없이도 완성 가능** — 순수 도메인 연산. 가장 먼저 붙여도 된다
-- [ ] `ambiguous` / `unmeasurable` / `unknown` 응답 UX 연결 (clarify 칩 UI는 이미 있음). **셋은 할 말이 다르다** — `unmeasurable`은 "몇 g인지 알려주시면 계산할게요"이지 "모르는 음식"이 아니다
-- [ ] **음료 seed를 추가한다면 100mL 기준 행을 실데이터로 검증** — importer가 지원은 하지만 현재 14개는 전부 100g이라 그 경로는 미검증
-- [ ] **add 경로의 되묻기를 clarification noul 대신 resolver 결과로 판단** (→ §5의 경고). "어떤 음식을 얼마나"는 코드가 확정적으로 아는 것이지 확률로 추측할 것이 아니다
-- [ ] 화면을 mock 데이터에서 실제 repository로 전환
-- [ ] 데이터셋 항목 확대 — **반드시 행을 눈으로 보고 `FOOD_CD`를 `seeds.ts`에 추가** (→ §7의 함정)
-- [ ] 추천 로직 (남은 칼로리 + 단백질 부족 여부 정도. 복잡한 생성형 코칭 금지)
+말 → 저장/수정/삭제가 전부 이어졌다. 구조는 [`architecture.md` §4.1·§4.2](architecture.md).
+
+```
+/api/chat     judgment → add/modify 확장(NutritionResolver) → 타입화된 command
+/api/resolve  수량 후속 입력 전용. 음식을 **이름**으로 찾는다 (Jev 거치지 않음)
+PendingAdd    add와 modify가 공유하는 대화 상태. target이 있으면 수정
+editFood      item이 속한 record를 찾아 기존 update/delete 함수를 고른다
+```
+
+### 되돌리면 안 되는 결정 (6A 넷 + 6B 넷)
+
+1. **한 문장은 한 기록.** 부분 저장 금지.
+2. **PendingAdd는 client 상태.** 새로고침하면 사라지는 게 맞다.
+3. **add_food는 clarification noul을 보지 않는다.** resolver가 데이터로 답한다.
+4. **중간 확신도에서도 조회는 한다.** add·modify 모두. "네"에 적용할 것이 남아야 한다.
+5. **새 CRUD를 만들지 않았다.** `editFood`는 Phase 3의 update/delete 중 무엇을 부를지만 정한다.
+6. **삭제는 스스로 동점을 깨지 않는다.** 지목이 갈리고 후보가 서로 다르면 언제나 되묻는다 — 모델이 골랐든 휴리스틱이 골랐든. (수정에는 적용하지 않는다: 보이고 되돌릴 수 있다.)
+7. **수정은 add 파이프라인을 재사용한다.** 평행 구조를 만들지 말 것. 얹은 것은 `preferTargetFood`와 `namesASubstitution` 둘뿐이다.
+8. **수정해도 item의 `id`와 record의 `sourceText`는 유지한다.** 원래 한 말은 정정이 덮어쓸 대상이 아니다.
+
+### ⚠️ 알려진 한계 — 정정 문법
+
+`foodPhrases`는 **add 문법에 맞춰 만든 것**이라 정정 문법을 다 읽지 못한다. 실측:
+
+| 입력 | 파싱 |
+| --- | --- |
+| `아까 밥 반만 먹었어` | ✅ "밥" + 0.5 |
+| `갈비탕 반 그릇만 먹었어` | ❌ 문장 전체가 이름, 1인분 가정 |
+| `아까 밥은 절반 정도 남겼어` | ❌ `남겼어`를 어미로 못 읽음 |
+| `아메리카노 말고 라떼였어` | ❌ (라떼는 데이터셋에도 없음) |
+
+읽지 못하면 **양을 되묻는다**(`isSameAs`로 "바뀐 게 없음"을 감지). 틀린 값을 저장하지는 않는다.
+
+다음에 손댄다면: `foodPhrases`에 정정 문법(`남겼어`, `N만`, `말고 X`)을 추가하고 **골든셋 픽스처로 회귀를 고정**할 것. 25개 기존 테스트를 깨기 쉬우므로 지금은 건드리지 않았다.
+
+### 다음 TODO
+
+- [ ] 정정 문법 파싱 확대 (위 표) — 픽스처 먼저
+- [ ] 추천 로직 (남은 칼로리 + 단백질 부족 정도. 복잡한 생성형 코칭 금지)
+- [ ] 데이터셋 항목 확대 — **반드시 행을 눈으로 보고 `FOOD_CD` 추가** (→ §7)
+- [ ] 음료 seed를 추가한다면 **100mL 기준 행을 실데이터로 검증** (현재 14개는 전부 100g이라 미검증)
 - [ ] LLM fallback 파서 (선택) — **음식명/수량 추출만. 칼로리 생성 금지**
 
 ### 장기 아이디어 (지금 넣지 말 것)
 
-`갈비탕 칼로리 높아?` 같은 read-only 질문이 실사용에서 많을 것이므로 **`nutrition_question` intent가 생길 가능성이 높습니다.** 다만 **지금 추가하지 마세요.** 현재는 `other`로 처리됩니다.
+`갈비탕 칼로리 높아?` 같은 read-only 질문이 실사용에서 많을 것이므로 **`nutrition_question` intent가 생길 가능성이 높습니다.** 다만 지금 추가하지 마세요. 현재는 `other`로 처리됩니다.
 
 > 참고: 실측에서 Jev가 이런 문장 일부를 `ask_recommendation`으로 읽습니다(§5). intent를 하나 더 만들 때 이 경계를 같이 정리하는 게 좋습니다.
 
 ## 14. 마지막 검증 결과
 
-**2026-09-23, Phase 4.5 + 5B 커밋 직전**
+**2026-09-23, Phase 6B 커밋 직전**
 
 | | |
 | --- | --- |
 | `pnpm typecheck` | ✅ exit 0 |
 | `pnpm lint` | ✅ exit 0, 경고 0 |
-| `pnpm test` | ✅ **18 files / 391 tests** (5A 시점 287 → +104) |
-| `pnpm build` | ✅ `/` static, `/api/chat` dynamic |
-| `pnpm eval:jev` | ✅ intent 95.0% · consumption 96.7% · clarification 73.3% · reference 95.0% |
-| `EVAL_JUDGE=mock pnpm eval:jev` | ✅ intent 100% · consumption 100% · clarification 96.7% · reference 90% (**기준선일 뿐**) |
-| `pnpm sync:mfds` | ✅ 14/14 항목, 1인분 정보 11건 |
+| `pnpm test` | ✅ **21 files / 463 tests** (6A 시점 445 → +18) |
+| `pnpm build` | ✅ `/` static, `/api/chat` · `/api/resolve` dynamic |
+| `pnpm eval:jev` | Phase 4.5 이후 판단 로직 변화 없음 (재실행 불필요) |
+| `pnpm sync:mfds` | 6A에서 재생성됨, 6B에서 데이터 변경 없음 |
 
-`pnpm test`는 **네트워크를 전혀 호출하지 않는다.** Jev adapter는 stub client 주입, MFDS importer는 커밋된 실제 응답 픽스처, repository는 in-memory storage 주입.
+`pnpm test`는 **네트워크를 전혀 호출하지 않는다.**
+
+### 브라우저 QA (Chrome, 실제 Jev + 실제 데이터셋)
+
+**삭제** — `김밥 삭제해줘` 단일 item record 통째 삭제(1,397→1,075) · `갈비탕 삭제해줘` 2-item record에서 하나만 제거하고 쌀밥 유지(713→351) · **`밥 지워줘`로 쌀밥/김밥이 갈릴 때 되묻고 선택 후 삭제**(673→322).
+
+**수정** — `아까 밥 반만 먹었어` → 확인 후 쌀밥 351→175 (item id·sourceText 유지, 713→537) · `아까 갈비탕 아니고 김치찌개 한 그릇 먹었어` → `무엇으로 바꿀까요?` → 김치찌개 90으로 교체(362→90) · 취소 시 기록 그대로.
+
+**회귀** — add 시나리오(resolved / ambiguous / unmeasurable+200ml / unknown / status) 전부 6A와 동일. 새로고침 후 수정·삭제 결과 유지. 가로 overflow 320~768px 0, 하단 바 183px로 6A와 동일.
+
+**단위 테스트로만 확인한 것**: 대상이 사라진 뒤의 수정/삭제(`not_found` → 저장소 무변경). 삭제 confirm 구간의 "아니요"는 QA 중 Jev가 그 구간을 내주지 않아 코드 경로로만 확인했다.
 
 ## 15. 다음 세션에 읽을 파일
 
@@ -404,6 +446,9 @@ Phase 4.5와 5B는 끝났다. 남은 것은 **연결**이다.
 7. `fixtures/korean-inputs.json` — 골든셋 60건 (기대값은 *맞는 답*이지 모델의 현재 답이 아님)
 8. `src/ai/nutrition/localDatasetResolver.ts` — `resolved`/`ambiguous`/`unknown` 세 상태
 9. `src/ai/nutrition/mfds/seeds.ts` — 왜 이름이 아니라 `FOOD_CD`로 고르는지
+10. `src/application/addFood.ts` · `pendingAdd.ts` — 한 문장이 한 기록이 되는 과정
+11. `src/application/editFood.ts` — item과 record 사이의 틈을 건너는 곳
+12. `src/components/TodayScreen.tsx` — 위 셋을 순서대로 호출하는 유일한 곳
 
 TypeSafe 작업 시에는 `/typesafe:typesafe-ai` skill이 project scope에 설치되어 있습니다. **live docs가 source of truth이므로 추측하지 말 것.** SDK API는 `node_modules/@typesafe-ai/sdk/dist/index.d.mts`가 가장 정확합니다 (공개 문서 페이지는 요약적임).
 
@@ -411,27 +456,25 @@ TypeSafe 작업 시에는 `/typesafe:typesafe-ai` skill이 project scope에 설�
 
 ## 16. Git 상태
 
-이번 세션 시작 시점: **`a87f177`**, 워킹 트리 clean. Phase 5A는 이미 `c54420f`로 커밋되어 있었다.
+Phase 4.5 / 5B는 세 커밋: `2c88b13` (Jev 실측·정책), `dff8eb0` (MFDS 데이터셋), `e1218c9` (resolution 의미 분리).
 
-이번 세션에서 Phase 4.5 + 5B를 커밋한다:
+Phase 6A·6B는 아직 커밋하지 않았다. 변경:
 
 ```
-신규  src/ai/judgment/referenceHeuristic.ts       (+ mockJudge에서 분리)
-신규  src/ai/nutrition/koreanFoods.ts  .test.ts
-신규  src/ai/nutrition/mfds/{client,importer,seeds}.ts  importer.test.ts
-신규  scripts/syncMfdsDataset.sync.ts · vitest.sync.mts
-신규  data/korean-foods.json                      (생성물, 커밋함)
-신규  fixtures/mfds-sample.json                   (실제 응답 픽스처)
-변경  src/ai/judgment/confidence.ts   .test.ts    (임계값 확정 + 근거)
-변경  src/ai/judgment/jevJudge.ts                 (onCall 텔레메트리)
-변경  src/ai/judgment/mockJudge.ts                (휴리스틱 분리)
-변경  src/application/commands.ts     .test.ts    (reference fallback)
-변경  scripts/evalJev.eval.ts                     (latency/usage/mock diff/EVAL_DUMP)
-변경  src/env.ts · .env.example · package.json    (MFDS 변수, sync:mfds)
+신규  src/application/addFood.ts  .test.ts     문장 → AddPart[]        (6A)
+신규  src/application/pendingAdd.ts            여러 턴 대화 상태        (6A)
+신규  src/application/editFood.ts .test.ts     item → record 편집       (6B)
+신규  src/app/api/resolve/route.ts             수량 후속 입력
+변경  src/application/commands.ts  .test.ts    add/modify 명령 · 삭제 동점 금지
+변경  src/app/api/chat/route.ts                resolver 연결 · 명령 확장
+변경  src/components/TodayScreen.tsx           pending state · 실제 저장/수정/삭제
+변경  src/components/replyText.ts  .test.ts    add/modify/delete 응답 문구
+변경  src/ai/judgment/referenceHeuristic.ts    findReferenceMatches 노출
+변경  src/ai/nutrition/quantity.ts .test.ts    parseAmountOnly
+변경  src/ai/nutrition/mfds/seeds.ts           표시 이름 정리
+변경  data/korean-foods.json                   위 이름으로 재생성
 변경  README.md · docs/architecture.md · docs/HANDOFF.md
 ```
-
-`data/korean-foods.json`은 **생성물이지만 커밋한다** — 앱이 런타임에 읽고, 없으면 빌드가 깨진다. 키 없이도 클론해서 돌릴 수 있어야 한다.
 
 push는 하지 않았다 (사용자 지시 없음).
 
@@ -447,4 +490,10 @@ push는 하지 않았다 (사용자 지시 없음).
 8. 데이터가 없다는 이유로 **Phase를 억지로 "완료" 처리하지 마세요.** 막힌 것은 막혔다고 적습니다.
 9. **`AMT_NUM1` 검산을 제거하지 마세요.** 식약처 영양소 컬럼에는 이름이 없습니다. 검산이 사라지면 컬럼 순서가 바뀌는 날 조용히 틀린 칼로리가 들어갑니다.
 10. **이름으로 음식을 고르지 마세요.** `아메리카노` 정확 일치조차 인스턴트 분말(200 kcal/100g)을 물어옵니다. `FOOD_CD`를 눈으로 확인하고 `seeds.ts`에 넣으세요.
-11. **1인분 무게를 지어내지 마세요.** 삶은 달걀·아메리카노·삼각김밥이 `unknown`인 건 버그가 아니라 데이터에 없기 때문입니다.
+11. **1인분 무게를 지어내지 마세요.** 삶은 달걀·아메리카노·삼각김밥이 `unmeasurable`인 건 버그가 아니라 데이터에 없기 때문입니다.
+12. **되묻는 도중에 일부만 저장하지 마세요.** 한 문장은 한 기록입니다. 부분 저장은 취소를 복잡하게 만듭니다.
+13. **PendingAdd를 localStorage나 서버 세션에 넣지 마세요.** 반쯤 끝난 질문은 데이터가 아닙니다.
+14. **add_food에서 clarification noul을 다시 끌어들이지 마세요.** resolver가 확정적으로 답하는 질문입니다.
+15. **삭제가 스스로 동점을 깨게 하지 마세요.** 최근 것을 고르는 규칙은 수정용입니다. 삭제는 되묻습니다.
+16. **수정용 평행 구조를 만들지 마세요.** add 파이프라인과 `PendingAdd`를 그대로 씁니다.
+17. **수정할 때 item의 `id`나 record의 `sourceText`를 바꾸지 마세요.**

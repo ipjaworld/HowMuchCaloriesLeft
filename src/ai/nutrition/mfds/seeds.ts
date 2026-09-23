@@ -19,12 +19,17 @@ import type { SeedSpec } from "./importer";
  * live API. Adding a food means looking its row up and reading it, not
  * guessing a code.
  *
+ * `name` is what the list shows, so it is written the way a person would say
+ * it. MFDS separates a dish from its variant with an underscore
+ * (`커피_아메리카노`), which is a database convention and not something to put
+ * in front of a user; the raw form stays reachable as an alias.
+ *
  * `counter` is the Korean counter the food is normally spoken in — 공기,
  * 그릇, 잔. It names a portion; it never sizes one. The grams behind it come
  * from the row's own stated weight, and a food whose row states no weight
- * simply ships without a portion, so the resolver answers `unknown` instead
- * of scaling by an invented number. That is why 삼각김밥, 삶은 달걀 and
- * 아메리카노 below carry no counter: MFDS gives their energy but not a
+ * simply ships without a portion, so the resolver answers `unmeasurable`
+ * instead of scaling by an invented number. That is why 삼각김밥, 삶은 달걀
+ * and 아메리카노 below carry no counter: MFDS gives their energy but not a
  * per-piece or per-cup weight, and this project does not fill that in.
  */
 
@@ -68,11 +73,11 @@ export const FOOD_SEEDS: FoodSeed[] = [
   {
     // MFDS states 200 g for this row, which is more than one convenience
     // store triangle weighs — so it gets no counter and "삼각김밥 하나"
-    // resolves to unknown rather than to a doubled figure.
+    // resolves to unmeasurable rather than to a doubled figure.
     foodCode: "D101-019460000-0001",
     query: "삼각김밥_참치마요네즈",
-    name: "삼각김밥_참치마요네즈",
-    aliases: ["삼각김밥", "참치마요삼각김밥"],
+    name: "삼각김밥 (참치마요)",
+    aliases: ["삼각김밥", "참치마요삼각김밥", "삼각김밥_참치마요네즈"],
   },
 
   // ── 국 · 탕 · 찌개 ────────────────────────────────────────────────
@@ -86,7 +91,7 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D106-266100000-0001",
     query: "김치찌개_돼지고기",
     name: "김치찌개",
-    aliases: ["돼지고기김치찌개"],
+    aliases: ["돼지고기김치찌개", "김치찌개_돼지고기"],
     counter: "그릇",
   },
   {
@@ -130,20 +135,20 @@ export const FOOD_SEEDS: FoodSeed[] = [
   // ── 달걀 ──────────────────────────────────────────────────────────
   {
     // No per-egg weight anywhere in MFDS, so no counter: "계란 두 개" is
-    // answered with unknown, not with a guessed 50 g.
+    // answered with unmeasurable, not with a guessed 50 g.
     foodCode: "D327-758010000-0001",
     query: "달걀_삶은것",
-    name: "달걀_삶은것",
-    aliases: ["삶은계란", "삶은달걀", "계란", "달걀"],
+    name: "삶은 달걀",
+    aliases: ["삶은계란", "삶은달걀", "계란", "달걀", "달걀_삶은것"],
   },
 
   // ── 음료 ──────────────────────────────────────────────────────────
   {
     // The brewed drink at 4 kcal/100 g. MFDS states no cup size, so a
-    // "한 잔" cannot be priced and resolves to unknown.
+    // "한 잔" cannot be priced and resolves to unmeasurable.
     foodCode: "D320-748080000-0001",
     query: "커피_아메리카노",
-    name: "커피_아메리카노",
-    aliases: ["아메리카노", "아아", "커피"],
+    name: "아메리카노",
+    aliases: ["아아", "커피", "커피_아메리카노"],
   },
 ];

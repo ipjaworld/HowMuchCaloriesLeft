@@ -121,7 +121,7 @@ async function main(): Promise<void> {
   console.log(`\n${entries.length}/${FOOD_SEEDS.length}개 항목을 ${OUT_PATH} 에 기록했습니다.`);
   const withServings = entries.filter((entry) => entry.servings !== undefined).length;
   console.log(
-    `  1인분 정보 있음 ${withServings}건 · 없음 ${entries.length - withServings}건 (없으면 수량 질문은 unknown)`,
+    `  1인분 정보 있음 ${withServings}건 · 없음 ${entries.length - withServings}건 (없으면 수량 질문은 unmeasurable)`,
   );
 
   if (unresolved.length > 0) {
