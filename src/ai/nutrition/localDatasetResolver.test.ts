@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { MIN_MATCH_SCORE, findByName, nameVariants, parseFoodEntries } from "./dataset";
 import { parseFoodPhrases } from "./foodPhrases";
-import { caloriesFor, createLocalDatasetResolver, toGrams } from "./localDatasetResolver";
+import { caloriesFor, createLocalDatasetResolver, toGrams, narrowByServingUnit } from "./localDatasetResolver";
 import { assumedQuantity } from "./quantity";
+import type { Quantity, Unit } from "./quantity";
 import type { FoodEntry } from "./types";
 
 /**
@@ -233,9 +234,14 @@ describe("a bare food name resolves to one natural unit", () => {
   });
 
   it("will not invent a count for a food with no portion", async () => {
-    // 미역 is sold by weight; "1개 of 미역" is not a thing.
+    // 미역 is sold by weight; "1개 of 미역" is not a thing. The food is in
+    // the dataset, so this is `unmeasurable`, not `unknown` — naming grams
+    // would answer it.
     const result = await resolver.resolve(only("미역"));
-    expect(result.status).toBe("unknown");
+    expect(result.status).toBe("unmeasurable");
+    if (result.status !== "unmeasurable") return;
+    expect(result.reason).toBe("missing_serving");
+    expect(result.entries.map((entry) => entry.name)).toEqual(["미역"]);
   });
 });
 
@@ -278,9 +284,19 @@ describe("resolver, end to end from a sentence", () => {
     expect(result.status).toBe("unknown");
   });
 
-  it("says unknown for a known food it cannot weigh", async () => {
-    const result = await resolver.resolve(only("미역 먹었어"));
-    expect(result.status).toBe("unknown");
+  it("separates a food it cannot weigh from one it does not know", async () => {
+    // The distinction the reply depends on: one of these the user can fix by
+    // naming an amount, the other they cannot fix at all.
+    const known = await resolver.resolve(only("미역 먹었어"));
+    expect(known.status).toBe("unmeasurable");
+
+    const absent = await resolver.resolve(only("마라탕 먹었어"));
+    expect(absent.status).toBe("unknown");
+  });
+
+  it("resolves the food it could not weigh once an amount is given", async () => {
+    const result = await resolver.resolve(only("미역 100g 먹었어"));
+    expect(result.status).toBe("resolved");
   });
 
   it("never returns a calorie figure it was not given", async () => {
@@ -309,5 +325,50 @@ describe("parseFoodEntries", () => {
       { ...ENTRIES[3], servings: [{ unit: "잔", grams: 0 }] },
     ]);
     expect(parsed.map((entry) => entry.id)).toEqual(["f-rice"]);
+  });
+});
+
+describe("narrowByServingUnit", () => {
+  const rice = { id: "e-rice", name: "쌀밥", caloriesPer100g: 167, source: "t", servings: [{ unit: "공기", grams: 210 }] };
+  const brown = { id: "e-brown", name: "현미밥", caloriesPer100g: 172, source: "t", servings: [{ unit: "공기", grams: 230 }] };
+  const gimbap = { id: "e-gimbap", name: "김밥", caloriesPer100g: 140, source: "t", servings: [{ unit: "줄", grams: 230 }] };
+  const bibimbap = { id: "e-bibim", name: "비빔밥", caloriesPer100g: 142, source: "t", servings: [{ unit: "그릇", grams: 450 }] };
+  const noPortion = { id: "e-none", name: "삼각김밥", caloriesPer100g: 199, source: "t" };
+
+  const all = [rice, brown, gimbap, bibimbap];
+  const quantity = (unit: Unit | null, assumed = false): Quantity => ({
+    value: 1,
+    unit,
+    text: `한 ${String(unit)}`,
+    assumed,
+  });
+
+  it("keeps only the foods that publish the counter the user used", () => {
+    const narrowed = narrowByServingUnit(all, quantity("공기"));
+    expect(narrowed.map((e) => e.name)).toEqual(["쌀밥", "현미밥"]);
+  });
+
+  it("narrows nothing when no counter was given", () => {
+    expect(narrowByServingUnit(all, quantity(null))).toHaveLength(4);
+  });
+
+  it("narrows nothing when the amount was assumed", () => {
+    expect(narrowByServingUnit(all, quantity("공기", true))).toHaveLength(4);
+  });
+
+  it("narrows nothing for a weight, which applies to every food", () => {
+    expect(narrowByServingUnit(all, quantity("g"))).toHaveLength(4);
+    expect(narrowByServingUnit(all, quantity("ml"))).toHaveLength(4);
+  });
+
+  it("keeps every candidate when the counter matches none of them", () => {
+    // Better to fall back to the natural portion downstream than to answer
+    // that we know nothing.
+    expect(narrowByServingUnit(all, quantity("조각"))).toHaveLength(4);
+  });
+
+  it("drops a food with no portion table when others do publish the counter", () => {
+    const narrowed = narrowByServingUnit([rice, noPortion], quantity("공기"));
+    expect(narrowed.map((e) => e.name)).toEqual(["쌀밥"]);
   });
 });

@@ -24,6 +24,16 @@ const KILOGRAM_UNITS = new Set(["kg", "킬로"]);
 const MILLILITRE_UNITS = new Set(["ml", "mL"]);
 const LITRE_UNITS = new Set(["리터"]);
 
+/** A weight or volume, which every food can be measured in. */
+function isMetricUnit(unit: string): boolean {
+  return (
+    GRAM_UNITS.has(unit) ||
+    KILOGRAM_UNITS.has(unit) ||
+    MILLILITRE_UNITS.has(unit) ||
+    LITRE_UNITS.has(unit)
+  );
+}
+
 type Weighed = {
   grams: number;
   estimated: boolean;
@@ -113,6 +123,40 @@ export function caloriesFor(
   };
 }
 
+/**
+ * Narrows name matches by the counter the user actually used.
+ *
+ * "밥" is inside 쌀밥, 현미밥, 김밥 and 비빔밥, so the name alone scores all
+ * four identically and the app asks which of the four was meant — including
+ * two nobody counts in 공기. The counter settles it: 쌀밥 and 현미밥 publish
+ * a 공기 portion, 김밥 publishes 줄 and 비빔밥 그릇, so "한 공기" can only
+ * mean the first two. What remains is the real ambiguity, worth asking about.
+ *
+ * This is a constraint read out of the data, not a guess about language: it
+ * only ever consults `servings`, which came from MFDS. Three rules keep it
+ * from throwing away real answers:
+ *
+ *   - an assumed amount narrows nothing, since the user named no counter;
+ *   - grams and millilitres narrow nothing, because they apply to every food;
+ *   - if the counter matches no candidate at all, every candidate is kept —
+ *     an unfamiliar counter is handled downstream by falling back to the
+ *     natural portion, and that is better than answering "I know nothing".
+ */
+export function narrowByServingUnit(
+  entries: FoodEntry[],
+  quantity: Quantity,
+): FoodEntry[] {
+  const { unit } = quantity;
+  if (unit === null || quantity.assumed) return entries;
+  if (isMetricUnit(unit)) return entries;
+
+  const publishing = entries.filter((entry) =>
+    entry.servings?.some((serving) => serving.unit === unit),
+  );
+
+  return publishing.length > 0 ? publishing : entries;
+}
+
 export function createLocalDatasetResolver(
   entries: FoodEntry[],
 ): NutritionResolver {
@@ -120,21 +164,31 @@ export function createLocalDatasetResolver(
     async resolve(phrase: ParsedFoodPhrase): Promise<PhraseResolution> {
       const found = findByName(entries, phrase.name);
 
+      // Not in the dataset. Nothing the user can say will price it.
       if (found.kind === "none") return { status: "unknown", phrase };
 
-      if (found.kind === "one") {
-        const match = caloriesFor(phrase.quantity, found.entry);
-        // A known food we cannot weigh is still unknown for our purposes.
-        if (match === null) return { status: "unknown", phrase };
-        return { status: "resolved", phrase, match: { ...match, score: found.score } };
-      }
+      const matched =
+        found.kind === "one"
+          ? [found.entry]
+          : narrowByServingUnit(found.entries, phrase.quantity);
 
-      const candidates = found.entries
+      const candidates = matched
         .map((entry) => caloriesFor(phrase.quantity, entry))
         .filter((match): match is NutritionMatch => match !== null)
         .map((match) => ({ ...match, score: found.score }));
 
-      if (candidates.length === 0) return { status: "unknown", phrase };
+      // Known foods, but the data states no weight for any of them. Distinct
+      // from `unknown`: naming an amount in grams or millilitres resolves it,
+      // and the reply can say so.
+      if (candidates.length === 0) {
+        return {
+          status: "unmeasurable",
+          phrase,
+          entries: matched,
+          reason: "missing_serving",
+        };
+      }
+
       if (candidates.length === 1 && candidates[0] !== undefined) {
         return { status: "resolved", phrase, match: candidates[0] };
       }

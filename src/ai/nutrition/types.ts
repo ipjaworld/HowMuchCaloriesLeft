@@ -54,12 +54,49 @@ export type NutritionMatch = {
   score: number;
 };
 
+/**
+ * Why a food we recognise still cannot be counted.
+ *
+ * Only one cause exists today, and it is deliberately named rather than
+ * folded into a bare `unmeasurable`: an unfamiliar counter does *not* land
+ * here, because `toGrams` falls back to the entry's natural portion and
+ * flags the result `estimated`. The single way to end up with no number at
+ * all is an entry that states no portion at any counter.
+ */
+export type UnmeasurableReason = "missing_serving";
+
+/**
+ * Four outcomes, because "we don't know" splits into two answers that call
+ * for completely different replies:
+ *
+ *   unknown       the food is not in the dataset at all. Nothing the user
+ *                 can say will price it — 마라탕.
+ *   unmeasurable  the food is known and its energy is known, but the data
+ *                 states no weight for the portion asked about. "커피 한잔"
+ *                 lands here, and "커피 200ml" resolves, so the user can fix
+ *                 it in one word — but only if the app tells them so.
+ *
+ * Collapsing these into one status makes the app claim it does not know a
+ * food it does know, and hides the fix from the person who could apply it.
+ */
 export type PhraseResolution =
   | { status: "resolved"; phrase: ParsedFoodPhrase; match: NutritionMatch }
   | {
       status: "ambiguous";
       phrase: ParsedFoodPhrase;
       candidates: NutritionMatch[];
+    }
+  | {
+      status: "unmeasurable";
+      phrase: ParsedFoodPhrase;
+      /**
+       * The matching foods. Usually one; several when the name is ambiguous
+       * *and* none of the matches can be weighed — adding more 삼각김밥
+       * flavours, none of which state a per-piece weight, produces exactly
+       * that. Never empty.
+       */
+      entries: FoodEntry[];
+      reason: UnmeasurableReason;
     }
   | { status: "unknown"; phrase: ParsedFoodPhrase };
 

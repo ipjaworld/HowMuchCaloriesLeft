@@ -224,7 +224,7 @@ type PhraseResolution =
 - **동점이면 `ambiguous`로 되묻습니다.** `밥`은 흰쌀밥·현미밥 양쪽에 걸리므로 조용히 하나 고르지 않습니다
 - 스케일링: `caloriesPer100g × grams / 100`, 정수 반올림. `공기`→g는 항목의 `servings` 표에서
 - 모르는 단위 → 기본 1인분 + `estimated: true`. `ml`은 g로 읽되 역시 `estimated`
-- `servings`가 없는 항목은 이름이 맞아도 **`unknown`** — 추정하지 않음
+- `servings`가 없는 항목은 이름이 맞아도 무게를 못 구함 → **`unmeasurable`** (추정하지 않되 `unknown`과 구분)
 
 ### 데이터셋 계약
 
@@ -361,7 +361,8 @@ Phase 4.5와 5B는 끝났다. 남은 것은 **연결**이다.
 - [ ] `add_candidate` → 실제 `AddMealRecord` 연결. `addMealRecord`/`updateMealRecord`/`deleteMealRecord`는 Phase 3부터 구현·테스트되어 있고 **호출부만 없다**
 - [ ] `/api/chat`에 `koreanFoodResolver` 연결 — 지금은 judgment까지만 하고 영양 조회를 하지 않는다
 - [ ] **delete는 NutritionResolver 없이도 완성 가능** — 순수 도메인 연산. 가장 먼저 붙여도 된다
-- [ ] `ambiguous` / `unknown` 응답 UX 연결 (clarify 칩 UI는 이미 있음)
+- [ ] `ambiguous` / `unmeasurable` / `unknown` 응답 UX 연결 (clarify 칩 UI는 이미 있음). **셋은 할 말이 다르다** — `unmeasurable`은 "몇 g인지 알려주시면 계산할게요"이지 "모르는 음식"이 아니다
+- [ ] **음료 seed를 추가한다면 100mL 기준 행을 실데이터로 검증** — importer가 지원은 하지만 현재 14개는 전부 100g이라 그 경로는 미검증
 - [ ] **add 경로의 되묻기를 clarification noul 대신 resolver 결과로 판단** (→ §5의 경고). "어떤 음식을 얼마나"는 코드가 확정적으로 아는 것이지 확률로 추측할 것이 아니다
 - [ ] 화면을 mock 데이터에서 실제 repository로 전환
 - [ ] 데이터셋 항목 확대 — **반드시 행을 눈으로 보고 `FOOD_CD`를 `seeds.ts`에 추가** (→ §7의 함정)
