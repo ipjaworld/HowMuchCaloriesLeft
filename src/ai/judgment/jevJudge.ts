@@ -39,16 +39,35 @@ const intentAnswerSchema = choiceAnswerSchema.extend({
   choice: z.enum(INTENTS),
 });
 
+/**
+ * What one Jev call cost, for the golden-set report. Kept out of `Judgment`
+ * on purpose: the application decides nothing from these numbers, and the
+ * type above this boundary should not grow a field only an eval reads.
+ */
+export type JevCallTelemetry = {
+  /** The model that actually answered, e.g. `jev-1.13.0` for `jev-latest`. */
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  /** Wall clock around the single `systemOne` call. */
+  latencyMs: number;
+  /** How many reference candidates were offered, which drives input size. */
+  candidateCount: number;
+};
+
 export type JevJudgeOptions = {
   client?: TypeSafeClient;
   apiKey?: string;
   model?: string;
+  /** Called once per judgement. Only the eval passes this. */
+  onCall?: (telemetry: JevCallTelemetry) => void;
 };
 
 export function createJevJudge({
   client,
   apiKey,
   model,
+  onCall,
 }: JevJudgeOptions = {}): Judge {
   // The SDK refuses to run in a browser unless explicitly allowed, which is
   // the behaviour we want: this only ever constructs on the server.
@@ -76,7 +95,16 @@ export function createJevJudge({
         questions["reference"] = referenceQuestion(candidates);
       }
 
+      const startedAt = Date.now();
       const result = await typeSafe.systemOne({ state, questions });
+      onCall?.({
+        model: result.model,
+        inputTokens: result.usage.input_tokens,
+        outputTokens: result.usage.output_tokens,
+        latencyMs: Date.now() - startedAt,
+        candidateCount: candidates.length,
+      });
+
       const answers = result.answers as Record<string, unknown>;
 
       const intent = intentAnswerSchema.parse(answers["intent"]);

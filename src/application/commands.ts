@@ -4,6 +4,7 @@ import {
   classifyIntentConfidence,
   isProbable,
 } from "@/ai/judgment/confidence";
+import { resolveReferenceByName } from "@/ai/judgment/referenceHeuristic";
 import type { Intent, Judgment, JudgmentInput, RecentItem } from "@/ai/judgment/types";
 
 /**
@@ -61,16 +62,32 @@ function toCandidates(recentItems: RecentItem[]): ClarifyCandidate[] {
 }
 
 /**
- * A reference is only usable when the model both picked one and was
- * reasonably sure. `referenceConfidence` is null for judges that do not
- * report one, which is treated as usable — the mock resolves by name in code.
+ * Which entry the sentence is about — strategy A, decided by the Phase 4.5
+ * measurement: Jev picks, because it reads Korean synonyms a rule cannot
+ * ("아까 커피 먹었다고 한 거 취소" -> the 아메리카노 entry, which the code
+ * heuristic misses entirely).
+ *
+ * Jev is trusted only as far as it says it should be. Its confidence turned
+ * out to be unusually well calibrated here — 19 correct answers all >= 0.74,
+ * the one wrong answer at 0.29 — so below the floor its pick is discarded
+ * and the deterministic rule answers instead. That rule's own strength is
+ * the complementary one: deictic phrases that name no food at all ("방금 넣은
+ * 거 취소해줘"). Only if both come up empty does the caller ask the user.
+ *
+ * `referenceConfidence` is null for judges that do not report one — the mock
+ * already resolves in code, so its pick is taken as given.
  */
-function usableTarget(judgment: Judgment): string | null {
-  if (judgment.referenceTargetId === null) return null;
+function usableTarget(judgment: Judgment, input: JudgmentInput): string | null {
   if (judgment.referenceConfidence === null) return judgment.referenceTargetId;
-  return judgment.referenceConfidence >= REFERENCE_CONFIDENCE_FLOOR
-    ? judgment.referenceTargetId
-    : null;
+
+  if (
+    judgment.referenceTargetId !== null &&
+    judgment.referenceConfidence >= REFERENCE_CONFIDENCE_FLOOR
+  ) {
+    return judgment.referenceTargetId;
+  }
+
+  return resolveReferenceByName(input.message, input.recentItems);
 }
 
 export function decideCommand(
@@ -122,7 +139,7 @@ export function decideCommand(
 
     case "modify_food":
     case "delete_food": {
-      const targetId = usableTarget(judgment);
+      const targetId = usableTarget(judgment, input);
 
       if (targetId === null || mustAsk) {
         return {

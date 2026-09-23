@@ -1,5 +1,10 @@
-import type { Judge, Judgment, JudgmentInput, RecentItem } from "./types";
+import type { Judge, Judgment, JudgmentInput } from "./types";
 import type { Intent } from "./types";
+import {
+  VERB_RE,
+  foodLikeTokens,
+  resolveReferenceByName,
+} from "./referenceHeuristic";
 
 /**
  * The judge used when there is no `TYPESAFE_API_KEY`.
@@ -10,9 +15,10 @@ import type { Intent } from "./types";
  * to grow into one: when it disagrees with Jev, Jev is the one being
  * measured.
  *
- * The reference-target rule here is also the fallback the Phase 0 report
- * described, should Jev's Korean reference accuracy turn out to be too weak
- * to trust: name match first, then recency.
+ * The reference-target rule it uses now lives in `referenceHeuristic.ts`,
+ * because Phase 4.5 promoted it: it is no longer only the mock's rule, it is
+ * also what `decideCommand` falls back to when Jev reports a reference it is
+ * not confident in.
  */
 
 /** Order matters: the first pattern that matches decides the intent. */
@@ -44,16 +50,6 @@ const VAGUE_TOKENS = new Set([
   "그",
 ]);
 
-/** Dropped before deciding whether anything food-like is left. */
-const TIME_MARKER_RE = /^(아까|방금|오늘|어제|내일|지금)$/;
-const MEAL_TIME_RE = /^(아침|점심|저녁|간식|야식)(에|으로|은|는|엔)$/;
-const VERB_RE = /(먹었|먹음|마셨|마심|드셨|했어|였어|이야|이었)/;
-
-const MOST_RECENT_RE = /방금|마지막|마지막으로/;
-
-/** Trailing particles, so "밥은" can still match the entry named "흰쌀밥". */
-const PARTICLE_RE = /(은|는|이|가|을|를|도|만|의|에|과|와|랑)$/;
-
 function classifyIntent(message: string): { intent: Intent; confident: boolean } {
   if (DELETE_RE.test(message)) return { intent: "delete_food", confident: true };
   if (STATUS_RE.test(message)) return { intent: "ask_status", confident: true };
@@ -68,17 +64,6 @@ function classifyIntent(message: string): { intent: Intent; confident: boolean }
   // question is probably not about the log at all.
   if (message.includes("?")) return { intent: "other", confident: false };
   return { intent: "add_food", confident: false };
-}
-
-/** Tokens that might be a food name, once markers and verbs are removed. */
-function foodLikeTokens(message: string): string[] {
-  return message
-    .split(/\s+/)
-    .map((token) => token.replace(/[?!.,]/g, ""))
-    .filter((token) => token.length > 0)
-    .filter((token) => !TIME_MARKER_RE.test(token))
-    .filter((token) => !MEAL_TIME_RE.test(token))
-    .filter((token) => !VERB_RE.test(token));
 }
 
 function needsClarificationFor(
@@ -100,44 +85,6 @@ function needsClarificationFor(
   const hasVerb = VERB_RE.test(message);
   const hasQuantity = QUANTITY_RE.test(message);
   return tokens.length === 1 && !hasVerb && !hasQuantity;
-}
-
-/**
- * Name match first, then recency. When several entries share the matched
- * text — "밥" is inside both 삼각김밥 and 흰쌀밥 — the most recent one wins,
- * which is what "아까 밥" almost always means.
- */
-export function resolveReferenceByName(
-  message: string,
-  recentItems: RecentItem[],
-): string | null {
-  const byRecency = recentItems
-    .slice()
-    .sort((a, b) => b.consumedAt.localeCompare(a.consumedAt));
-
-  const tokens = foodLikeTokens(message);
-
-  // Single-syllable food words are ordinary in Korean — 밥, 국, 면 — so a
-  // one-character token still matches, but only inside the stored name.
-  // Matching the other way round needs two characters to stay meaningful.
-  const forms = tokens.flatMap((token) => {
-    const stripped = token.replace(PARTICLE_RE, "");
-    return stripped === token || stripped.length === 0 ? [token] : [token, stripped];
-  });
-
-  const matched = byRecency.filter((item) =>
-    forms.some(
-      (form) =>
-        item.name.includes(form) ||
-        (form.length >= 2 && form.includes(item.name)),
-    ),
-  );
-  if (matched.length > 0) return matched[0]?.id ?? null;
-
-  // "방금 넣은 거 취소해줘" names nothing, but says which one it means.
-  if (MOST_RECENT_RE.test(message)) return byRecency[0]?.id ?? null;
-
-  return null;
 }
 
 export function createMockJudge(): Judge {

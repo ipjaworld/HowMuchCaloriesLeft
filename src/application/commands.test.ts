@@ -173,16 +173,53 @@ describe("decideCommand", () => {
       ]);
     });
 
-    it("discards a target the model was not sure about", () => {
+    it("discards a target the model was not sure about and resolves it in code", () => {
+      // Jev points at the 갈비탕 entry but reports 0.2, under the floor. The
+      // pick is dropped, and the code heuristic reads "밥" as the 흰쌀밥
+      // entry — so the low-confidence answer is not merely passed through.
+      const command = decideCommand(
+        judgment({
+          intent: "modify_food",
+          referenceTargetId: "i-galbitang",
+          referenceConfidence: 0.2,
+        }),
+        input(),
+      );
+      expect(command).toMatchObject({
+        type: "modify_candidate",
+        targetId: "i-rice",
+      });
+    });
+
+    it("asks when neither the model nor the heuristic can name a target", () => {
       const command = decideCommand(
         judgment({
           intent: "modify_food",
           referenceTargetId: "i-rice",
           referenceConfidence: 0.2,
         }),
-        input(),
+        input("아까 그거 절반"),
       );
       expect(command).toMatchObject({ type: "clarify", reason: "unknown_target" });
+    });
+
+    it("falls back to the newest entry for a deictic reference", () => {
+      // The one reference Jev missed on the golden set: it named nothing and
+      // said so (conf 0.29). "방금 넣은 거" means the last thing added.
+      const command = decideCommand(
+        judgment({
+          intent: "delete_food",
+          intentConfidence: 0.99,
+          actualConsumptionProbability: 0.14,
+          referenceTargetId: null,
+          referenceConfidence: 0.29,
+        }),
+        input("방금 넣은 거 취소해줘"),
+      );
+      expect(command).toMatchObject({
+        type: "delete_candidate",
+        targetId: "i-rice",
+      });
     });
 
     it("trusts a target when the judge reports no reference confidence", () => {
