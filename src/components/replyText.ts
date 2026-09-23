@@ -129,7 +129,9 @@ export function describeCommand(
         text:
           command.kind === "status"
             ? describeStatus(summary)
-            : "추천은 다음 단계에서 연결할게요.",
+            // Honest about the limit without narrating a roadmap: "다음
+            // 단계" is a word about our backlog, not about their day.
+            : "뭘 먹을지는 아직 못 골라드려요. 드신 걸 말씀해주시면 기록할게요.",
       };
 
     case "add_candidate":

@@ -1,8 +1,41 @@
 # HANDOFF
 
-> 마지막 갱신: **2026-09-23** · 상태: **Phase 6A·6B 완료. 자연어 CRUD가 end-to-end로 동작함.**
+> 마지막 갱신: **2026-09-24** · 상태: **MVP v0.1 — 배포 대기.** 다음 세션은 Vercel 배포.
 
 다음 세션에서 이 파일부터 읽으면 컨텍스트 없이 바로 이어갈 수 있습니다.
+
+---
+
+## 0. 지금 상태 요약 (배포 담당자용)
+
+| | |
+| --- | --- |
+| HEAD | `dd833cf` feat: log, correct and delete food from natural language |
+| working tree | clean |
+| 완료 Phase | 0 · 1 · 2 · 3 · 4 · 4.5 · 5A · 5B · 6A · 6B |
+| 상태 | **MVP v0.1.** 자연어 기록·수정·삭제가 실제로 동작 |
+| 다음 할 일 | **Vercel 배포** (§18) |
+
+### 런타임 환경변수 — 하나뿐
+
+```
+TYPESAFE_API_KEY     선택. 없으면 mock 판단으로 앱 전체 정상 동작
+```
+
+### 동기화 전용 — Vercel에 넣지 않아도 됨
+
+```
+MFDS_FOOD_NUTRITION_API_KEY    scripts/syncMfdsDataset.sync.ts 에서만 사용
+MFDS_FOOD_NUTRITION_ENDPOINT   같은 스크립트. 기본값 있음
+```
+
+### 아직 미사용
+
+```
+ANTHROPIC_API_KEY    src/env.ts 스키마에만 존재. 호출하는 코드 없음
+```
+
+**위는 추측이 아니라 `grep`으로 사용처를 전부 추적한 결과다.** 런타임 경로(`src/app/`)에서 MFDS 변수를 읽는 코드는 없다.
 
 ---
 
@@ -286,16 +319,18 @@ live query를 쓰지 않는 이유: 331k행은 번들 불가, 요청 시점 선�
 
 ## 8. 외부 자격증명
 
-| 변수 | 용도 | 상태 |
+사용처를 `grep`으로 전부 추적한 결과다. **런타임에 필요한 것과 오프라인 전용을 섞지 말 것.**
+
+| 변수 | 실제 사용처 | 런타임 필요? |
 | --- | --- | --- |
-| `TYPESAFE_API_KEY` | Jev 판단 | ✅ 확보·검증됨 |
-| `MFDS_FOOD_NUTRITION_API_KEY` | 식약처 영양성분 | ✅ 확보·검증됨 (`pnpm sync:mfds`에서만) |
-| `MFDS_FOOD_NUTRITION_ENDPOINT` | 위 API 주소 | 스키마에 기본값 있음 |
-| `ANTHROPIC_API_KEY` | LLM fallback 파서 | 미설정 — 선택 |
+| `TYPESAFE_API_KEY` | `src/app/api/chat/route.ts` | **예** (없으면 mock으로 동작) |
+| `MFDS_FOOD_NUTRITION_API_KEY` | `scripts/syncMfdsDataset.sync.ts` | 아니오 — 데이터셋 재생성 전용 |
+| `MFDS_FOOD_NUTRITION_ENDPOINT` | 같은 스크립트 | 아니오 (기본값 있음) |
+| `ANTHROPIC_API_KEY` | **없음.** 스키마에만 존재 | 아니오 |
 
 전부 `optionalSecret`이라 없어도 앱은 뜬다. `.env.local`은 `.gitignore`에 있고 추적되지 않는다. **커밋 전 항상 확인할 것.**
 
-`src/env.ts`에 `hasTypeSafeKey` / `hasMfdsKey` / `hasLlmFallbackKey`가 있다.
+> `src/env.ts`의 `hasTypeSafeKey` / `hasMfdsKey` / `hasLlmFallbackKey`는 현재 **아무도 import하지 않는다.** 세 키의 선택적 상태를 문서화하는 용도로 남겨뒀다. 정리해도 되고 그대로 둬도 동작에 영향은 없다.
 
 ---
 
@@ -355,7 +390,7 @@ Jev가 고르고, 확신이 낮으면(`< 0.5`) 코드 휴리스틱이 받는다.
 
 **표본은 60건 한 번**이다. delete·other는 예측 건수가 한 자리다. 같은 픽스처 두 실행에서 confidence가 최대 0.03 흔들렸으므로 **0.01 단위 튜닝은 노이즈를 맞추는 것.**
 
-## 13. Phase 6A·6B 결과 · 다음 TODO
+## 13. Phase 6A·6B 결과
 
 ### 연결된 것
 
@@ -394,13 +429,7 @@ editFood      item이 속한 record를 찾아 기존 update/delete 함수를 고
 
 다음에 손댄다면: `foodPhrases`에 정정 문법(`남겼어`, `N만`, `말고 X`)을 추가하고 **골든셋 픽스처로 회귀를 고정**할 것. 25개 기존 테스트를 깨기 쉬우므로 지금은 건드리지 않았다.
 
-### 다음 TODO
-
-- [ ] 정정 문법 파싱 확대 (위 표) — 픽스처 먼저
-- [ ] 추천 로직 (남은 칼로리 + 단백질 부족 정도. 복잡한 생성형 코칭 금지)
-- [ ] 데이터셋 항목 확대 — **반드시 행을 눈으로 보고 `FOOD_CD` 추가** (→ §7)
-- [ ] 음료 seed를 추가한다면 **100mL 기준 행을 실데이터로 검증** (현재 14개는 전부 100g이라 미검증)
-- [ ] LLM fallback 파서 (선택) — **음식명/수량 추출만. 칼로리 생성 금지**
+> 다음에 할 일은 **§19 우선순위**에 정리되어 있다. 여기서는 반복하지 않는다.
 
 ### 장기 아이디어 (지금 넣지 말 것)
 
@@ -456,25 +485,23 @@ TypeSafe 작업 시에는 `/typesafe:typesafe-ai` skill이 project scope에 설�
 
 ## 16. Git 상태
 
-Phase 4.5 / 5B는 세 커밋: `2c88b13` (Jev 실측·정책), `dff8eb0` (MFDS 데이터셋), `e1218c9` (resolution 의미 분리).
-
-Phase 6A·6B는 아직 커밋하지 않았다. 변경:
+MVP v0.1까지의 커밋 이력:
 
 ```
-신규  src/application/addFood.ts  .test.ts     문장 → AddPart[]        (6A)
-신규  src/application/pendingAdd.ts            여러 턴 대화 상태        (6A)
-신규  src/application/editFood.ts .test.ts     item → record 편집       (6B)
-신규  src/app/api/resolve/route.ts             수량 후속 입력
-변경  src/application/commands.ts  .test.ts    add/modify 명령 · 삭제 동점 금지
-변경  src/app/api/chat/route.ts                resolver 연결 · 명령 확장
-변경  src/components/TodayScreen.tsx           pending state · 실제 저장/수정/삭제
-변경  src/components/replyText.ts  .test.ts    add/modify/delete 응답 문구
-변경  src/ai/judgment/referenceHeuristic.ts    findReferenceMatches 노출
-변경  src/ai/nutrition/quantity.ts .test.ts    parseAmountOnly
-변경  src/ai/nutrition/mfds/seeds.ts           표시 이름 정리
-변경  data/korean-foods.json                   위 이름으로 재생성
-변경  README.md · docs/architecture.md · docs/HANDOFF.md
+dd833cf  feat: log, correct and delete food from natural language   ← Phase 6A + 6B
+e1218c9  fix: refine nutrition resolution semantics and serving-aware matching
+dff8eb0  feat: build the nutrition dataset from the MFDS open API
+2c88b13  feat: measure Jev on Korean and settle the confidence policy
+a87f177  feat: count a bare food name as one natural unit
+ec08b1d  design: rework the screen as a light assistant, not a dashboard
+c54420f  feat: add deterministic nutrition resolution pipeline
+0bb84b7  feat: integrate Jev judgment pipeline
+5643701  feat: add calorie domain and local persistence
+631871f  feat: build calorie tracking ui shell
+8963eac  chore: bootstrap project foundation
 ```
+
+6A와 6B는 한 커밋으로 묶었다. `editFood.ts` 외의 파일은 6B가 6A의 코드를 같은 함수 안에서 고쳤기 때문에, 분리하려면 중간 상태를 손으로 복원하고 따로 검증해야 했고 얻는 것은 이력의 모양뿐이었다. Phase 경계는 `architecture.md` §4.1·§4.2에 문서로 남아 있다.
 
 push는 하지 않았다 (사용자 지시 없음).
 
@@ -497,3 +524,54 @@ push는 하지 않았다 (사용자 지시 없음).
 15. **삭제가 스스로 동점을 깨게 하지 마세요.** 최근 것을 고르는 규칙은 수정용입니다. 삭제는 되묻습니다.
 16. **수정용 평행 구조를 만들지 마세요.** add 파이프라인과 `PendingAdd`를 그대로 씁니다.
 17. **수정할 때 item의 `id`나 record의 `sourceText`를 바꾸지 마세요.**
+
+---
+
+## 18. Vercel 배포 전 체크리스트
+
+실제 배포는 하지 않았다. 아래는 코드를 직접 확인한 결과이며, 배포 담당자가 다시 검증할 항목이다.
+
+### 확인된 것 (이 세션에서 실제로 검사함)
+
+| 항목 | 결과 |
+| --- | --- |
+| Next.js 16 App Router 구조 | ✅ `/` static, `/api/chat`·`/api/resolve` dynamic |
+| `engines.node` | ✅ `>=20` |
+| `packageManager` | ✅ `pnpm@12.5.1`, `pnpm-lock.yaml` 존재 (160KB) |
+| production build | ✅ `pnpm build` 통과, `pnpm start`로 실사용 QA 완료 |
+| `@typesafe-ai/sdk` 서버 번들 | ✅ `/api/chat`에서만 import. 브라우저에서 생성 거부하는 SDK라 클라이언트로 샐 경로가 없음 |
+| `data/korean-foods.json` | ✅ `koreanFoods.ts`가 정적 import → 번들에 포함. 런타임 파일 읽기 없음 |
+| `localStorage` 경계 | ✅ `src/infrastructure/storage.ts` 한 곳에서만. `typeof window === "undefined"`면 no-op storage 반환 → SSR/prerender 안전 |
+| `process.loadEnvFile` (Node 전용) | ✅ `scripts/`에만. 런타임 경로에 없음 |
+| `node:fs` import | ✅ `src/ai/judgment/goldenSet.ts` 하나뿐이고 **런타임에서 아무도 import하지 않는다** (테스트·eval 전용) |
+| sync 스크립트 빌드 중 실행 | ✅ `build`는 `next build`뿐. sync/eval은 별도 명령 |
+| `.env.local` | ✅ `.gitignore` 15행, 미추적 |
+| `NEXT_PUBLIC_*` secret | ✅ 하나도 없음 |
+| `src/env.ts` 클라이언트 유출 | ✅ import하는 곳은 `/api/chat` 하나뿐 |
+
+### 배포 담당자가 직접 확인할 것
+
+1. **Vercel 프로젝트 설정** — Framework: Next.js, Build: `pnpm build`, Install: `pnpm install`. Node 20+ 선택.
+2. **`TYPESAFE_API_KEY`를 Vercel 환경변수에 등록** (Production/Preview). 넣지 않아도 배포는 성공하고 앱은 mock 판단으로 동작하므로, **키 없이 한 번 배포해 보고 나중에 추가해도 된다.**
+3. **MFDS 키는 넣지 말 것** — 런타임에서 쓰지 않는다. 넣어도 해는 없지만 불필요한 secret이다.
+4. `pnpm-lock.yaml`이 커밋되어 있으므로 `--frozen-lockfile` 기본 동작으로 설치된다. corepack 버전 이슈가 나면 Vercel의 `packageManager` 필드 존중 여부를 확인할 것.
+5. 배포 후 스모크: 목표 설정 → `갈비탕 하나 먹었어` → 새로고침 후 기록 유지.
+
+### 알려진 런타임 특성
+
+- **저장소가 브라우저다.** 기기/브라우저를 바꾸면 기록이 따라가지 않는다. 의도된 MVP 범위다.
+- 서버는 상태가 없으므로 인스턴스가 여러 개여도 상관없다.
+- 첫 렌더는 `loading` 상태이고 그동안 입력창이 비활성이다 — 하루치를 읽기 전에 삭제/질문을 받으면 빈 목록 기준으로 틀린 답이 나가기 때문이다.
+
+---
+
+## 19. 다음 단계 우선순위 (구현하지 말 것, 순서만)
+
+1. **Vercel 배포** — 위 체크리스트
+2. **실제로 며칠 써 보기** — 이게 3번의 입력이 된다
+3. **usage-driven 음식 seed 확장** — `unknown`이 반복된 음식부터. 반드시 행을 눈으로 보고 `FOOD_CD` 추가 (→ §7의 함정)
+4. **UI polish** — 실사용에서 걸린 것만
+5. **추천** — 남은 칼로리 + 부족한 것 정도. 생성형 코칭 금지
+6. **사진 입력** — 가장 나중
+
+---
