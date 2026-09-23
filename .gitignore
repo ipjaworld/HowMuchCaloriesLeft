@@ -22,6 +22,7 @@ build/
 .vitest/
 
 # misc
+.vercel/
 .DS_Store
 *.log
 npm-debug.log*
