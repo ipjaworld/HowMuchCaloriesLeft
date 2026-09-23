@@ -38,6 +38,21 @@ const envSchema = z.object({
    * empty. It never produces calorie numbers. (Phase 5)
    */
   ANTHROPIC_API_KEY: optionalSecret,
+
+  /**
+   * Ministry of Food and Drug Safety (식약처) open API — the food
+   * nutrition database behind `NutritionResolver`. Used by the offline sync
+   * script, not by the running app: the app reads the dataset file the sync
+   * produces, so a missing key here only means the dataset cannot be
+   * refreshed. (Phase 5B)
+   */
+  MFDS_FOOD_NUTRITION_API_KEY: optionalSecret,
+
+  /** Endpoint for the above. Defaulted so only the key has to be supplied. */
+  MFDS_FOOD_NUTRITION_ENDPOINT: z
+    .string()
+    .min(1)
+    .default("https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo03"),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -55,3 +70,6 @@ export const hasTypeSafeKey = env.TYPESAFE_API_KEY !== undefined;
 
 /** The LLM fallback parser is available; otherwise resolution stops at "unknown". */
 export const hasLlmFallbackKey = env.ANTHROPIC_API_KEY !== undefined;
+
+/** The nutrition dataset can be re-synced from the MFDS open API. */
+export const hasMfdsKey = env.MFDS_FOOD_NUTRITION_API_KEY !== undefined;

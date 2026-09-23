@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "eval:jev": "vitest run --config vitest.eval.mts"
+    "eval:jev": "vitest run --config vitest.eval.mts",
+    "sync:mfds": "vitest run --config vitest.sync.mts"
   },
   "dependencies": {
     "@typesafe-ai/sdk": "^0.6.0",

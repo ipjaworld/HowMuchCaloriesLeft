@@ -44,8 +44,15 @@ pnpm dev          # http://localhost:3000
 
 pnpm typecheck
 pnpm lint
+pnpm test
 pnpm build
+
+pnpm eval:jev                  # 실제 Jev로 골든셋 60건 측정 (TYPESAFE_API_KEY 필요)
+EVAL_JUDGE=mock pnpm eval:jev  # 규칙 기반 fallback 기준선 (키 불필요)
+pnpm sync:mfds                 # 식약처에서 데이터셋 재생성 (MFDS 키 필요)
 ```
+
+`eval:jev`와 `sync:mfds`는 개발용이다. `pnpm test`는 네트워크를 전혀 타지 않는다.
 
 pnpm이 없다면 corepack으로 켠다.
 
@@ -60,9 +67,13 @@ corepack enable --install-directory ~/.local/bin pnpm
 | 변수 | 필수 | 용도 |
 | --- | --- | --- |
 | `TYPESAFE_API_KEY` | 아니오 | Jev 판단. **없으면 결정론적 mock으로 동작한다.** |
+| `MFDS_FOOD_NUTRITION_API_KEY` | 아니오 | 식약처 영양성분 DB. **`pnpm sync:mfds`에서만 쓴다** — 앱은 커밋된 데이터셋 파일을 읽는다 |
+| `MFDS_FOOD_NUTRITION_ENDPOINT` | 아니오 | 위 API 주소. 기본값이 있어 보통 건드릴 일 없다 |
 | `ANTHROPIC_API_KEY` | 아니오 | 음식명·수량 파싱 **fallback 전용.** 칼로리 값은 생성하지 않는다. |
 
-둘 다 서버에서만 쓰인다. `src/env.ts`는 클라이언트에서 import되면 예외를 던진다.
+전부 서버에서만 쓰인다. `src/env.ts`는 클라이언트에서 import되면 예외를 던진다.
+
+식약처 키는 [data.go.kr 15127578](https://www.data.go.kr/data/15127578/openapi.do)에서 활용신청하면 개발계정은 자동승인된다. **없어도 앱은 돈다** — `data/korean-foods.json`이 커밋되어 있고, 키는 그 파일을 새로 만들 때만 필요하다.
 
 ## Jev가 하는 일 / 하지 않는 일
 
@@ -97,19 +108,34 @@ Jev는 ChatGPT 같은 생성형 챗봇의 대체재가 아니다. **문장을 �
 | 2 | UI shell (mock data) | |
 | 3 | 도메인 — MealRecord CRUD, 칼로리 계산, 저장소, 테스트 | |
 | 4 | Jev 연동 — intent 판단, 확신도 정책, mock fallback | 완료 |
-| 4.5 | **Jev 한국어 실측** | **대기 — API 키 필요** |
+| 4.5 | **Jev 한국어 실측** — 정확도 측정, 임계값 확정, reference 전략 결정 | **완료** |
 | 5A | 수량 파서, NutritionResolver, 데이터셋 계약 | 완료 |
-| 5B | 식약처 데이터 투입 + LLM fallback | 대기 — 데이터 필요 |
-| 6 | 자연어 end-to-end | |
+| 5B | **식약처 OpenAPI 연결** — client · importer · 번들 데이터셋 | **완료** |
+| 6 | 자연어 end-to-end — command를 실제 기록에 연결 | 미착수 |
 
-### 지금 막혀 있는 것
+### 지금 어디까지 되나
 
-> 이어서 작업한다면 [`docs/HANDOFF.md`](docs/HANDOFF.md) 부터 읽으세요.
+**판단은 실측했다.** `jev-1.13.0`으로 골든셋 60건을 돌렸다 — intent **93~95%**, 섭취 판별 **96.7%**, reference **95%**. 확신도 임계값은 그 결과로 확정했고, reference는 **전략 A**(Jev가 고르고, 확신이 낮으면 코드 휴리스틱이 받는다)를 골랐다. 근거와 틀린 케이스 전부는 [`docs/architecture.md`](docs/architecture.md#31-jev-한국어-실측-phase-45)에 있다.
 
+한 번의 판단은 **p50 261ms · 60건에 $0.0027**이다.
 
-**Jev integration implemented, real Korean accuracy not yet validated.** `TYPESAFE_API_KEY`가 없어 Jev를 한 번도 호출하지 못했습니다. 확신도 임계값과 reference 전략은 `pnpm eval:jev` 실측 전까지 확정하지 않습니다. 앱은 그동안 결정론적 mock 판단으로 동작합니다.
+**칼로리 데이터가 들어왔다.** 식약처 식품영양성분DB(331,212행)에서 골라 `data/korean-foods.json`으로 번들했다. 앱은 런타임에 API를 호출하지 않는다.
 
-**칼로리 데이터가 없습니다.** 식약처 데이터는 익명 다운로드가 불가능하고 계정이나 인증키가 필요합니다. 수량 파서·매칭·스케일링은 전부 완성돼 있고, 데이터셋 파일만 넣으면 동작합니다. 자세한 경로는 [`docs/architecture.md`](docs/architecture.md#데이터-확보-상태-미해결) 참고.
+```
+갈비탕 한 그릇   → 362 kcal   (670g × 54 kcal/100g)
+공기밥 한 공기   → 351 kcal   (210g × 167 kcal/100g)
+라면 한 그릇     → 451 kcal   (550g × 82 kcal/100g)
+삶은계란 두 개   → unknown    ← MFDS에 개당 무게가 없다
+아메리카노 한 잔 → unknown    ← 잔 용량이 없다
+```
+
+**모르는 건 모른다고 한다.** 이게 버그가 아니라 설계다. 데이터가 1인분 무게를 주지 않으면 그럴듯한 숫자를 만들지 않고 되묻는다.
+
+### 남은 한계
+
+- **음식 14개뿐이다.** `seeds.ts`에 손으로 확인한 `FOOD_CD`만 담았다. 이름 검색은 부분 일치라 `커피`가 커피번(389 kcal/100g)을, `아메리카노`가 인스턴트 분말(200 kcal/100g)을 물어온다 — 그래서 자동으로 늘리지 않는다
+- **Phase 6이 남았다.** 판단과 조회는 되지만 `add_candidate` → 실제 기록 저장이 아직 연결되지 않았다. 화면은 여전히 mock 데이터로 돈다
+- LLM fallback 파서는 설계만 있고 구현하지 않았다
 
 ### 한국어 골든셋
 
@@ -120,8 +146,8 @@ Jev는 영어가 주 훈련 언어이고 한국어를 포함한 CJK는 정확도
 ## 이후 확장 아이디어
 
 - 서버 DB + 인증 (repository 인터페이스만 교체)
-- 식약처 OpenAPI를 `NutritionResolver`의 두 번째 구현체로 추가
-- 단백질 등 macro 표시
+- 데이터셋 항목 확대 (`seeds.ts`에 확인한 `FOOD_CD` 추가)
+- 단백질 등 macro 표시 — 식약처 응답에 이미 들어 있다
 - 자주 먹는 음식 빠른 재입력
 
 의학적 진단이나 치료를 목적으로 하는 서비스가 아니다.

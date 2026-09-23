@@ -74,7 +74,7 @@ repository가 서버로 이동하고, `/api/chat`이 command를 직접 적용하
 LLM은 **fallback이다.** 기본 경로에서는 호출되지 않는다.
 
 ```
-1. 로컬 dataset 매칭 + 결정론적 수량 파싱      ← Phase 5A 구현 완료
+1. 로컬 dataset 매칭 + 결정론적 수량 파싱      ← Phase 5A/5B 완료, 실데이터
         ↓ 후보 없음 / 후보 여럿
 2. Jev candidate selection (동적 criteria + none 탈출 옵션)
         ↓ none 또는 낮은 confidence
@@ -87,17 +87,75 @@ LLM은 **fallback이다.** 기본 경로에서는 호출되지 않는다.
 
 **불변 규칙: 칼로리는 조회하는 것이지 생성하는 것이 아니다.** 데이터셋이 모르는 음식의 답은 `unknown`이고, 그럴듯한 숫자를 만들어내지 않는다. `PhraseResolution`에 `resolved | ambiguous | unknown` 세 상태만 있는 이유다.
 
-### 데이터 확보 상태 (미해결)
+### 식약처 데이터 연결 (Phase 5B) — 완료
 
-식약처 데이터는 **익명으로 내려받을 수 없다.** 세 경로 모두 사용자 계정이나 키가 필요하다.
+**식품의약품안전처_식품영양성분DB** (data.go.kr `15127578`) · 이용허락범위 제한 없음 · 개발계정 일 10,000건.
 
-| 경로 | 필요한 것 | 조건 |
+```
+GET https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo03/getFoodNtrCpntDbInq03
+    ?serviceKey=...&pageNo=1&numOfRows=100&type=json&FOOD_NM_KR=갈비탕
+→ { header: { resultCode, resultMsg }, body: { totalCount, items: [...] } }
+```
+
+실제 응답에서 확인한 것(문서가 아니라 **응답을 보고** 정리):
+
+| 필드 | 값 | 쓰임 |
 | --- | --- | --- |
-| 공공데이터포털 OpenAPI (`15127578`) | 활용신청 → 인증키 | 무료, 이용허락범위 제한 없음, 개발계정 일 10,000건, 개발단계 자동승인 |
-| 공공데이터포털 파일데이터 (`15047698`) | 포털 로그인 | 통합 자료집 파일 |
-| 식품안전나라 DB 내려받기 | 세션 (JS 기반 선택 흐름, EUC-KR) | 영양성분 선택 후 엑셀 |
+| `FOOD_CD` | `D105-199000000-0001` | 항목 id — 출처 추적의 핵심 |
+| `FOOD_NM_KR` | `갈비탕` | 이름 |
+| `SERVING_SIZE` | `100g` 또는 `100mL` | **모든 수치의 기준** |
+| `AMT_NUM1` ~ `AMT_NUM157` | `"54.00"` | 영양성분. **이름이 없는 번호 컬럼** |
+| `Z10500` | `"670.000g"` | 1인분 총 중량 |
+| `NUTRI_AMOUNT_SERVING` | `"210g"` | 가공식품 표시 1회 제공량 |
+| `DB_GRP_NM` / `DB_CLASS_NM` | `음식`/`품목대표` | 행 선별 |
+| `CRT_MTH_NM` | `분석`/`수집`/`산출` | 산출 방식 |
 
-익명 접근을 확인한 결과: 표준데이터 직접 다운로드 URL은 404, 내려받기 페이지는 JS 플로우. 계정 생성은 사용자만 할 수 있으므로 **데이터 투입은 사용자 작업**이다.
+전체 **331,212행**.
+
+#### 위험 1 — 영양소가 번호 컬럼이다
+
+`AMT_NUM1`이 에너지라는 건 **가정**이다. 그래서 믿지 않고 검산한다: 단백질(`AMT_NUM3`)·지방(`AMT_NUM4`)·탄수화물(`AMT_NUM6`)에 Atwater 계수(4/9/4)를 적용해 `AMT_NUM1`과 대조하고, 어긋나면 그 행을 **버린다**.
+
+700행 표본(음식/가공식품/원재료성)에서 네 값이 모두 있는 602행 중 **584행이 15% 이내** 일치했다. 컬럼 순서가 바뀌면 조용히 틀린 칼로리가 들어가는 대신 import가 시끄럽게 실패한다.
+
+#### 위험 2 — 이름 검색이 위험하다
+
+`FOOD_NM_KR`은 **부분 일치**다. 실제로 확인한 함정:
+
+| 검색 | 돌아오는 것 | 진짜 |
+| --- | --- | --- |
+| `커피` | 커피번 **389 kcal/100g** | — |
+| `아메리카노` (정확 일치) | 인스턴트 **분말** 200 kcal/100g | 내린 커피 **4 kcal/100g** |
+| `바나나` (정확 일치) | 바나나맛 **과자** 454 kcal/100g | 생바나나 ~80 |
+| `갈비탕` | 품목대표만 **6행**, 27~89 kcal/100g | — |
+
+그래서 **이름으로 고르지 않는다.** `seeds.ts`가 손으로 확인한 `FOOD_CD`를 직접 지정하고, 행이 하나로 좁혀지지 않으면 건너뛰고 보고한다.
+
+#### 적재 방식 — API → 정규화 파일 → 기존 resolver
+
+```
+pnpm sync:mfds  (오프라인, 개발자만)
+   MFDS API → selectRow(FOOD_CD) → toFoodEntry → data/korean-foods.json
+                                                        │ 커밋됨
+앱 런타임 (네트워크 호출 없음)                              ▼
+   koreanFoods.ts → parseFoodEntries → createLocalDatasetResolver
+```
+
+**live query를 쓰지 않는 이유**: 331,212행은 번들할 수 없고, 요청 시점에 행을 고르면 위의 함정을 그대로 밟는다. 호출당 ~300ms · 일 10,000건 제한인 반면 로컬 조회는 0ms이고, `localDatasetResolver`와 그 테스트가 이미 이 형태를 소비한다. 테스트 스위트는 네트워크를 전혀 타지 않는다.
+
+#### 1인분 정보는 있을 때만 쓴다
+
+`servings`의 그램 수는 **언제나 행이 명시한 값**이다(`Z10500` 또는 `NUTRI_AMOUNT_SERVING`). 단위 이름(공기·그릇·잔)만 `seeds.ts`가 정하는 언어적 정보이고, **크기는 절대 정하지 않는다.** 두 필드가 기준값(100g/100mL)과 같으면 "1인분 정보 없음"으로 읽는다.
+
+현재 14개 항목 중 **11개에 1인분 정보가 있고 3개는 없다.** 없는 것은 그대로 `unknown`이 된다.
+
+| 항목 | 이유 |
+| --- | --- |
+| 삶은 달걀 | MFDS에 **개당 무게가 없다.** `계란 두 개` → unknown |
+| 아메리카노 | **잔 용량이 없다.** `한 잔` → unknown |
+| 삼각김밥 | 행의 200g이 한 개가 아니다 — 단위를 달지 않았다 |
+
+**억지로 채우지 않는다.** 모르는 건 모른다고 답하고 앱이 되묻는다.
 
 ### 데이터셋 계약 (`dataset.ts`)
 
@@ -228,18 +286,27 @@ src/
       types.ts          intent 어휘 — 질문 criteria와 fixture의 단일 출처
       questions.ts      Jev 질문 정의 (영문 instructions/criteria)
       jevJudge.ts       TypeSafe 연동  ·  mockJudge.ts  규칙 기반 fallback
-      confidence.ts     임계값 단일 출처
+      confidence.ts     임계값 단일 출처 (실측 확정)
+      referenceHeuristic.ts  코드 기반 reference 해석 (저확신 fallback)
       goldenSet.ts      골든셋 스키마·로더
     nutrition/          음식 → 칼로리
       quantity.ts       한국어 수량 파서 (하나/한 공기/반/200ml)
       foodPhrases.ts    문장 → 음식 구문 분해
       dataset.ts        데이터셋 스키마 + 이름 매칭
       localDatasetResolver.ts   NutritionResolver 로컬 구현
+      koreanFoods.ts    번들 데이터셋 로드 + resolver 인스턴스
+      mfds/             식약처 OpenAPI 경계          (Phase 5B)
+        client.ts       실제 응답 형태 · 페이징 · 키 마스킹
+        importer.ts     행 → FoodEntry · 에너지 검산 · 행 선별
+        seeds.ts        어떤 FOOD_CD를 담을지 (숫자 없음)
       types.ts          FoodEntry · NutritionResolver 포트
   infrastructure/       repository 구현                        (Phase 3)
   env.ts                환경변수 스키마 (서버 전용)
+data/
+  korean-foods.json     식약처에서 생성한 번들 데이터셋 (pnpm sync:mfds)
 fixtures/
   korean-inputs.json    한국어 자연어 골든셋 60건
+  mfds-sample.json      실제 식약처 응답 원본 (importer 테스트용)
 docs/
   architecture.md       이 문서
 ```
