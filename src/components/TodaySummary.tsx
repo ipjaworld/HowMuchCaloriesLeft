@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import type { DailySummary } from "@/domain/calories";
 
@@ -32,12 +33,21 @@ type Props = {
 export function TodaySummary({ summary, goalAction, isLoading = false }: Props) {
   return (
     <section aria-labelledby="today-heading" className="px-6 pt-11 pb-7">
-      <h1
-        id="today-heading"
-        className="text-[0.8125rem] font-medium tracking-[0.02em] text-ink-soft"
-      >
-        오늘
-      </h1>
+      <div className="flex items-baseline justify-between">
+        <h1
+          id="today-heading"
+          className="text-[0.8125rem] font-medium tracking-[0.02em] text-ink-soft"
+        >
+          오늘
+        </h1>
+        {/* Quiet on purpose: today's number is the screen, the past is a side door. */}
+        <Link
+          href="/history"
+          className="text-[0.8125rem] text-ink-soft underline decoration-line-strong underline-offset-4 hover:text-ink"
+        >
+          지난 기록
+        </Link>
+      </div>
 
       {isLoading ? (
         <LoadingFigure />

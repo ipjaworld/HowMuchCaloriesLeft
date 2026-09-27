@@ -48,6 +48,10 @@ export function createLocalStorageMealRecordRepository({
         .sort((a, b) => a.consumedAt.localeCompare(b.consumedAt));
     },
 
+    async getAll() {
+      return readAll();
+    },
+
     async add(record) {
       writeAll([...readAll(), record]);
     },

@@ -1,4 +1,5 @@
 import { compareDateKeys } from "@/domain/date";
+import { effectiveGoal } from "@/domain/history";
 import type { DailyGoal } from "@/domain/meal";
 import type { DailyGoalRepository } from "@/domain/repository";
 import { dailyGoalSchema, parseValidEntries } from "./schemas";
@@ -34,15 +35,15 @@ export function createLocalStorageDailyGoalRepository({
 
   return {
     async get(date) {
-      const applicable = readAll()
-        .filter((goal) => compareDateKeys(goal.date, date) <= 0)
-        .sort((a, b) => compareDateKeys(a.date, b.date));
-
-      return applicable.at(-1) ?? null;
+      return effectiveGoal(readAll(), date);
     },
 
     async getExact(date) {
       return readAll().find((goal) => goal.date === date) ?? null;
+    },
+
+    async getAll() {
+      return readAll();
     },
 
     async set(goal) {

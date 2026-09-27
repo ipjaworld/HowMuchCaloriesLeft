@@ -40,6 +40,7 @@ function fakeRepository(initial: MealRecord[]) {
   const repository: MealRecordRepository = {
     add: async () => undefined,
     getByDate: async () => records,
+    getAll: async () => records,
     update,
     remove,
   };

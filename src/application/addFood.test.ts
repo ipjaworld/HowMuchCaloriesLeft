@@ -42,6 +42,7 @@ function fakeRepository() {
   const repository: MealRecordRepository = {
     add,
     getByDate: async () => records,
+    getAll: async () => records,
     update: async () => undefined,
     remove: async () => undefined,
   };

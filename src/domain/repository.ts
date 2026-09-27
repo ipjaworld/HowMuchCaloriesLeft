@@ -12,6 +12,8 @@ import type { DailyGoal, MealRecord, UpdateMealRecordInput } from "./meal";
 export interface MealRecordRepository {
   /** Records whose `consumedAt` falls on this local date key. */
   getByDate(date: string): Promise<MealRecord[]>;
+  /** Every stored record, for looking back over past days. */
+  getAll(): Promise<MealRecord[]>;
   add(record: MealRecord): Promise<void>;
   /** No-op when the id is unknown. */
   update(id: string, input: UpdateMealRecordInput): Promise<void>;
@@ -27,5 +29,7 @@ export interface DailyGoalRepository {
   get(date: string): Promise<DailyGoal | null>;
   /** The goal set for exactly this date, ignoring carry-forward. */
   getExact(date: string): Promise<DailyGoal | null>;
+  /** Every goal ever set, one per date it was changed on. */
+  getAll(): Promise<DailyGoal[]>;
   set(goal: DailyGoal): Promise<void>;
 }
