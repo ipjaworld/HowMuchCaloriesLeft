@@ -33,6 +33,16 @@ export function objectParticle(word: string): "을" | "를" {
   return hasFinalConsonant(word) ? "을" : "를";
 }
 
+/** 으로/로 — 받침이 없거나 ㄹ 받침이면 로. 인분으로, 개로, 줄로. */
+export function directionParticle(word: string): "으로" | "로" {
+  const last = word.trim().at(-1);
+  if (last === undefined) return "로";
+  const code = last.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return "로";
+  const final = (code - 0xac00) % 28;
+  return final === 0 || final === 8 ? "로" : "으로";
+}
+
 /** 은/는 — the topic particle. 수정은, 삭제는. */
 export function topicParticle(word: string): "은" | "는" {
   return hasFinalConsonant(word) ? "은" : "는";
@@ -269,6 +279,23 @@ export function describeQuestion(question: PendingQuestion): Reply {
   }
 
   const name = question.entries[0]?.name ?? question.phraseName;
+
+  // The food has portions, just not in the counter that was said. Saying
+  // which counters it does have turns "g으로 알려주세요" into something a
+  // person can actually answer without a scale.
+  if (question.reason === "unsupported_unit" && question.unit !== undefined) {
+    const known = question.knownUnits ?? [];
+    const alternative =
+      known.length === 0
+        ? "g"
+        : `g이나 ${known.join("·")}`;
+    const last = known.at(-1) ?? "g";
+    return {
+      kind: "statement",
+      text: `${name}${topicParticle(name)} 찾았어요. ${question.unit} 단위 무게는 몰라서, ${alternative}${directionParticle(last)} 알려주세요.`,
+    };
+  }
+
   return {
     kind: "statement",
     text: `${name}${topicParticle(name)} 찾았어요. 얼마나 드셨는지 g이나 ml로 알려주세요.`,

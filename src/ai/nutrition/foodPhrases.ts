@@ -66,8 +66,43 @@ const LEADING_MARKERS = [
  * what keeps 와인 and 과자 from being split on their first syllable.
  * `에` links two foods in one meal ("김치찌개에 공기밥"), but `에서` is a
  * place, so it is excluded.
+ *
+ * The space is not enough for 과 and 와 at the *end* of a word: "사과 반 개"
+ * used to split into "사" and "반 개", and "사" then prefix-matched 사과 as a
+ * whole apple — a silent wrong figure. Grammar settles it, so no word list is
+ * needed: the conjunction is 과 after a final consonant (밥과) and 와 after a
+ * vowel (커피와). 사 ends in a vowel, so the 과 in 사과 cannot be "and".
  */
-const SEPARATOR = /(?:이랑|랑|하고|그리고|및|와|과|에(?!서))[ ]+|[,][ ]*/;
+const SEPARATOR = /(이랑|랑|하고|그리고|및|와|과|에(?!서))[ ]+|[,][ ]*/g;
+
+/** Whether a Hangul syllable carries a final consonant (받침). */
+function hasFinalConsonant(syllable: string): boolean | null {
+  const code = syllable.charCodeAt(0);
+  if (Number.isNaN(code) || code < 0xac00 || code > 0xd7a3) return null;
+  return (code - 0xac00) % 28 !== 0;
+}
+
+/** True when a 과/와 at `index` can grammatically be the conjunction. */
+function isConjunctionHere(text: string, index: number, particle: "과" | "와"): boolean {
+  const final = hasFinalConsonant(text[index - 1] ?? "");
+  if (final === null) return false;
+  return particle === "과" ? final : !final;
+}
+
+function splitPhrases(text: string): string[] {
+  const segments: string[] = [];
+  let start = 0;
+  for (const match of text.matchAll(SEPARATOR)) {
+    const word = match[1];
+    if ((word === "과" || word === "와") && !isConjunctionHere(text, match.index, word)) {
+      continue;
+    }
+    segments.push(text.slice(start, match.index));
+    start = match.index + match[0].length;
+  }
+  segments.push(text.slice(start));
+  return segments;
+}
 
 function stripVerbEnding(text: string): string {
   for (const ending of VERB_ENDINGS) {
@@ -101,8 +136,7 @@ export function parseFoodPhrases(sentence: string): ParsedFoodPhrase[] {
   );
   if (normalized.length === 0) return [];
 
-  return normalized
-    .split(SEPARATOR)
+  return splitPhrases(normalized)
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0)
     .map(toPhrase)

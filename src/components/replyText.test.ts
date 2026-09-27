@@ -10,6 +10,7 @@ import {
   describeCancelled,
   describeAddFailure,
   describeUnreadableAmount,
+  directionParticle,
 } from "./replyText";
 
 function summary(overrides: Partial<DailySummary> = {}): DailySummary {
@@ -287,5 +288,58 @@ describe("correction wording is not borrowed from the add pipeline", () => {
   it("backs out of a correction without saying it was not logged", () => {
     expect(describeCancelled("modify").text).toBe("알겠어요. 그대로 둘게요.");
     expect(describeCancelled("add").text).toBe("알겠어요. 기록하지 않을게요.");
+  });
+});
+
+describe("a counter the food does not publish", () => {
+  it("names the counter it could not weigh and the ones it can", () => {
+    const reply = describeQuestion({
+      type: "provide_quantity",
+      partIndex: 0,
+      phraseName: "만두",
+      entries: [{ id: "e1", name: "고기만두" }],
+      reason: "unsupported_unit",
+      unit: "개",
+      knownUnits: ["인분"],
+    });
+    expect(reply).toEqual({
+      kind: "statement",
+      text: "고기만두는 찾았어요. 개 단위 무게는 몰라서, g이나 인분으로 알려주세요.",
+    });
+  });
+
+  it("falls back to grams alone when no counter is known", () => {
+    const reply = describeQuestion({
+      type: "provide_quantity",
+      partIndex: 0,
+      phraseName: "김밥",
+      entries: [{ id: "e1", name: "김밥" }],
+      reason: "unsupported_unit",
+      unit: "개",
+    });
+    expect(reply.text).toBe("김밥은 찾았어요. 개 단위 무게는 몰라서, g로 알려주세요.");
+  });
+
+  it("never claims the food is unknown", () => {
+    const reply = describeQuestion({
+      type: "provide_quantity",
+      partIndex: 0,
+      phraseName: "만두",
+      entries: [{ id: "e1", name: "고기만두" }],
+      reason: "unsupported_unit",
+      unit: "개",
+      knownUnits: ["인분"],
+    });
+    expect(reply.text).not.toContain("정보가 없");
+  });
+});
+
+describe("으로/로", () => {
+  it("follows the final consonant, with ㄹ taking 로", () => {
+    expect(directionParticle("인분")).toBe("으로");
+    expect(directionParticle("그릇")).toBe("으로");
+    expect(directionParticle("개")).toBe("로");
+    expect(directionParticle("줄")).toBe("로");
+    expect(directionParticle("g")).toBe("로");
   });
 });

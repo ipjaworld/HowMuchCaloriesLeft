@@ -72,16 +72,22 @@ export function toGrams(quantity: Quantity, entry: FoodEntry): Weighed {
     }
   }
 
-  // A count with no counter ("계란", "삼각김밥 하나"), or a counter this food
-  // has no figure for — use its natural portion and report which one.
+  // A counter this food has no figure for. This used to fall back to the
+  // natural portion, which turned "만두 5개" into five 인분 — a portion size
+  // multiplied by a count of something else. Refusing is the honest answer;
+  // the caller asks, and "g" or a counter the food does have settles it.
+  if (unit !== null) return null;
+
+  // A count with no counter ("계란", "삼각김밥 하나") — use the food's
+  // natural portion and report which one.
   const fallback = entry.servings?.[0];
   if (fallback === undefined) return null;
 
   return {
     grams: value * fallback.grams,
-    // An unfamiliar counter was silently swapped for the default one, so that
-    // is an approximation even when the user did give an amount.
-    estimated: quantity.assumed || unit !== null,
+    // "하나" of a food counted in 그릇 is one 그릇; only an assumed amount
+    // makes it approximate.
+    estimated: quantity.assumed,
     unit: fallback.unit,
   };
 }
@@ -139,8 +145,8 @@ export function caloriesFor(
  *   - an assumed amount narrows nothing, since the user named no counter;
  *   - grams and millilitres narrow nothing, because they apply to every food;
  *   - if the counter matches no candidate at all, every candidate is kept —
- *     an unfamiliar counter is handled downstream by falling back to the
- *     natural portion, and that is better than answering "I know nothing".
+ *     each then comes back `unsupported_unit`, which still says "we know
+ *     this food", rather than `unknown`, which would say we do not.
  */
 export function narrowByServingUnit(
   entries: FoodEntry[],
@@ -177,16 +183,17 @@ export function createLocalDatasetResolver(
         .filter((match): match is NutritionMatch => match !== null)
         .map((match) => ({ ...match, score: found.score }));
 
-      // Known foods, but the data states no weight for any of them. Distinct
-      // from `unknown`: naming an amount in grams or millilitres resolves it,
-      // and the reply can say so.
+      // Known foods, but no weight for the amount as said. Distinct from
+      // `unknown`: naming grams — or a counter the food does publish —
+      // resolves it, and the reply can say so.
       if (candidates.length === 0) {
-        return {
-          status: "unmeasurable",
-          phrase,
-          entries: matched,
-          reason: "missing_serving",
-        };
+        const unit = phrase.quantity.unit;
+        const hasPortions = matched.some(
+          (entry) => (entry.servings?.length ?? 0) > 0,
+        );
+        return unit !== null && hasPortions
+          ? { status: "unmeasurable", phrase, entries: matched, reason: "unsupported_unit", unit }
+          : { status: "unmeasurable", phrase, entries: matched, reason: "missing_serving" };
       }
 
       if (candidates.length === 1 && candidates[0] !== undefined) {

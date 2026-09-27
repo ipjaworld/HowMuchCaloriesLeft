@@ -57,13 +57,16 @@ export type NutritionMatch = {
 /**
  * Why a food we recognise still cannot be counted.
  *
- * Only one cause exists today, and it is deliberately named rather than
- * folded into a bare `unmeasurable`: an unfamiliar counter does *not* land
- * here, because `toGrams` falls back to the entry's natural portion and
- * flags the result `estimated`. The single way to end up with no number at
- * all is an entry that states no portion at any counter.
+ *   missing_serving   the entry states no portion at any counter — MFDS
+ *                     gives 닭가슴살 per 100 g and nothing per pack.
+ *   unsupported_unit  the entry has portions, but not in the counter the
+ *                     user said. "만두 5개" against a food published per
+ *                     인분 used to be priced as five 인분; multiplying one
+ *                     portion size by a count of a different unit is exactly
+ *                     the silent wrong number this layer exists to prevent,
+ *                     so it now asks instead.
  */
-export type UnmeasurableReason = "missing_serving";
+export type UnmeasurableReason = "missing_serving" | "unsupported_unit";
 
 /**
  * Four outcomes, because "we don't know" splits into two answers that call
@@ -97,6 +100,8 @@ export type PhraseResolution =
        */
       entries: FoodEntry[];
       reason: UnmeasurableReason;
+      /** The counter the user said, for `unsupported_unit`. */
+      unit?: string;
     }
   | { status: "unknown"; phrase: ParsedFoodPhrase };
 

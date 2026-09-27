@@ -1,3 +1,4 @@
+import type { UnmeasurableReason } from "@/ai/nutrition/types";
 import type { AddPart } from "./addFood";
 import type { NewFoodItem } from "./mealRecords";
 
@@ -67,7 +68,9 @@ export type PendingQuestion =
       partIndex: number;
       phraseName: string;
       entries: { id: string; name: string }[];
-      reason: "missing_serving";
+      reason: UnmeasurableReason;
+      unit?: string;
+      knownUnits?: string[];
     };
 
 /**
@@ -108,6 +111,8 @@ export function nextQuestion(pending: PendingAdd): PendingQuestion | null {
         phraseName: part.phraseName,
         entries: part.entries,
         reason: part.reason,
+        ...(part.unit === undefined ? {} : { unit: part.unit }),
+        ...(part.knownUnits === undefined ? {} : { knownUnits: part.knownUnits }),
       };
     }
   }

@@ -158,12 +158,15 @@ describe("toGrams", () => {
       .toEqual({ grams: 200, estimated: true, unit: "ml" });
   });
 
-  it("falls back to the default portion for a counter it does not know", () => {
+  it("refuses to price a counter the food has no portion for", () => {
+    // It used to swap in the default portion, which turned "만두 5개" into
+    // five 인분. A portion multiplied by a count of something else is a
+    // silent wrong number; refusing makes the caller ask.
     const weighed = toGrams(
       { value: 1, unit: "접시", text: "한 접시", assumed: false },
       rice,
     );
-    expect(weighed).toEqual({ grams: 200, estimated: true, unit: "공기" });
+    expect(weighed).toBeNull();
   });
 
   it("counts a bare name as one of the entry's natural portion", () => {
@@ -370,5 +373,46 @@ describe("narrowByServingUnit", () => {
   it("drops a food with no portion table when others do publish the counter", () => {
     const narrowed = narrowByServingUnit([rice, noPortion], quantity("공기"));
     expect(narrowed.map((e) => e.name)).toEqual(["쌀밥"]);
+  });
+});
+
+describe("an explicit counter the food does not publish", () => {
+  const dumpling: FoodEntry = {
+    id: "f-dumpling",
+    name: "고기만두",
+    caloriesPer100g: 160,
+    servings: [{ unit: "인분", grams: 220 }],
+    source: "test-fixture",
+  };
+  const dumplingResolver = createLocalDatasetResolver([dumpling]);
+
+  it("asks instead of multiplying a portion by a count of something else", async () => {
+    const result = await dumplingResolver.resolve(only("고기만두 5개 먹었어"));
+    expect(result.status).toBe("unmeasurable");
+    if (result.status !== "unmeasurable") return;
+    expect(result.reason).toBe("unsupported_unit");
+    expect(result.unit).toBe("개");
+    expect(result).not.toHaveProperty("match");
+  });
+
+  it("still prices the counter it does publish", async () => {
+    const result = await dumplingResolver.resolve(only("고기만두 1인분 먹었어"));
+    expect(result.status).toBe("resolved");
+    if (result.status !== "resolved") return;
+    expect(result.match.calories).toBe(352);
+    expect(result.match.estimated).toBe(false);
+  });
+
+  it("still counts a bare number in the natural portion", async () => {
+    // "하나" names no counter, so one 인분 is what it means.
+    const result = await dumplingResolver.resolve(only("고기만두 하나 먹었어"));
+    expect(result.status).toBe("resolved");
+  });
+
+  it("keeps missing_serving for a food with no portion at all", async () => {
+    const result = await resolver.resolve(only("미역 두 개"));
+    expect(result.status).toBe("unmeasurable");
+    if (result.status !== "unmeasurable") return;
+    expect(result.reason).toBe("missing_serving");
   });
 });

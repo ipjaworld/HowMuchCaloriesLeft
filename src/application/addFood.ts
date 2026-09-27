@@ -1,5 +1,9 @@
 import { parseFoodPhrases } from "@/ai/nutrition/foodPhrases";
-import type { NutritionMatch, NutritionResolver } from "@/ai/nutrition/types";
+import type {
+  NutritionMatch,
+  NutritionResolver,
+  UnmeasurableReason,
+} from "@/ai/nutrition/types";
 import type { NewFoodItem } from "./mealRecords";
 
 /**
@@ -40,7 +44,14 @@ export type AddPart =
       phraseName: string;
       /** What the dataset matched. Usually one. */
       entries: { id: string; name: string }[];
-      reason: "missing_serving";
+      reason: UnmeasurableReason;
+      /** For `unsupported_unit`: the counter the user said ("개"). */
+      unit?: string;
+      /**
+       * For `unsupported_unit`: the counters the first entry *does* publish
+       * ("인분"), so the question can offer them as well as grams.
+       */
+      knownUnits?: string[];
     }
   | { status: "unknown"; phraseName: string };
 
@@ -99,7 +110,10 @@ export async function resolveAddParts(
             })),
           };
 
-        case "unmeasurable":
+        case "unmeasurable": {
+          const knownUnits = (resolution.entries[0]?.servings ?? []).map(
+            (serving) => serving.unit,
+          );
           return {
             status: "unmeasurable",
             phraseName: phrase.name,
@@ -108,7 +122,10 @@ export async function resolveAddParts(
               name: entry.name,
             })),
             reason: resolution.reason,
+            ...(resolution.unit === undefined ? {} : { unit: resolution.unit }),
+            ...(knownUnits.length === 0 ? {} : { knownUnits }),
           };
+        }
 
         case "unknown":
           return { status: "unknown", phraseName: phrase.name };

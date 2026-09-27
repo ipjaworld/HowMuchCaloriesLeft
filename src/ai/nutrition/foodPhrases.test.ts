@@ -99,6 +99,21 @@ describe("words that only look like conjunctions", () => {
     ]);
   });
 
+  it("does not split 사과 on its last syllable", () => {
+    // 사 ends in a vowel, so this 과 cannot be the conjunction (that would be
+    // 와). It used to split into "사" + "반 개" and price a whole apple.
+    expect(parse("사과 반 개 먹었어")).toEqual([
+      { name: "사과", value: 0.5, unit: "개", assumed: false },
+    ]);
+    expect(parse("사과 하나랑 바나나 먹었어").map((p) => p.name)).toEqual(["사과", "바나나"]);
+  });
+
+  it("still splits 과 after a final consonant and 와 after a vowel", () => {
+    expect(parse("밥과 김치찌개 먹었어").map((p) => p.name)).toEqual(["밥", "김치찌개"]);
+    expect(parse("커피와 식빵 먹었어").map((p) => p.name)).toEqual(["커피", "식빵"]);
+    expect(parse("사과와 배 먹었어").map((p) => p.name)).toEqual(["사과", "배"]);
+  });
+
   it("does not split 과자 on 과", () => {
     expect(parse("과자 한 봉지 먹었어")).toEqual([
       { name: "과자", value: 1, unit: "봉지", assumed: false },
