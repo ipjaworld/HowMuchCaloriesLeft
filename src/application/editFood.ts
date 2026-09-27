@@ -37,7 +37,16 @@ export function locateItem(
 }
 
 export type RemoveResult =
-  | { status: "removed"; item: FoodItem }
+  | {
+      status: "removed";
+      item: FoodItem;
+      /**
+       * The record as it was before the removal, and where the item sat in
+       * it — everything `restoreFoodItem` needs to undo the removal.
+       */
+      record: MealRecord;
+      index: number;
+    }
   /** The id was not on the day — nothing was touched. */
   | { status: "not_found" };
 
@@ -64,7 +73,35 @@ export async function removeFoodItem(
     await updateMealRecord(repository, found.record.id, { items: remaining });
   }
 
-  return { status: "removed", item: found.item };
+  return { status: "removed", item: found.item, record: found.record, index: found.index };
+}
+
+export type Removed = Extract<RemoveResult, { status: "removed" }>;
+
+/**
+ * Undoes `removeFoodItem`: the item goes back into its record at the place
+ * it was, keeping its id, its figures and the record's original sentence.
+ *
+ * If the record went with it (it was the only item), the record comes back
+ * whole. If the record is still there, only the item is re-inserted, so
+ * anything else changed on that record in the meantime is kept.
+ */
+export async function restoreFoodItem(
+  repository: MealRecordRepository,
+  records: MealRecord[],
+  removed: Removed,
+): Promise<void> {
+  const current = records.find((record) => record.id === removed.record.id);
+
+  if (current === undefined) {
+    await repository.add(removed.record);
+    return;
+  }
+  if (current.items.some((item) => item.id === removed.item.id)) return;
+
+  const items = current.items.slice();
+  items.splice(Math.min(removed.index, items.length), 0, removed.item);
+  await updateMealRecord(repository, current.id, { items });
 }
 
 export type ReplaceResult =

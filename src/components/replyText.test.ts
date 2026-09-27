@@ -6,6 +6,8 @@ import {
   describeCommand,
   describeDeleted,
   describeModified,
+  describeRestored,
+  UNDO_DELETE,
   objectParticle,
   describeAdded,
   describeNothingAdded,
@@ -419,5 +421,20 @@ describe("insisting on what is already stored", () => {
     expect(describeAlreadyLogged({ name: "김치찌개", amount: "한 그릇" }).text).toBe(
       "이미 김치찌개 한 그릇으로 기록돼 있어요.",
     );
+  });
+});
+
+describe("a delete can be undone in one tap", () => {
+  const after = summary({ consumedCalories: 75, calorieTarget: 2250, remainingCalories: 2175, status: "under" });
+
+  it("offers 되돌리기 with the confirmation", () => {
+    expect(describeDeleted({ name: "바나나", amount: "2개" }, after)).toMatchObject({
+      kind: "question",
+      options: [{ id: UNDO_DELETE, label: "되돌리기" }],
+    });
+  });
+
+  it("says what came back", () => {
+    expect(describeRestored({ name: "바나나", amount: "2개" }, after).text).toMatch(/^바나나 2개를 되돌렸어요\./);
   });
 });

@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { FoodItem, MealRecord } from "@/domain/meal";
 import type { MealRecordRepository } from "@/domain/repository";
-import { locateItem, removeFoodItem, replaceFoodItem } from "./editFood";
+import { createLocalStorageMealRecordRepository } from "@/infrastructure/localStorageMealRecordRepository";
+import { createMemoryStorage } from "@/infrastructure/storage";
+import { locateItem, removeFoodItem, replaceFoodItem, restoreFoodItem } from "./editFood";
 
 /**
  * Editing what is already logged.
@@ -160,5 +162,61 @@ describe("replaceFoodItem", () => {
     expect(result).toEqual({ status: "not_found" });
     expect(update).toHaveBeenCalledTimes(0);
     expect(records[0]?.items[0]?.calories).toBe(362);
+  });
+});
+
+describe("undoing a delete", () => {
+  async function setup(records: MealRecord[]) {
+    const repository = createLocalStorageMealRecordRepository({ storage: createMemoryStorage() });
+    for (const record of records) await repository.add(record);
+    return repository;
+  }
+
+  const at = "2026-09-20T12:00:00+09:00";
+  const food = (id: string, name: string, calories: number) => ({
+    id,
+    name,
+    calories,
+    caloriesEstimated: false,
+  });
+  const meal: MealRecord = {
+    id: "m1",
+    consumedAt: at,
+    sourceText: "갈비탕 하나랑 밥 한 공기",
+    items: [food("g", "갈비탕", 650), food("r", "쌀밥", 351), food("k", "김치", 20)],
+    createdAt: at,
+    updatedAt: at,
+  };
+
+  it("puts an item back where it was in its record", async () => {
+    const repository = await setup([meal]);
+    const removed = await removeFoodItem(repository, await repository.getAll(), "r");
+    if (removed.status !== "removed") throw new Error("expected removal");
+
+    await restoreFoodItem(repository, await repository.getAll(), removed);
+    const [restored] = await repository.getAll();
+    expect(restored?.items.map((item) => item.id)).toEqual(["g", "r", "k"]);
+    expect(restored?.sourceText).toBe("갈비탕 하나랑 밥 한 공기");
+  });
+
+  it("brings back a record that went with its only item", async () => {
+    const single: MealRecord = { ...meal, id: "m2", items: [food("b", "바나나", 154)] };
+    const repository = await setup([single]);
+    const removed = await removeFoodItem(repository, await repository.getAll(), "b");
+    if (removed.status !== "removed") throw new Error("expected removal");
+    expect(await repository.getAll()).toHaveLength(0);
+
+    await restoreFoodItem(repository, await repository.getAll(), removed);
+    expect(await repository.getAll()).toEqual([single]);
+  });
+
+  it("does not duplicate an item that is already back", async () => {
+    const repository = await setup([meal]);
+    const removed = await removeFoodItem(repository, await repository.getAll(), "k");
+    if (removed.status !== "removed") throw new Error("expected removal");
+
+    await restoreFoodItem(repository, await repository.getAll(), removed);
+    await restoreFoodItem(repository, await repository.getAll(), removed);
+    expect((await repository.getAll())[0]?.items).toHaveLength(3);
   });
 });

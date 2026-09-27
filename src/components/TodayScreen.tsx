@@ -15,7 +15,13 @@ import {
 import type { ChosenTarget } from "@/application/commands";
 import { adoptCalculatedGoal, shouldOfferCalculator } from "@/application/calculatedGoal";
 import { setDailyGoal, type SetDailyGoalResult } from "@/application/dailyGoal";
-import { locateItem, removeFoodItem, replaceFoodItem } from "@/application/editFood";
+import {
+  locateItem,
+  removeFoodItem,
+  replaceFoodItem,
+  restoreFoodItem,
+  type Removed,
+} from "@/application/editFood";
 import { addMealRecord } from "@/application/mealRecords";
 import {
   answerCalories,
@@ -53,10 +59,12 @@ import {
   describeCommand,
   describeDeleted,
   describeModified,
+  describeRestored,
   describeNothingAdded,
   describeQuestion,
   describeTargetGone,
   describeUnreadableAmount,
+  UNDO_DELETE,
   type ClarifyOption,
   type Reply,
 } from "./replyText";
@@ -140,6 +148,8 @@ export function TodayScreen() {
   const [isPending, setIsPending] = useState(false);
   const [clarification, setClarification] =
     useState<PendingClarification | null>(null);
+  /** The last delete, for as long as its 되돌리기 is on screen. */
+  const [lastRemoved, setLastRemoved] = useState<Removed | null>(null);
   /**
    * An "I ate ..." sentence that could not be finished in one turn. While it
    * is set, the next thing the user types is read as an answer to the open
@@ -294,7 +304,29 @@ export function TodayScreen() {
       return;
     }
 
+    setLastRemoved(result);
     setReply(describeDeleted(result.item, await reloadDay()));
+  }
+
+  /**
+   * The × on a row. Whatever was being asked is dropped first: the user has
+   * moved on, and a pending correction may have been about this very row.
+   */
+  async function handleDeleteItem(itemId: string): Promise<void> {
+    setPendingAdd(null);
+    setClarification(null);
+    setIsPending(true);
+    try {
+      await applyDelete(itemId);
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  async function undoDelete(removed: Removed): Promise<void> {
+    setLastRemoved(null);
+    await restoreFoodItem(repositories.meals, records, removed);
+    setReply(describeRestored(removed.item, await reloadDay()));
   }
 
   /** Applies a finished correction to the item it was about. */
@@ -473,6 +505,8 @@ export function TodayScreen() {
   async function handleMessage(message: string, chosen?: ChosenTarget) {
     setIsPending(true);
     setReply(null);
+    // A new sentence replaces the reply that carried 되돌리기.
+    setLastRemoved(null);
 
     try {
       // An open question owns the next message. Sending "200ml" to the judge
@@ -661,6 +695,11 @@ export function TodayScreen() {
 
   /** Answered on the client — a confirmation is not worth a second round trip. */
   function handleChooseOption(option: ClarifyOption) {
+    if (option.id === UNDO_DELETE) {
+      if (lastRemoved !== null) void undoDelete(lastRemoved);
+      return;
+    }
+
     // Picking one of the candidate foods. Their calories were computed for
     // the amount the user already gave, so this is a selection and needs no
     // second round trip.
@@ -756,7 +795,12 @@ export function TodayScreen() {
       />
 
       <div className="flex-1 pb-8">
-        <MealList records={records} isLoading={isLoading} />
+        <MealList
+          records={records}
+          isLoading={isLoading}
+          onDeleteItem={(item) => void handleDeleteItem(item.id)}
+          isBusy={isPending}
+        />
       </div>
 
       <ChatInput

@@ -16,8 +16,7 @@ type Group = { label: string; items: FoodItem[] };
 
 /**
  * Groups by meal type in day order, with untyped records collected at the
- * end. Read-only on purpose: editing happens by talking to the app, so no
- * edit or delete buttons live here.
+ * end.
  */
 function groupItems(records: MealRecord[]): Group[] {
   const byMealType = new Map<string, FoodItem[]>();
@@ -48,6 +47,14 @@ function groupItems(records: MealRecord[]): Group[] {
 type Props = {
   records: MealRecord[];
   isLoading?: boolean;
+  /**
+   * Shows a × on each row that removes it. Today passes this; history does
+   * not, because a past day is for looking at. Corrections still happen by
+   * talking — a delete is the one edit simple enough to be a button.
+   */
+  onDeleteItem?: (item: FoodItem) => void;
+  /** Disables the × while another change is in flight. */
+  isBusy?: boolean;
 };
 
 /**
@@ -55,7 +62,7 @@ type Props = {
  * "kcal" on every line — the figure above already established the unit, and
  * the number alone is what the eye is scanning for.
  */
-export function MealList({ records, isLoading = false }: Props) {
+export function MealList({ records, isLoading = false, onDeleteItem, isBusy = false }: Props) {
   const groups = isLoading ? [] : groupItems(records);
 
   return (
@@ -102,6 +109,21 @@ export function MealList({ records, isLoading = false }: Props) {
                       {numberFormat.format(item.calories)}
                       <span className="sr-only"> kcal</span>
                     </span>
+                    {onDeleteItem !== undefined && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteItem(item)}
+                        disabled={isBusy}
+                        aria-label={`${item.amount === undefined ? item.name : `${item.name} ${item.amount}`} 지우기`}
+                        // 32 px to hit, drawn at 12: easy for a thumb, quiet
+                        // next to the numbers the eye is actually scanning.
+                        className="-my-1.5 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full text-ink-soft transition-colors hover:bg-raised hover:text-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none disabled:opacity-40"
+                      >
+                        <svg aria-hidden="true" viewBox="0 0 12 12" className="h-3 w-3">
+                          <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

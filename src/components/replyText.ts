@@ -405,8 +405,26 @@ export function describeDeleted(
 ): Reply {
   const label = entryLabel(entry);
   return {
-    kind: "statement",
+    kind: "question",
     text: [`${label}${objectParticle(label)} 지웠어요.`, ...totalsAfterChange(summary)].join(" "),
+    // A delete takes one tap on a small ×, so it is undone in one tap too —
+    // cheaper for everyone than asking "지울까요?" on every deliberate one.
+    options: [{ id: UNDO_DELETE, label: "되돌리기" }],
+  };
+}
+
+/** The option id that undoes the last delete. */
+export const UNDO_DELETE = "undo_delete";
+
+/** Said after an undo, with the totals re-read from storage. */
+export function describeRestored(
+  entry: { name: string; amount?: string },
+  summary: DailySummary,
+): Reply {
+  const label = entryLabel(entry);
+  return {
+    kind: "statement",
+    text: [`${label}${objectParticle(label)} 되돌렸어요.`, ...totalsAfterChange(summary)].join(" "),
   };
 }
 
