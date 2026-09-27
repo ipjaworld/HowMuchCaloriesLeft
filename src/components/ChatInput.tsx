@@ -8,21 +8,28 @@ type Props = {
   /** Chosen answer to a clarifying question; resolved on the client. */
   onChooseOption: (option: ClarifyOption) => void;
   reply: Reply | null;
+  /**
+   * What the user last said — typed, or the chip they picked — shown above
+   * the reply it got. Null for an action with no words, like the ×.
+   */
+  lastMessage: string | null;
   isPending: boolean;
 };
 
 /**
  * The half of the app that makes it feel like talking to something.
  *
- * The reply sits in a soft bubble above the field rather than as loose text,
- * and it rises into place instead of blinking — enough to read as an answer,
- * far short of a chat log. There is no transcript on purpose: this app shows
- * today's state, not a conversation history.
+ * One exchange, messenger-style: what the user said on the right in white,
+ * the app's answer on the left in ink — the same pairing the product's own
+ * landing page shows. Only the latest exchange, never a transcript: this app
+ * shows today's state, not a conversation history, and the previous
+ * exchange is replaced the moment a new one starts.
  */
 export function ChatInput({
   onSubmit,
   onChooseOption,
   reply,
+  lastMessage,
   isPending,
 }: Props) {
   const [text, setText] = useState("");
@@ -40,12 +47,21 @@ export function ChatInput({
 
   return (
     <div className="sticky bottom-0 bg-surface/95 px-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
-      <div className="mb-3 min-h-[0.5rem]">
+      <div className="mb-3 min-h-[0.5rem] space-y-2">
+        {lastMessage !== null && (isPending || reply !== null) && (
+          <div className="animate-rise flex justify-end">
+            <p className="max-w-[80%] rounded-[1.125rem] rounded-br-md border border-line-strong bg-surface px-3.5 py-2.5 text-[0.875rem] leading-relaxed break-keep text-ink [overflow-wrap:anywhere]">
+              <span className="sr-only">나: </span>
+              {lastMessage}
+            </p>
+          </div>
+        )}
+
         {isPending && <Thinking />}
 
         {!isPending && reply !== null && (
           <div className="animate-rise" role="status">
-            <p className="inline-block max-w-[88%] rounded-[1.125rem] rounded-bl-md bg-raised px-3.5 py-2.5 text-[0.875rem] leading-relaxed break-keep text-ink [overflow-wrap:anywhere]">
+            <p className="inline-block max-w-[88%] rounded-[1.125rem] rounded-bl-md bg-ink px-3.5 py-2.5 text-[0.875rem] leading-relaxed break-keep text-surface [overflow-wrap:anywhere]">
               {reply.text}
             </p>
 
@@ -100,7 +116,7 @@ export function ChatInput({
 function Thinking() {
   return (
     <p
-      className="inline-flex items-center gap-1.5 rounded-[1.125rem] rounded-bl-md bg-raised px-3.5 py-3"
+      className="inline-flex items-center gap-1.5 rounded-[1.125rem] rounded-bl-md bg-ink px-3.5 py-3"
       role="status"
     >
       <span className="sr-only">생각하는 중</span>
@@ -108,7 +124,7 @@ function Thinking() {
         <span
           key={index}
           aria-hidden="true"
-          className="thinking-dot h-1.5 w-1.5 rounded-full bg-ink-faint"
+          className="thinking-dot h-1.5 w-1.5 rounded-full bg-surface"
           style={{ animationDelay: `${index * 160}ms` }}
         />
       ))}

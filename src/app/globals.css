@@ -25,9 +25,6 @@
 
   --color-ink: #1b1917;
   --color-ink-soft: #6b665e;
-  /* 2.48:1 — non-text only. It is here for the thinking dots and nothing
-     else; a meal label or an amount carries meaning and gets `ink-soft`. */
-  --color-ink-faint: #a9a49b;
 
   --color-accent: #a4550c;
   --color-accent-soft: #e08b2c;

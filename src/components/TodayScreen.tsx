@@ -148,6 +148,8 @@ export function TodayScreen() {
   const [isPending, setIsPending] = useState(false);
   const [clarification, setClarification] =
     useState<PendingClarification | null>(null);
+  /** What the user last said, shown as their side of the exchange. */
+  const [lastMessage, setLastMessage] = useState<string | null>(null);
   /** The last delete, for as long as its 되돌리기 is on screen. */
   const [lastRemoved, setLastRemoved] = useState<Removed | null>(null);
   /**
@@ -313,6 +315,8 @@ export function TodayScreen() {
    * moved on, and a pending correction may have been about this very row.
    */
   async function handleDeleteItem(itemId: string): Promise<void> {
+    // A tap says nothing, so the exchange shows only the app's answer.
+    setLastMessage(null);
     setPendingAdd(null);
     setClarification(null);
     setIsPending(true);
@@ -505,6 +509,8 @@ export function TodayScreen() {
   async function handleMessage(message: string, chosen?: ChosenTarget) {
     setIsPending(true);
     setReply(null);
+    // A re-send after a pick keeps the pick as what was said.
+    if (chosen === undefined) setLastMessage(message);
     // A new sentence replaces the reply that carried 되돌리기.
     setLastRemoved(null);
 
@@ -695,6 +701,9 @@ export function TodayScreen() {
 
   /** Answered on the client — a confirmation is not worth a second round trip. */
   function handleChooseOption(option: ClarifyOption) {
+    // Picking a chip is the user's turn: it reads as what they said.
+    setLastMessage(option.label);
+
     if (option.id === UNDO_DELETE) {
       if (lastRemoved !== null) void undoDelete(lastRemoved);
       return;
@@ -807,6 +816,7 @@ export function TodayScreen() {
         onSubmit={(message) => void handleMessage(message)}
         onChooseOption={handleChooseOption}
         reply={reply}
+        lastMessage={lastMessage}
         // Also blocked while the day is still being read: until then `records`
         // is empty, and a delete or a status question answered against an
         // empty day is a wrong answer rather than a slow one.
