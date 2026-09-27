@@ -104,13 +104,28 @@ function splitPhrases(text: string): string[] {
   return segments;
 }
 
+/**
+ * The eating verb as a whole last word, however it is inflected or typed:
+ * 먹었엉, 먹었당, 먹었다니까, 마셨음ㅋㅋ. A list of endings can never keep up
+ * with how people type, and missing one is not harmless — "바나나 2개
+ * 먹었엉" kept "2개 먹었엉" inside the name, lost the count, and was stored
+ * as one banana. A word that *starts* with the verb stem is the verb.
+ */
+const EATING_VERB_WORD =
+  /(?:^|\s)(?:먹|마셨|마시|마심|마셔|드셨|드심|드시)[가-힣]*[\s.,!?~ㅋㅎㅠㅜ^]*$/;
+
+/** Removes a trailing eating verb, in any inflection. */
+export function stripEatingVerb(text: string): string {
+  return text.replace(EATING_VERB_WORD, "").trimEnd();
+}
+
 function stripVerbEnding(text: string): string {
   for (const ending of VERB_ENDINGS) {
     if (text.endsWith(ending)) {
       return text.slice(0, -ending.length).trimEnd();
     }
   }
-  return text;
+  return stripEatingVerb(text);
 }
 
 function stripLeadingMarkers(text: string): string {

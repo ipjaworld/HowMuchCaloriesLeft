@@ -160,3 +160,19 @@ describe("the source span is kept for later correction", () => {
     expect(phrases.map((p) => p.sourceText)).toEqual(["갈비탕", "밥 한 공기"]);
   });
 });
+
+describe("the eating verb, however it is typed", () => {
+  it.each([
+    ["바나나 2개 먹었엉", "바나나", 2],
+    ["바나나 2개 먹었당", "바나나", 2],
+    ["바나나 2개 먹었다니까?", "바나나", 2],
+    ["바나나 2개 먹었어요!!", "바나나", 2],
+    ["우유 200ml 마셨음ㅋㅋ", "우유", 200],
+  ])("%s → %s × %d, never an assumed one", (sentence, name, value) => {
+    expect(parse(sentence)).toEqual([expect.objectContaining({ name, value, assumed: false })]);
+  });
+
+  it("leaves a food whose name contains the verb alone", () => {
+    expect(parse("마시는 요구르트 1개")[0]?.name).toBe("마시는 요구르트");
+  });
+});
