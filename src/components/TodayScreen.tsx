@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Intent, RecentItem } from "@/ai/judgment/types";
+import type { Intent } from "@/ai/judgment/types";
 import {
   isSameAs,
   isSettled,
@@ -10,6 +10,7 @@ import {
   preferTargetFood,
   type AddPart,
 } from "@/application/addFood";
+import { adoptCalculatedGoal, shouldOfferCalculator } from "@/application/calculatedGoal";
 import { setDailyGoal, type SetDailyGoalResult } from "@/application/dailyGoal";
 import { locateItem, removeFoodItem, replaceFoodItem } from "@/application/editFood";
 import { addMealRecord } from "@/application/mealRecords";
@@ -24,10 +25,14 @@ import {
 } from "@/application/pendingAdd";
 import { summarizeDay } from "@/domain/calories";
 import { todayKey } from "@/domain/date";
+import type { BodyFacts, DietProfile, GoalMode } from "@/domain/dietProfile";
 import type { MealRecord } from "@/domain/meal";
 import { createLocalStorageDailyGoalRepository } from "@/infrastructure/localStorageDailyGoalRepository";
+import { createLocalStorageDietProfileRepository } from "@/infrastructure/localStorageDietProfileRepository";
 import { createLocalStorageMealRecordRepository } from "@/infrastructure/localStorageMealRecordRepository";
 import { ChatInput } from "./ChatInput";
+import { buildChatRequest } from "./chatRequest";
+import { GoalCalculatorDialog, type CalculatorStep } from "./GoalCalculatorDialog";
 import { GoalEditor } from "./GoalEditor";
 import { MealList } from "./MealList";
 import { TodaySummary } from "./TodaySummary";
@@ -64,20 +69,6 @@ type PendingClarification = {
   candidates: { id: string; name: string }[];
 };
 
-/** The judge only needs the items, flattened, with their record's context. */
-function toRecentItems(records: MealRecord[]): RecentItem[] {
-  return records.flatMap((record) =>
-    record.items.map((item) => ({
-      id: item.id,
-      name: item.name,
-      ...(item.amount === undefined ? {} : { amount: item.amount }),
-      calories: item.calories,
-      ...(record.mealType === undefined ? {} : { mealType: record.mealType }),
-      consumedAt: record.consumedAt,
-    })),
-  );
-}
-
 /**
  * The single client boundary.
  *
@@ -94,6 +85,8 @@ export function TodayScreen() {
     () => ({
       meals: createLocalStorageMealRecordRepository(),
       goals: createLocalStorageDailyGoalRepository(),
+      // Body facts. Read and written here only; never part of a request.
+      profile: createLocalStorageDietProfileRepository(),
     }),
     [],
   );
@@ -110,6 +103,17 @@ export function TodayScreen() {
    * being sent to Jev as a standalone message.
    */
   const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null);
+  /** Which calculator step is showing, or null when it is closed. */
+  const [calculator, setCalculator] = useState<CalculatorStep | null>(null);
+  const [savedProfile, setSavedProfile] = useState<DietProfile | null>(null);
+  /**
+   * "직접 입력할게요" should land on the input, not on the button that opens
+   * it. The key remounts the field open; the flag is one-shot, cleared as soon
+   * as the field closes, so a later remount — the summary switching layout
+   * once a goal exists — does not pop it open again.
+   */
+  const [manualGoalKey, setManualGoalKey] = useState(0);
+  const [manualGoalRequested, setManualGoalRequested] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,9 +122,11 @@ export function TodayScreen() {
       // Computed here, not during render: on the server this would be the
       // server's timezone, which is not the user's day.
       const dateKey = todayKey();
-      const [records, goal] = await Promise.all([
+      const [records, goal, profile, promptSeen] = await Promise.all([
         repositories.meals.getByDate(dateKey),
         repositories.goals.get(dateKey),
+        repositories.profile.get(),
+        repositories.profile.hasSeenPrompt(),
       ]);
 
       if (cancelled) return;
@@ -130,6 +136,20 @@ export function TodayScreen() {
         records,
         calorieTarget: goal?.calorieTarget ?? null,
       });
+      setSavedProfile(profile);
+
+      // First visit only: no goal, no profile, and the question never
+      // answered. Anyone already using the app with a typed goal is not
+      // interrupted by it.
+      if (
+        shouldOfferCalculator({
+          hasGoal: goal !== null,
+          hasProfile: profile !== null,
+          promptSeen,
+        })
+      ) {
+        setCalculator("intro");
+      }
     }
 
     void load();
@@ -320,9 +340,49 @@ export function TodayScreen() {
       calorieTarget,
     );
     if (result.ok) {
+      // In the same update as the new goal, so the summary's switch to its
+      // "with goal" layout never remounts the field still flagged open.
+      setManualGoalRequested(false);
       setState({ ...state, calorieTarget: result.goal.calorieTarget });
     }
     return result;
+  }
+
+  /** The first-visit question was answered or waved away; never ask again. */
+  function closeCalculator(): void {
+    setCalculator(null);
+    void repositories.profile.markPromptSeen();
+  }
+
+  /**
+   * A calculated target becomes an ordinary `DailyGoal` — the same one the
+   * manual field writes. The number the dialog showed is not trusted; the
+   * use case recomputes it from the facts.
+   */
+  async function handleAcceptCalculated(
+    facts: BodyFacts,
+    goalMode: GoalMode,
+  ): Promise<boolean> {
+    if (state.status !== "ready") return false;
+
+    const result = await adoptCalculatedGoal(repositories, {
+      date: state.dateKey,
+      facts,
+      goalMode,
+      now: new Date(),
+    });
+    if (!result.ok) return false;
+
+    setState({ ...state, calorieTarget: result.goal.calorieTarget });
+    setSavedProfile(result.profile);
+    setCalculator(null);
+    return true;
+  }
+
+  async function handleForgetProfile(): Promise<void> {
+    await repositories.profile.clear();
+    setSavedProfile(null);
+    closeCalculator();
   }
 
   async function handleMessage(message: string) {
@@ -354,12 +414,14 @@ export function TodayScreen() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          message,
-          now: new Date().toISOString(),
-          dailyGoalCalories: summary.calorieTarget,
-          recentItems: toRecentItems(records),
-        }),
+        body: JSON.stringify(
+          buildChatRequest({
+            message,
+            now: new Date(),
+            dailyGoalCalories: summary.calorieTarget,
+            records,
+          }),
+        ),
       });
 
       if (!response.ok) {
@@ -560,8 +622,12 @@ export function TodayScreen() {
         goalAction={
           isLoading ? undefined : (
             <GoalEditor
+              key={manualGoalKey}
+              startOpen={manualGoalRequested}
+              onClose={() => setManualGoalRequested(false)}
               currentTarget={summary.calorieTarget}
               onSubmit={handleSetGoal}
+              onOpenCalculator={() => setCalculator("form")}
             />
           )
         }
@@ -579,6 +645,20 @@ export function TodayScreen() {
         // is empty, and a delete or a status question answered against an
         // empty day is a wrong answer rather than a slow one.
         isPending={isPending || isLoading}
+      />
+
+      <GoalCalculatorDialog
+        step={calculator}
+        savedProfile={savedProfile}
+        onStart={() => setCalculator("form")}
+        onChooseManual={() => {
+          closeCalculator();
+          setManualGoalRequested(true);
+          setManualGoalKey((count) => count + 1);
+        }}
+        onDismiss={closeCalculator}
+        onAccept={handleAcceptCalculated}
+        onForget={() => void handleForgetProfile()}
       />
     </>
   );

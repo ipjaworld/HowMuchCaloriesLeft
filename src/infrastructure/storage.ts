@@ -69,6 +69,10 @@ export function writeJson(
 export const STORAGE_KEYS = {
   mealRecords: "hmcl.v1.mealRecords",
   dailyGoals: "hmcl.v1.dailyGoals",
+  /** Body facts for the calorie calculator. Never leaves this browser. */
+  dietProfile: "hmcl.v1.dietProfile",
+  /** Whether the first-visit calculator prompt has been answered. */
+  onboarding: "hmcl.v1.onboarding",
 } as const;
 
 export const STORAGE_VERSION = 1;

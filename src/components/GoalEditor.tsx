@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { DAILY_GOAL_RANGE, type SetDailyGoalResult } from "@/application/dailyGoal";
 
 const numberFormat = new Intl.NumberFormat("ko-KR");
@@ -16,6 +16,16 @@ const MESSAGES: Record<GoalError, string> = {
 type Props = {
   currentTarget: number | null;
   onSubmit: (calorieTarget: number) => Promise<SetDailyGoalResult>;
+  /** Opens the calculator. The manual field is never replaced by it. */
+  onOpenCalculator?: () => void;
+  /**
+   * Mount with the field already open — used right after "직접 입력할게요",
+   * so the choice leads straight to the input instead of back to a button.
+   * The parent remounts with a new `key` to trigger it again.
+   */
+  startOpen?: boolean;
+  /** The inline field closed — saved or cancelled. */
+  onClose?: () => void;
 };
 
 /**
@@ -25,14 +35,37 @@ type Props = {
  * Before a goal exists it reads as an invitation; afterwards it recedes to a
  * quiet link beside the totals. There is no suggested default — a prefilled
  * 2100 would read as a recommended intake, which this app does not give.
+ *
+ * The calculator sits next to it rather than in front of it. Someone who
+ * knows their number types it; someone who does not gets an estimate. Either
+ * way the result is the same `DailyGoal`, and whichever was set last wins.
  */
-export function GoalEditor({ currentTarget, onSubmit }: Props) {
+export function GoalEditor({
+  currentTarget,
+  onSubmit,
+  onOpenCalculator,
+  startOpen = false,
+  onClose,
+}: Props) {
   const inputId = useId();
-  const [isOpen, setIsOpen] = useState(false);
-  const [value, setValue] = useState("");
+  const [isOpen, setIsOpen] = useState(startOpen);
+  const [value, setValue] = useState(
+    startOpen && currentTarget !== null ? String(currentTarget) : "",
+  );
   const [error, setError] = useState<string | null>(null);
 
   const isFirstTime = currentTarget === null;
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Opened from the calculator's "직접 입력할게요": the closing <dialog>
+  // hands focus back to whatever had it before, in an effect that runs after
+  // this field's own autoFocus. A zero-delay task lands after both — and,
+  // unlike a frame callback, still runs in a background tab.
+  useEffect(() => {
+    if (!startOpen) return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 0);
+    return () => clearTimeout(timer);
+  }, [startOpen]);
 
   function open() {
     setValue(currentTarget === null ? "" : String(currentTarget));
@@ -43,6 +76,7 @@ export function GoalEditor({ currentTarget, onSubmit }: Props) {
   function close() {
     setIsOpen(false);
     setError(null);
+    onClose?.();
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -62,15 +96,29 @@ export function GoalEditor({ currentTarget, onSubmit }: Props) {
     setError(MESSAGES[result.reason]);
   }
 
-  if (!isOpen) {
-    return isFirstTime ? (
+  const calculatorLink =
+    onOpenCalculator === undefined ? null : (
       <button
         type="button"
-        onClick={open}
-        className="h-11 rounded-full bg-ink px-4 text-[0.875rem] font-medium text-surface transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:outline-none"
+        onClick={onOpenCalculator}
+        className="-m-3 shrink-0 rounded p-3 text-[0.8125rem] text-ink-soft underline decoration-line-strong underline-offset-[3px] transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
       >
-        목표 설정
+        계산해서 정하기
       </button>
+    );
+
+  if (!isOpen) {
+    return isFirstTime ? (
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <button
+          type="button"
+          onClick={open}
+          className="h-11 rounded-full bg-ink px-4 text-[0.875rem] font-medium text-surface transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
+          목표 설정
+        </button>
+        {calculatorLink}
+      </div>
     ) : (
       // The negative margin cancels the padding, so the tap area is 44px tall
       // without the text drifting off the totals line.
@@ -93,6 +141,7 @@ export function GoalEditor({ currentTarget, onSubmit }: Props) {
 
         <input
           id={inputId}
+          ref={inputRef}
           // `type="text"` with a numeric keypad: no spinner, and no way to
           // type "e" or "+" the way `type="number"` allows.
           type="text"
@@ -129,6 +178,12 @@ export function GoalEditor({ currentTarget, onSubmit }: Props) {
       {error !== null && (
         <p id={`${inputId}-error`} role="alert" className="mt-2 text-sm text-accent">
           {error}
+        </p>
+      )}
+
+      {calculatorLink !== null && (
+        <p className="mt-3.5 text-[0.8125rem] text-ink-soft">
+          목표를 모르겠다면 {calculatorLink}
         </p>
       )}
     </form>
