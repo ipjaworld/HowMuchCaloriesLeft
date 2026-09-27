@@ -5,6 +5,7 @@ import {
   isProbable,
 } from "@/ai/judgment/confidence";
 import type { AddPart } from "./addFood";
+import { parseAmountOnly } from "@/ai/nutrition/quantity";
 import { splitCorrection } from "./correction";
 import {
   findReferenceMatches,
@@ -164,6 +165,21 @@ function contestedModifyTargets(input: JudgmentInput, judgedId: string | null): 
   return distinct.size > 1 ? named : [];
 }
 
+/**
+ * "2개 먹었다니까?" names no food, only a new amount. Said as a correction, it
+ * is about the entry just logged — the one whose amount the user is looking
+ * at. Only for a sentence that is nothing but an amount; anything naming a
+ * food goes through the ordinary reference rules.
+ */
+function amountOnlyTarget(input: JudgmentInput): string | null {
+  const { next } = splitCorrection(input.message, null);
+  if (parseAmountOnly(next) === null) return null;
+  const newest = input.recentItems
+    .slice()
+    .sort((a, b) => b.consumedAt.localeCompare(a.consumedAt))[0];
+  return newest?.id ?? null;
+}
+
 function contestedDeleteTargets(input: JudgmentInput): RecentItem[] {
   const matches = findReferenceMatches(input.message, input.recentItems);
   if (matches.length <= 1) return [];
@@ -191,12 +207,39 @@ export function asksToChangeGoal(message: string): boolean {
   );
 }
 
+/**
+ * An entry the user picked in answer to "어떤 기록을 수정할까요?". It is
+ * final: the sentence is re-sent with it, and nothing may ask the same
+ * question again — that is how "2개 먹었다니까?" once looped forever, the
+ * judge failing to find a target in a sentence that names no food, every
+ * time it was re-sent.
+ */
+export type ChosenTarget = {
+  targetId: string;
+  intent: "modify_food" | "delete_food";
+};
+
 export function decideCommand(
   judgment: Judgment,
   input: JudgmentInput,
+  chosen?: ChosenTarget,
 ): Command {
   if (asksToChangeGoal(input.message)) {
     return { type: "answer", kind: "goal_setting" };
+  }
+
+  // The user's pick settles both the intent and the target. What is left is
+  // only what to change it to, which the lookup answers.
+  if (chosen !== undefined && input.recentItems.some((item) => item.id === chosen.targetId)) {
+    return chosen.intent === "delete_food"
+      ? { type: "delete_candidate", targetId: chosen.targetId }
+      : {
+          type: "modify_candidate",
+          targetId: chosen.targetId,
+          sourceText: input.message,
+          needsConfirmation: false,
+          parts: [],
+        };
   }
 
   const decision = classifyIntentConfidence(
@@ -219,6 +262,20 @@ export function decideCommand(
           candidates: toCandidates(contested),
         };
       }
+    }
+    // "2개 먹었다니까?" is nothing but an amount. The judge cannot place it
+    // (measured: modify 0.32, ask_status 0.36), but the only reading that
+    // makes sense is a correction of the entry just logged — so propose that
+    // and let the user say yes, instead of "무슨 말씀인지 모르겠어요".
+    const newest = amountOnlyTarget(input);
+    if (newest !== null) {
+      return {
+        type: "modify_candidate",
+        targetId: newest,
+        sourceText: input.message,
+        needsConfirmation: true,
+        parts: [],
+      };
     }
     return { type: "clarify", reason: "low_confidence", intent: judgment.intent };
   }
@@ -276,7 +333,15 @@ export function decideCommand(
         }
       }
 
-      const targetId = usableTarget(judgment, input);
+      const judgedTarget = usableTarget(judgment, input);
+      // A bare amount pointed at the newest entry is a reasonable reading,
+      // not a certain one: it is confirmed ("바나나를 고칠까요?") rather than
+      // asked about from scratch.
+      const fromAmount =
+        judgedTarget === null && judgment.intent === "modify_food"
+          ? amountOnlyTarget(input)
+          : null;
+      const targetId = judgedTarget ?? fromAmount;
 
       if (judgment.intent === "modify_food") {
         const contested = contestedModifyTargets(input, targetId);
@@ -297,7 +362,7 @@ export function decideCommand(
         NOUL_THRESHOLDS.clarificationNeeded,
       );
 
-      if (targetId === null || mustAsk) {
+      if (targetId === null || (mustAsk && fromAmount === null)) {
         return {
           type: "clarify",
           reason: "unknown_target",
@@ -327,7 +392,7 @@ export function decideCommand(
             type: "modify_candidate",
             targetId,
             sourceText: input.message,
-            needsConfirmation: decision === "confirm",
+            needsConfirmation: decision === "confirm" || fromAmount !== null,
             parts: [],
           }
         : { type: "delete_candidate", targetId };

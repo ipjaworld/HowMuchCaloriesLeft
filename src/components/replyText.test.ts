@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Command } from "@/application/commands";
 import type { DailySummary } from "@/domain/calories";
 import {
+  describeAlreadyLogged,
   describeCommand,
   describeDeleted,
   describeModified,
@@ -409,5 +410,14 @@ describe("changes to the log say exactly what changed", () => {
     if (reply.kind === "question") {
       expect(reply.options.map((option) => option.label)).toEqual(["사과 1개", "사과 2개"]);
     }
+  });
+});
+
+describe("insisting on what is already stored", () => {
+  it("says so, with the right particle", () => {
+    expect(describeAlreadyLogged({ name: "바나나", amount: "2개" }).text).toBe("이미 바나나 2개로 기록돼 있어요.");
+    expect(describeAlreadyLogged({ name: "김치찌개", amount: "한 그릇" }).text).toBe(
+      "이미 김치찌개 한 그릇으로 기록돼 있어요.",
+    );
   });
 });

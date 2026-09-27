@@ -67,3 +67,11 @@ describe("the corrected entry is priced by the ordinary lookup", () => {
     expect(item?.calories).toBe(250);
   });
 });
+
+describe("an insisted amount", () => {
+  const BANANA: CorrectionTarget = { name: "바나나", amount: "1개", calories: 77 };
+
+  it.each(["2개 먹었다니까?", "2개라니까", "2개 먹었엉"])("%s → 바나나 2개", (message) => {
+    expect(correctionFor(message, BANANA)).toEqual({ kind: "phrase", text: "바나나 2개" });
+  });
+});

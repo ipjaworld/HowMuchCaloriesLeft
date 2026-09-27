@@ -43,6 +43,13 @@ export const chatRequestSchema = z.object({
   now: isoDateTime,
   dailyGoalCalories: z.number().int().positive().nullable(),
   recentItems: z.array(recentItemSchema).max(MAX_RECENT_ITEMS),
+  /** The entry the user picked when asked "어떤 기록을…?". Final. */
+  chosen: z
+    .object({
+      targetId: z.string().min(1),
+      intent: z.enum(["modify_food", "delete_food"]),
+    })
+    .optional(),
 });
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>;

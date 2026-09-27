@@ -46,7 +46,7 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const judgment = await judge.judge(input);
-    const decided = decideCommand(judgment, input);
+    const decided = decideCommand(judgment, input, parsed.data.chosen);
 
     const command = await expand(decided, input);
 

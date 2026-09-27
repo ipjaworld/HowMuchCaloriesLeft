@@ -19,12 +19,14 @@ export function buildChatRequest(input: {
   now: Date;
   dailyGoalCalories: number | null;
   records: MealRecord[];
+  chosen?: ChatRequest["chosen"];
 }): ChatRequest {
   return {
     message: input.message,
     now: input.now.toISOString(),
     dailyGoalCalories: input.dailyGoalCalories,
     recentItems: toRecentItems(input.records),
+    ...(input.chosen === undefined ? {} : { chosen: input.chosen }),
   };
 }
 

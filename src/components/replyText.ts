@@ -449,6 +449,12 @@ export function describeAskAmount(name: string): Reply {
   };
 }
 
+/** A correction that asks for exactly what is already stored. */
+export function describeAlreadyLogged(entry: { name: string; amount?: string }): Reply {
+  const label = entryLabel(entry);
+  return { kind: "statement", text: `이미 ${label}${directionParticle(label)} 기록돼 있어요.` };
+}
+
 /** The entry the judge pointed at is no longer on the day. */
 export function describeTargetGone(): Reply {
   return { kind: "statement", text: "그 기록을 찾지 못했어요." };

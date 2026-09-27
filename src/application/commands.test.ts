@@ -565,3 +565,79 @@ describe("a hesitant correction over duplicates still asks which record", () => 
     expect(command).toMatchObject({ type: "clarify", reason: "low_confidence" });
   });
 });
+
+describe("a record the user picked is final", () => {
+  const banana: RecentItem[] = [
+    { id: "ban", name: "바나나", amount: "1개", calories: 77, consumedAt: "2026-09-20T12:00:00+09:00" },
+  ];
+  const at = (message: string): JudgmentInput => ({ ...input(message), recentItems: banana });
+  // What Jev returned for "2개 먹었다니까?": unsure, no target, "ask" at 0.87.
+  const unsure = judgment({
+    intent: "modify_food",
+    intentConfidence: 0.5,
+    referenceTargetId: null,
+    referenceConfidence: 0.44,
+    clarificationProbability: 0.87,
+  });
+
+  it("never asks 'which record' again once one was picked (the loop)", () => {
+    for (let resend = 0; resend < 3; resend++) {
+      expect(decideCommand(unsure, at("2개 먹었다니까?"), { targetId: "ban", intent: "modify_food" })).toEqual({
+        type: "modify_candidate",
+        targetId: "ban",
+        sourceText: "2개 먹었다니까?",
+        needsConfirmation: false,
+        parts: [],
+      });
+    }
+  });
+
+  it("holds even when the judge reads another intent", () => {
+    const other = judgment({ intent: "ask_status", intentConfidence: 0.37 });
+    expect(decideCommand(other, at("2개 먹었다니까?"), { targetId: "ban", intent: "modify_food" }).type).toBe(
+      "modify_candidate",
+    );
+  });
+
+  it("ignores a pick that is no longer on the day", () => {
+    const withGonePick = decideCommand(unsure, at("2개 먹었다니까?"), { targetId: "gone", intent: "modify_food" });
+    expect(withGonePick).toEqual(decideCommand(unsure, at("2개 먹었다니까?")));
+  });
+
+  it("a bare amount corrects the newest entry, confirmed first", () => {
+    const two: RecentItem[] = [
+      { id: "egg", name: "삶은 달걀", amount: "1개", calories: 75, consumedAt: "2026-09-20T08:00:00+09:00" },
+      ...banana,
+    ];
+    expect(decideCommand(unsure, { ...input("2개 먹었다니까?"), recentItems: two })).toMatchObject({
+      type: "modify_candidate",
+      targetId: "ban",
+      needsConfirmation: true,
+    });
+  });
+});
+
+describe("a bare amount the judge could not place", () => {
+  it("is proposed as a correction of the newest entry, not 'say more'", () => {
+    const items: RecentItem[] = [
+      { id: "egg", name: "삶은 달걀", amount: "1개", calories: 75, consumedAt: "2026-09-20T08:00:00+09:00" },
+      { id: "ban", name: "바나나", amount: "1개", calories: 77, consumedAt: "2026-09-20T12:00:00+09:00" },
+    ];
+    for (const read of [
+      judgment({ intent: "modify_food", intentConfidence: 0.32 }),
+      judgment({ intent: "ask_status", intentConfidence: 0.36 }),
+    ]) {
+      expect(decideCommand(read, { ...input("2개 먹었다니까?"), recentItems: items })).toMatchObject({
+        type: "modify_candidate",
+        targetId: "ban",
+        needsConfirmation: true,
+      });
+    }
+  });
+
+  it("a vague sentence with no amount still asks for more", () => {
+    expect(
+      decideCommand(judgment({ intent: "modify_food", intentConfidence: 0.32 }), input("그거 아니었어")),
+    ).toMatchObject({ type: "clarify", reason: "low_confidence" });
+  });
+});

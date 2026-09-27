@@ -1,4 +1,4 @@
-import { toFoodPhrase } from "@/ai/nutrition/foodPhrases";
+import { stripEatingVerb, toFoodPhrase } from "@/ai/nutrition/foodPhrases";
 import { normalizeSpacing, parseAmountOnly } from "@/ai/nutrition/quantity";
 
 /**
@@ -56,7 +56,12 @@ export type CorrectionParts = {
 
 /** Splits a correction into what was logged and what it should be. */
 export function splitCorrection(message: string, targetName: string | null): CorrectionParts {
-  const text = normalizeSpacing(message).replace(TRAILING, "").trim();
+  // "2개 먹었다니까?" corrects the amount; the verb and its insistence carry
+  // nothing, and neither does a "라니까" on a bare amount.
+  const text = stripEatingVerb(normalizeSpacing(message))
+    .replace(/(?:이라니까|라니까|이라고|라고)[?!.~]*$/, "")
+    .replace(TRAILING, "")
+    .trim();
 
   const replacement = text.split(REPLACEMENT_MARKER);
   if (replacement.length === 2 && replacement[1] !== "") {

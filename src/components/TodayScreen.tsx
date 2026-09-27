@@ -12,6 +12,7 @@ import {
   preferTargetFood,
   type AddPart,
 } from "@/application/addFood";
+import type { ChosenTarget } from "@/application/commands";
 import { adoptCalculatedGoal, shouldOfferCalculator } from "@/application/calculatedGoal";
 import { setDailyGoal, type SetDailyGoalResult } from "@/application/dailyGoal";
 import { locateItem, removeFoodItem, replaceFoodItem } from "@/application/editFood";
@@ -45,6 +46,7 @@ import { TodaySummary } from "./TodaySummary";
 import {
   describeAddFailure,
   describeAdded,
+  describeAlreadyLogged,
   describeAskAmount,
   describeCaloriesWanted,
   describeCancelled,
@@ -465,11 +467,10 @@ export function TodayScreen() {
   }
 
   /**
-   * `onlyItemId` narrows what the judge sees to one entry: used after the
-   * user picked which record a correction is about, so the same sentence now
-   * has exactly one thing it can mean.
+   * `chosen` is the record the user picked when asked which one a sentence
+   * was about. It is final — the server acts on it and never asks again.
    */
-  async function handleMessage(message: string, onlyItemId?: string) {
+  async function handleMessage(message: string, chosen?: ChosenTarget) {
     setIsPending(true);
     setReply(null);
 
@@ -509,15 +510,8 @@ export function TodayScreen() {
             message,
             now: new Date(),
             dailyGoalCalories: summary.calorieTarget,
-            records:
-              onlyItemId === undefined
-                ? records
-                : records
-                    .map((record) => ({
-                      ...record,
-                      items: record.items.filter((item) => item.id === onlyItemId),
-                    }))
-                    .filter((record) => record.items.length > 0),
+            records,
+            chosen,
           }),
         ),
       });
@@ -614,6 +608,17 @@ export function TodayScreen() {
     const only = itemsOf(narrowed)[0];
     const nothingChanged =
       isSettled(narrowed) && only !== undefined && isSameAs(only, found.item);
+
+    // "2개라니까" about an entry already at 2개: the user is insisting on what
+    // is there, not failing to be understood. Say so instead of asking again.
+    if (
+      nothingChanged &&
+      only?.amount !== undefined &&
+      only.amount.replace(/\s+/g, "") === found.item.amount?.replace(/\s+/g, "")
+    ) {
+      setReply(describeAlreadyLogged(found.item));
+      return;
+    }
 
     if (narrowed.length === 0 || nothingChanged) {
       // The sentence was a correction the phrase parser cannot read. Rather
@@ -719,7 +724,7 @@ export function TodayScreen() {
         // then the amount is the one thing still missing.
         const sourceText = clarification?.sourceText;
         if (option.id !== "yes" && sourceText !== undefined) {
-          void handleMessage(sourceText, chosen.id);
+          void handleMessage(sourceText, { targetId: chosen.id, intent: "modify_food" });
           return;
         }
         void askAmountFor(chosen.id);
