@@ -200,7 +200,35 @@ describe("the add pipeline's sentences", () => {
       summary({ consumedCalories: 362, calorieTarget: null, remainingCalories: null, status: null }),
       ["마라탕"],
     );
-    expect(reply.text).toContain("마라탕은 아직 정보가 없어서 빼고 기록했어요.");
+    expect(reply.text).toContain("마라탕은 빼고 기록했어요.");
+  });
+
+  it("asks for calories, naming the food only when it reads as one", () => {
+    const named = describeQuestion({
+      type: "provide_calories",
+      partIndex: 0,
+      label: "마라탕",
+      othersResolved: false,
+    });
+    expect(named.text).toBe(
+      "마라탕은 아직 정보가 없어요. 대략 몇 kcal였는지 알려주시면 그대로 적을게요.",
+    );
+
+    const unnamed = describeQuestion({
+      type: "provide_calories",
+      partIndex: 0,
+      label: null,
+      othersResolved: true,
+    });
+    expect(unnamed.text).toMatch(/^말씀하신 음식은/);
+    expect(unnamed.kind === "question" && unnamed.options[0]?.id).toBe("skip");
+  });
+
+  it("never glues a particle onto a scrap of sentence", () => {
+    const reply = describeNothingAdded([
+      { status: "unknown", phraseName: "음... 이건 데이터베이스과 없을거 같고" },
+    ]);
+    expect(reply.text).toMatch(/^말씀하신 음식은 아직 정보가 없어요/);
   });
 
   it("never says a food is unknown when it only lacks a portion", () => {

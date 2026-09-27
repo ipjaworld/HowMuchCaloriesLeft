@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Intent } from "@/ai/judgment/types";
+import { readCalorieAnswer } from "@/ai/nutrition/statedCalories";
 import {
+  isAllUnknown,
   isSameAs,
   isSettled,
   namesASubstitution,
@@ -15,17 +17,21 @@ import { setDailyGoal, type SetDailyGoalResult } from "@/application/dailyGoal";
 import { locateItem, removeFoodItem, replaceFoodItem } from "@/application/editFood";
 import { addMealRecord } from "@/application/mealRecords";
 import {
+  answerCalories,
   answerChoice,
   answerQuantity,
   confirmAdd,
   isCancelMessage,
   isComplete,
+  isSkipMessage,
   nextQuestion,
+  skipUnknown,
   type PendingAdd,
 } from "@/application/pendingAdd";
 import { summarizeDay } from "@/domain/calories";
 import { todayKey } from "@/domain/date";
 import type { BodyFacts, DietProfile, GoalMode } from "@/domain/dietProfile";
+import { isValidCalorieValue } from "@/domain/limits";
 import type { MealRecord } from "@/domain/meal";
 import { createLocalStorageDailyGoalRepository } from "@/infrastructure/localStorageDailyGoalRepository";
 import { createLocalStorageDietProfileRepository } from "@/infrastructure/localStorageDietProfileRepository";
@@ -40,6 +46,7 @@ import {
   describeAddFailure,
   describeAdded,
   describeAskAmount,
+  describeCaloriesWanted,
   describeCancelled,
   describeCommand,
   describeDeleted,
@@ -53,6 +60,35 @@ import {
 } from "./replyText";
 import type { ChatResponse } from "@/app/api/chat/schema";
 import type { ResolveResponse } from "@/app/api/resolve/route";
+
+/**
+ * "아까 거 800칼로리였어" corrects the figure, not the food. The label read
+ * from that sentence is "거" or nothing, so a user-stated figure keeps the
+ * name and amount of the entry it corrects — unless the sentence names a
+ * replacement ("갈비탕 말고 쌀국수 700칼로리"), where the new name is the
+ * point.
+ */
+function keepTargetName(
+  parts: AddPart[],
+  target: { name: string; amount?: string },
+  substitutes: boolean,
+): AddPart[] {
+  if (substitutes) return parts;
+  return parts.map((part) => {
+    if (part.status !== "resolved" || part.item.calorieSource !== "user") {
+      return part;
+    }
+    return {
+      ...part,
+      phraseName: target.name,
+      item: {
+        ...part.item,
+        name: target.name,
+        ...(target.amount === undefined ? {} : { amount: target.amount }),
+      },
+    };
+  });
+}
 
 type State =
   | { status: "loading" }
@@ -175,7 +211,7 @@ export function TodayScreen() {
   async function commitAdd(pending: PendingAdd): Promise<void> {
     const items = itemsOf(pending.parts);
     const skipped = pending.parts
-      .filter((part) => part.status === "unknown")
+      .filter((part) => part.status === "unknown" || part.status === "skipped")
       .map((part) => part.phraseName);
 
     if (items.length === 0) {
@@ -327,6 +363,37 @@ export function TodayScreen() {
     await advance(answerQuantity(pending, question.partIndex, result.item));
   }
 
+  /**
+   * A reply to "대략 몇 kcal였나요?". Returns false when it was not an answer
+   * at all, so the caller can read it as a new sentence instead — someone
+   * who types "김밥 먹었어" here has moved on, and holding them to the
+   * question would be the app insisting on its own data model.
+   */
+  async function handleCalorieAnswer(
+    pending: PendingAdd,
+    message: string,
+  ): Promise<boolean> {
+    const question = nextQuestion(pending);
+    if (question === null || question.type !== "provide_calories") return false;
+
+    if (isSkipMessage(message)) {
+      await advance(skipUnknown(pending, question.partIndex));
+      return true;
+    }
+
+    const answer = readCalorieAnswer(message);
+    if (answer === null) return false;
+
+    if (answer.status === "wrong_unit" || !isValidCalorieValue(answer.calories)) {
+      // Still pending: the question stands.
+      setReply(describeCaloriesWanted());
+      return true;
+    }
+
+    await advance(answerCalories(pending, question.partIndex, answer.calories));
+    return true;
+  }
+
   async function handleSetGoal(
     calorieTarget: number,
   ): Promise<SetDailyGoalResult> {
@@ -403,6 +470,12 @@ export function TodayScreen() {
         const question = nextQuestion(pendingAdd);
         if (question?.type === "provide_quantity") {
           await handleQuantityAnswer(pendingAdd, message);
+          return;
+        }
+        if (
+          question?.type === "provide_calories" &&
+          (await handleCalorieAnswer(pendingAdd, message))
+        ) {
           return;
         }
         // A food choice is made with the chips, not by typing. Anything else
@@ -497,10 +570,11 @@ export function TodayScreen() {
       return;
     }
 
-    const narrowed = preferTargetFood(
-      parts,
-      found.item.name,
-      namesASubstitution(sourceText),
+    const substitutes = namesASubstitution(sourceText);
+    const narrowed = keepTargetName(
+      preferTargetFood(parts, found.item.name, substitutes),
+      found.item,
+      substitutes,
     );
 
     const pending: PendingAdd = {
@@ -543,8 +617,10 @@ export function TodayScreen() {
       return;
     }
 
-    // A sentence with nothing storable in it is not worth confirming.
-    if (needsConfirmation && itemsOf(parts).length === 0 && isSettled(parts)) {
+    // A sentence with nothing storable in it is not worth confirming. Only
+    // a confident report goes on to ask for calories: a sentence the judge
+    // half-believed was about food is not worth a follow-up question.
+    if (needsConfirmation && isAllUnknown(parts)) {
       setReply(describeNothingAdded(parts));
       return;
     }
@@ -572,6 +648,16 @@ export function TodayScreen() {
 
       if (question?.type === "choose_food") {
         void advance(answerChoice(pendingAdd, question.partIndex, option.id));
+        return;
+      }
+
+      if (question?.type === "provide_calories") {
+        if (option.id === "skip") {
+          void advance(skipUnknown(pendingAdd, question.partIndex));
+        } else {
+          setPendingAdd(null);
+          setReply(describeCancelled("add"));
+        }
         return;
       }
     }

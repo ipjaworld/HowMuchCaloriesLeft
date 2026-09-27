@@ -28,7 +28,18 @@ export type FoodItem = {
    * Optional so records written before it existed stay valid.
    */
   portionNote?: string;
+  /**
+   * Where the figure came from. "user" means the user said the number
+   * ("샌드위치 450kcal") and it was stored as said, over anything the dataset
+   * knows. Absent means the dataset, which is what every record written
+   * before this field existed was priced from.
+   */
+  calorieSource?: CalorieSource;
 };
+
+export const CALORIE_SOURCES = ["dataset", "user"] as const;
+
+export type CalorieSource = (typeof CALORIE_SOURCES)[number];
 
 export type MealRecord = {
   id: string;

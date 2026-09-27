@@ -11,12 +11,15 @@ import {
 } from "./addFood";
 import { addMealRecord } from "./mealRecords";
 import {
+  answerCalories,
   answerChoice,
   answerQuantity,
   confirmAdd,
   isCancelMessage,
   isComplete,
+  isSkipMessage,
   nextQuestion,
+  skipUnknown,
   type PendingAdd,
 } from "./pendingAdd";
 
@@ -180,18 +183,91 @@ describe("unmeasurable — the record waits for an amount", () => {
   });
 });
 
-describe("unknown — nothing to ask and nothing to store", () => {
-  it("writes no record for a food the dataset does not have", async () => {
-    const { repository, add } = fakeRepository();
+describe("unknown — ask the user for the figure, never supply one", () => {
+  it("asks for calories instead of writing nothing", async () => {
+    const { add } = fakeRepository();
     const pending = await start("마라탕 먹었어");
 
     expect(pending.parts[0]?.status).toBe("unknown");
-    // Settled, because there is no question that would help.
-    expect(isSettled(pending.parts)).toBe(true);
-    expect(itemsOf(pending.parts)).toHaveLength(0);
-
-    await commit(repository, pending);
+    expect(isSettled(pending.parts)).toBe(false);
+    expect(nextQuestion(pending)).toEqual({
+      type: "provide_calories",
+      partIndex: 0,
+      label: "마라탕",
+      othersResolved: false,
+    });
     expect(add).toHaveBeenCalledTimes(0);
+  });
+
+  it("stores the user's answer as said, under the food's name", async () => {
+    const { repository, records } = fakeRepository();
+    const pending = await start("마라탕 먹었어");
+
+    const answered = answerCalories(pending, 0, 700);
+    expect(isComplete(answered)).toBe(true);
+    await commit(repository, answered);
+
+    expect(records[0]?.items[0]).toMatchObject({
+      name: "마라탕",
+      calories: 700,
+      caloriesEstimated: false,
+      calorieSource: "user",
+    });
+  });
+
+  it("does not quote a scrap of sentence back as a food name", async () => {
+    const pending = await start("이건 데이터베이스과 없을거 같고 뭔가 먹었다는");
+    const question = nextQuestion(pending);
+    if (question?.type !== "provide_calories") throw new Error("expected a calorie question");
+    expect(question.label).toBeNull();
+  });
+
+  it("reads '빼고' and '모르겠어' as leaving the food out", () => {
+    for (const message of ["빼고", "모르겠어", "몰라요", "빼고 기록"]) {
+      expect(isSkipMessage(message), message).toBe(true);
+    }
+    expect(isSkipMessage("600")).toBe(false);
+  });
+});
+
+describe("calories the user states", () => {
+  it("stores a stated figure without looking the food up", async () => {
+    // 갈비탕 is in the dataset; the user's number still wins.
+    const parts = await resolveAddParts("갈비탕 720칼로리 먹었어", koreanFoodResolver);
+    expect(parts).toHaveLength(1);
+    expect(parts[0]).toMatchObject({
+      status: "resolved",
+      item: { name: "갈비탕", calories: 720, calorieSource: "user", caloriesEstimated: false },
+    });
+  });
+
+  it("records the screenshot sentence as 600 with no food name", async () => {
+    const parts = await resolveAddParts(
+      "음... 이건 데이터베이스과 없을거 같고 한 600kcal 먹었다는",
+      koreanFoodResolver,
+    );
+    expect(parts).toEqual([
+      {
+        status: "resolved",
+        phraseName: "직접 입력",
+        item: { name: "직접 입력", calories: 600, caloriesEstimated: false, calorieSource: "user" },
+      },
+    ]);
+  });
+
+  it("prices the other foods in the sentence as usual", async () => {
+    const parts = await resolveAddParts("갈비탕 하나랑 샌드위치 450kcal 먹었어", koreanFoodResolver);
+    expect(parts.map((part) => part.status)).toEqual(["resolved", "resolved"]);
+    const items = itemsOf(parts);
+    expect(items[0]?.calorieSource).toBeUndefined();
+    expect(items[1]).toMatchObject({ name: "샌드위치", calories: 450, calorieSource: "user" });
+  });
+
+  it("does not double count a figure stated for the whole sentence", async () => {
+    const parts = await resolveAddParts("김치찌개랑 밥 합쳐서 800칼로리 먹었어", koreanFoodResolver);
+    expect(itemsOf(parts)).toEqual([
+      { name: "김치찌개, 밥", calories: 800, caloriesEstimated: false, calorieSource: "user" },
+    ]);
   });
 });
 
@@ -221,14 +297,28 @@ describe("several foods in one sentence", () => {
     expect(records[0]?.items.map((item) => item.name)).toEqual(["갈비탕", "쌀밥"]);
   });
 
-  it("keeps the known food when another one is not in the dataset", async () => {
+  it("asks about an unknown food before writing the known one", async () => {
+    const { repository, add, records } = fakeRepository();
+    const pending = await start("갈비탕 하나랑 마라탕 먹었어");
+
+    const question = nextQuestion(pending);
+    expect(question).toMatchObject({ type: "provide_calories", partIndex: 1, othersResolved: true });
+    expect(add).toHaveBeenCalledTimes(0);
+
+    await commit(repository, answerCalories(pending, 1, 700));
+    expect(records[0]?.items.map((item) => [item.name, item.calories])).toEqual([
+      ["갈비탕", expect.any(Number)],
+      ["마라탕", 700],
+    ]);
+  });
+
+  it("keeps the known food when the unknown one is left out", async () => {
     const { repository, records } = fakeRepository();
     const pending = await start("갈비탕 하나랑 마라탕 먹었어");
 
-    // An unknown food cannot be rescued by asking, so it does not hold the
-    // rest of the sentence hostage — it is reported instead.
-    expect(isSettled(pending.parts)).toBe(true);
-    await commit(repository, pending);
+    const skipped = skipUnknown(pending, 1);
+    expect(isComplete(skipped)).toBe(true);
+    await commit(repository, skipped);
 
     expect(records[0]?.items.map((item) => item.name)).toEqual(["갈비탕"]);
   });

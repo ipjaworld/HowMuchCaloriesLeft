@@ -1,3 +1,4 @@
+import { cleanFoodLabel } from "@/ai/nutrition/statedCalories";
 import type { AddPart } from "@/application/addFood";
 import type { Command } from "@/application/commands";
 import type { PendingQuestion } from "@/application/pendingAdd";
@@ -218,16 +219,32 @@ export function describeAdded(
   }
 
   if (skipped.length > 0) {
-    lines.push(`${listNames(skipped)}${topicParticle(skipped.at(-1) ?? "")} 아직 정보가 없어서 빼고 기록했어요.`);
+    lines.push(`${unknownSubject(skipped)} 빼고 기록했어요.`);
   }
 
   return { kind: "statement", text: lines.join(" ") };
 }
 
+/**
+ * The subject of a sentence about foods the dataset lacks, with its particle.
+ *
+ * A phrase is quoted back only when it reads as a food name. When the parser
+ * could not find one, the "name" is a scrap of the user's sentence, and
+ * repeating it with a particle glued on reads as the app not listening.
+ */
+function unknownSubject(names: string[]): string {
+  const labels = names.map(cleanFoodLabel);
+  if (labels.length === 0 || labels.some((label) => label === null)) {
+    return "말씀하신 음식은";
+  }
+  const named = labels as string[];
+  return `${listNames(named)}${topicParticle(named.at(-1) ?? "")}`;
+}
+
 /** Nothing in the sentence could be priced, so nothing was written. */
 export function describeNothingAdded(parts: AddPart[]): Reply {
   const unknown = parts
-    .filter((part) => part.status === "unknown")
+    .filter((part) => part.status === "unknown" || part.status === "skipped")
     .map((part) => part.phraseName);
 
   if (unknown.length === 0) {
@@ -236,7 +253,17 @@ export function describeNothingAdded(parts: AddPart[]): Reply {
 
   return {
     kind: "statement",
-    text: `${listNames(unknown)}${topicParticle(unknown.at(-1) ?? "")} 아직 정보가 없어요.`,
+    // Says how to get past it, because the way past is the user's to take:
+    // a figure they know is stored as said.
+    text: `${unknownSubject(unknown)} 아직 정보가 없어요. "샌드위치 450kcal"처럼 칼로리를 함께 말씀해주시면 그대로 적을게요.`,
+  };
+}
+
+/** The reply to "몇 kcal였나요?" was an amount, not calories. */
+export function describeCaloriesWanted(): Reply {
+  return {
+    kind: "statement",
+    text: "칼로리로 알려주세요. 600처럼 숫자만 적으셔도 돼요.",
   };
 }
 
@@ -275,6 +302,22 @@ export function describeQuestion(question: PendingQuestion): Reply {
         id: candidate.entryId,
         label: candidate.name,
       })),
+    };
+  }
+
+  if (question.type === "provide_calories") {
+    const subject =
+      question.label === null
+        ? "말씀하신 음식은"
+        : `${question.label}${topicParticle(question.label)}`;
+    return {
+      kind: "question",
+      text: `${subject} 아직 정보가 없어요. 대략 몇 kcal였는지 알려주시면 그대로 적을게요.`,
+      options: [
+        question.othersResolved
+          ? { id: "skip", label: "빼고 기록" }
+          : { id: "no", label: "그만두기" },
+      ],
     };
   }
 

@@ -1,4 +1,10 @@
-import { parseFoodPhrases } from "@/ai/nutrition/foodPhrases";
+import { splitFoodSegments, toFoodPhrase } from "@/ai/nutrition/foodPhrases";
+import {
+  UNNAMED_FOOD_LABEL,
+  cleanFoodLabel,
+  findStatedCalories,
+  statesATotal,
+} from "@/ai/nutrition/statedCalories";
 import type {
   NutritionMatch,
   NutritionResolver,
@@ -53,7 +59,12 @@ export type AddPart =
        */
       knownUnits?: string[];
     }
-  | { status: "unknown"; phraseName: string };
+  | { status: "unknown"; phraseName: string }
+  /**
+   * An unknown food the user chose to leave out when asked for its calories.
+   * Kept rather than dropped so the reply can still say what was left out.
+   */
+  | { status: "skipped"; phraseName: string };
 
 export type AddCandidate = {
   /** The dataset entry id, which is the MFDS food code. */
@@ -77,19 +88,80 @@ export function toFoodItem(match: NutritionMatch): NewFoodItem {
 }
 
 /**
+ * A figure the user gave, as the domain stores it. The number is theirs and
+ * is copied exactly; only the name is ours to choose.
+ */
+export function userStatedItem(label: string | null, calories: number): NewFoodItem {
+  return {
+    name: label ?? UNNAMED_FOOD_LABEL,
+    calories,
+    caloriesEstimated: false,
+    calorieSource: "user",
+  };
+}
+
+function userStatedPart(label: string | null, calories: number): AddPart {
+  const item = userStatedItem(label, calories);
+  return { status: "resolved", phraseName: item.name, item };
+}
+
+/**
+ * The one case where a stated figure covers the whole sentence rather than
+ * its own slice.
+ *
+ * "김치찌개랑 밥 합쳐서 800칼로리" states one number for two foods; pricing
+ * 김치찌개 from the dataset as well would count it twice. The same holds when
+ * the slice with the number names no food of its own — "밥이랑 반찬 해서 한
+ * 700" is talk around a total, not a food called "해서". When every slice
+ * reads as a name, the row is named after all of them.
+ */
+function wholeSentenceFigure(segments: string[]): AddPart | null {
+  const stated = segments.map(findStatedCalories);
+  const found = stated.filter((entry) => entry !== null);
+  if (found.length !== 1) return null;
+
+  const figure = found[0];
+  if (figure === undefined) return null;
+
+  const isTotal =
+    segments.length === 1 ||
+    figure.label === null ||
+    segments.some(statesATotal);
+  if (!isTotal) return null;
+
+  const labels = segments.map((segment, index) =>
+    stated[index] === null ? cleanFoodLabel(segment) : stated[index]?.label ?? null,
+  );
+  const named = labels.every((label) => label !== null);
+
+  return userStatedPart(named ? labels.join(", ") : null, figure.calories);
+}
+
+/**
  * Runs the whole sentence through the resolver.
  *
  * Every phrase gets an answer, including the ones that failed, because the
- * reply has to be able to name what it could not add.
+ * reply has to be able to name what it could not add. A slice that states its
+ * own calories is not looked up at all: what the user said outranks what the
+ * dataset knows about something like it.
  */
 export async function resolveAddParts(
   sourceText: string,
   resolver: NutritionResolver,
 ): Promise<AddPart[]> {
-  const phrases = parseFoodPhrases(sourceText);
+  const segments = splitFoodSegments(sourceText);
 
-  return Promise.all(
-    phrases.map(async (phrase): Promise<AddPart> => {
+  const whole = wholeSentenceFigure(segments);
+  if (whole !== null) return [whole];
+
+  const resolved = await Promise.all(
+    segments.map(async (segment): Promise<AddPart | null> => {
+      const stated = findStatedCalories(segment);
+      if (stated !== null) return userStatedPart(stated.label, stated.calories);
+
+      const phrase = toFoodPhrase(segment);
+      if (phrase === null) return null;
+
       const resolution = await resolver.resolve(phrase);
 
       switch (resolution.status) {
@@ -133,12 +205,26 @@ export async function resolveAddParts(
       }
     }),
   );
+
+  return resolved.filter((part): part is AddPart => part !== null);
 }
 
-/** True when nothing is left to ask and the record can be written. */
+/**
+ * True when nothing is left to ask and the record can be written.
+ *
+ * An unknown food is not settled: the user may know its calories, and asking
+ * costs one short reply where skipping it silently undercounts the day.
+ */
 export function isSettled(parts: AddPart[]): boolean {
   return parts.every(
-    (part) => part.status === "resolved" || part.status === "unknown",
+    (part) => part.status === "resolved" || part.status === "skipped",
+  );
+}
+
+/** Nothing in the sentence is anything but a food the dataset does not have. */
+export function isAllUnknown(parts: AddPart[]): boolean {
+  return parts.length > 0 && parts.every(
+    (part) => part.status === "unknown" || part.status === "skipped",
   );
 }
 

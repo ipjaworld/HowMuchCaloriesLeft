@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { isDateKey } from "@/domain/date";
 import { isValidCalorieValue, isValidDailyGoal } from "@/domain/limits";
-import { MEAL_TYPES } from "@/domain/meal";
+import { CALORIE_SOURCES, MEAL_TYPES } from "@/domain/meal";
 
 /**
  * Schemas for what comes *back out* of storage.
@@ -26,6 +26,7 @@ export const foodItemSchema = z.object({
   }),
   caloriesEstimated: z.boolean(),
   portionNote: z.string().min(1).max(200).optional(),
+  calorieSource: z.enum(CALORIE_SOURCES).optional(),
 });
 
 export const mealRecordSchema = z.object({

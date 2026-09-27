@@ -131,6 +131,19 @@ function stripLeadingMarkers(text: string): string {
 }
 
 export function parseFoodPhrases(sentence: string): ParsedFoodPhrase[] {
+  return splitFoodSegments(sentence)
+    .map(toFoodPhrase)
+    .filter((phrase): phrase is ParsedFoodPhrase => phrase !== null);
+}
+
+/**
+ * The sentence cut into one slice per food, before any amount is read.
+ *
+ * Exposed because a slice can carry something a food phrase has no room for:
+ * "샌드위치 450kcal" states its own calories, and the caller has to see that
+ * before the "450kcal" is read — or dropped — as an amount.
+ */
+export function splitFoodSegments(sentence: string): string[] {
   const normalized = stripLeadingMarkers(
     stripVerbEnding(normalizeSpacing(sentence)),
   );
@@ -138,12 +151,10 @@ export function parseFoodPhrases(sentence: string): ParsedFoodPhrase[] {
 
   return splitPhrases(normalized)
     .map((segment) => segment.trim())
-    .filter((segment) => segment.length > 0)
-    .map(toPhrase)
-    .filter((phrase): phrase is ParsedFoodPhrase => phrase !== null);
+    .filter((segment) => segment.length > 0);
 }
 
-function toPhrase(segment: string): ParsedFoodPhrase | null {
+export function toFoodPhrase(segment: string): ParsedFoodPhrase | null {
   const match = parseTrailingQuantity(segment);
 
   if (match === null) {

@@ -1,5 +1,6 @@
 import type { UnmeasurableReason } from "@/ai/nutrition/types";
-import type { AddPart } from "./addFood";
+import { cleanFoodLabel } from "@/ai/nutrition/statedCalories";
+import { userStatedItem, type AddPart } from "./addFood";
 import type { NewFoodItem } from "./mealRecords";
 
 /**
@@ -71,6 +72,22 @@ export type PendingQuestion =
       reason: UnmeasurableReason;
       unit?: string;
       knownUnits?: string[];
+    }
+  | {
+      /**
+       * The dataset has nothing for this food, but the user may know its
+       * calories — a packet, a menu board, a guess. Their figure is stored as
+       * said; the app still never supplies one of its own.
+       */
+      type: "provide_calories";
+      partIndex: number;
+      /**
+       * The food's name when the phrase reads as one, null when it is a
+       * scrap of sentence that should not be quoted back at the user.
+       */
+      label: string | null;
+      /** Whether leaving it out would still leave something to record. */
+      othersResolved: boolean;
     };
 
 /**
@@ -87,7 +104,7 @@ export function nextQuestion(pending: PendingAdd): PendingQuestion | null {
       type: "confirm_add",
       mode: pending.target === undefined ? "add" : "modify",
       names: pending.parts
-        .filter((part) => part.status !== "unknown")
+        .filter((part) => part.status === "resolved" || part.status === "ambiguous" || part.status === "unmeasurable")
         .map((part) => part.phraseName),
     };
   }
@@ -113,6 +130,16 @@ export function nextQuestion(pending: PendingAdd): PendingQuestion | null {
         reason: part.reason,
         ...(part.unit === undefined ? {} : { unit: part.unit }),
         ...(part.knownUnits === undefined ? {} : { knownUnits: part.knownUnits }),
+      };
+    }
+    if (part.status === "unknown") {
+      return {
+        type: "provide_calories",
+        partIndex,
+        label: cleanFoodLabel(part.phraseName),
+        othersResolved: pending.parts.some(
+          (other, index) => index !== partIndex && other.status === "resolved",
+        ),
       };
     }
   }
@@ -177,6 +204,53 @@ export function answerQuantity(
     phraseName: part.phraseName,
     item,
   });
+}
+
+/** The user gave the calories of a food the dataset does not have. */
+export function answerCalories(
+  pending: PendingAdd,
+  partIndex: number,
+  calories: number,
+): PendingAdd {
+  const part = pending.parts[partIndex];
+  if (part === undefined || part.status !== "unknown") return pending;
+
+  const item = userStatedItem(cleanFoodLabel(part.phraseName), calories);
+  return replacePart(pending, partIndex, {
+    status: "resolved",
+    phraseName: item.name,
+    item,
+  });
+}
+
+/** The user does not know the calories either; record the rest without it. */
+export function skipUnknown(pending: PendingAdd, partIndex: number): PendingAdd {
+  const part = pending.parts[partIndex];
+  if (part === undefined || part.status !== "unknown") return pending;
+
+  return replacePart(pending, partIndex, {
+    status: "skipped",
+    phraseName: part.phraseName,
+  });
+}
+
+/** "모르겠어", "빼고" — an answer to the calorie question that has no number. */
+const SKIP_PHRASES = new Set([
+  "빼고",
+  "빼",
+  "빼줘",
+  "빼고 기록",
+  "빼고 기록해줘",
+  "모르겠어",
+  "모르겠어요",
+  "몰라",
+  "몰라요",
+  "모름",
+]);
+
+export function isSkipMessage(message: string): boolean {
+  const normalized = message.trim().replace(/[.!?~\s]+$/u, "");
+  return SKIP_PHRASES.has(normalized);
 }
 
 /**
