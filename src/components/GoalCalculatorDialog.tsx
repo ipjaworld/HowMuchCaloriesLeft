@@ -5,7 +5,6 @@ import {
   ACTIVITY_LEVELS,
   GOAL_MODES,
   PROFILE_BOUNDS,
-  invalidFields,
   isAdoptable,
   optionFor,
   planFor,
@@ -14,8 +13,15 @@ import {
   type DietProfile,
   type GoalMode,
   type ProfileField,
-  type Sex,
 } from "@/domain/dietProfile";
+import {
+  FIELD_LABELS,
+  PROFILE_FIELD_ORDER,
+  cleanFieldInput,
+  draftFrom,
+  factsFrom,
+  type Draft,
+} from "./profileForm";
 
 const numberFormat = new Intl.NumberFormat("ko-KR");
 
@@ -36,11 +42,6 @@ const MODE_LABELS: Record<GoalMode, { label: string; hint: string }> = {
   fast_loss: { label: "빠르게 감량", hint: "하루 700 kcal 적게" },
 };
 
-const FIELD_LABELS: Record<ProfileField, { label: string; unit: string }> = {
-  weightKg: { label: "몸무게", unit: "kg" },
-  heightCm: { label: "키", unit: "cm" },
-  age: { label: "나이", unit: "세" },
-};
 
 export type CalculatorStep = "intro" | "form";
 
@@ -58,41 +59,6 @@ type Props = {
   onAccept: (facts: BodyFacts, mode: GoalMode) => Promise<boolean>;
   onForget: () => void;
 };
-
-type Draft = Record<ProfileField, string> & {
-  sex: Sex | null;
-  activityLevel: ActivityLevel | null;
-  goalMode: GoalMode | null;
-};
-
-function draftFrom(profile: DietProfile | null): Draft {
-  if (profile === null) {
-    return { weightKg: "", heightCm: "", age: "", sex: null, activityLevel: null, goalMode: null };
-  }
-  return {
-    weightKg: String(profile.weightKg),
-    heightCm: String(profile.heightCm),
-    age: String(profile.age),
-    sex: profile.sex,
-    activityLevel: profile.activityLevel,
-    goalMode: profile.goalMode,
-  };
-}
-
-/** The facts, once every field holds a usable value. */
-function factsFrom(draft: Draft): BodyFacts | null {
-  if (draft.sex === null || draft.activityLevel === null) return null;
-  const facts: BodyFacts = {
-    weightKg: Number(draft.weightKg),
-    heightCm: Number(draft.heightCm),
-    age: Number(draft.age),
-    sex: draft.sex,
-    activityLevel: draft.activityLevel,
-  };
-  if (draft.weightKg === "" || draft.heightCm === "" || draft.age === "") return null;
-  if (!Number.isInteger(facts.age)) return null;
-  return invalidFields(facts).length === 0 ? facts : null;
-}
 
 /**
  * The goal calculator, in a native `<dialog>`.
@@ -184,7 +150,7 @@ function IntroStep({
         하루 목표를 대략 계산해 볼까요?
       </h2>
       <p className="mt-2.5 text-[0.9375rem] leading-relaxed break-keep text-ink-soft">
-        몸무게·키·나이·활동량으로 예상 유지 칼로리를 계산해 드려요. 이미 정한 목표가
+        키·몸무게·나이·활동량으로 예상 유지 칼로리를 계산해 드려요. 이미 정한 목표가
         있으면 바로 입력해도 돼요.
       </p>
 
@@ -284,7 +250,7 @@ function FormStep({
       </div>
 
       <div className="mt-5 grid grid-cols-3 gap-2.5">
-        {(Object.keys(FIELD_LABELS) as ProfileField[]).map((field, index) => {
+        {PROFILE_FIELD_ORDER.map((field, index) => {
           const id = `${baseId}-${field}`;
           const message = fieldError(field);
           return (
@@ -301,13 +267,7 @@ function FormStep({
                   // The first field takes focus when the form opens.
                   autoFocus={index === 0}
                   value={draft[field]}
-                  onChange={(event) => {
-                    const cleaned =
-                      field === "weightKg"
-                        ? event.target.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1")
-                        : event.target.value.replace(/\D/g, "");
-                    update(field, cleaned.slice(0, 5));
-                  }}
+                  onChange={(event) => update(field, cleanFieldInput(field, event.target.value))}
                   aria-invalid={message !== null}
                   aria-describedby={message === null ? undefined : `${id}-error`}
                   className="numeric w-full min-w-0 bg-transparent text-base text-ink focus-visible:outline-none"
