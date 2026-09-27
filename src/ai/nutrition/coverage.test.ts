@@ -214,3 +214,44 @@ describe("what is still not covered stays unknown", () => {
     expect(result).not.toHaveProperty("match");
   });
 });
+
+describe("diet and fitness foods — the everyday wording reaches the row", () => {
+  it.each([
+    ["그릭요거트 100g 먹었어", "그릭요거트"],
+    ["그릭 요거트 100g 먹었어", "그릭요거트"],
+    ["무가당 그릭요거트 150g", "그릭요거트"],
+    ["닭찌찌살 100g 먹었어", "닭가슴살"],
+    ["닭안심 100g 먹었어", "닭안심"],
+    ["오트밀 40g 먹었어", "오트밀"],
+    ["오트밀크 200ml 마셨어", "오트밀크"],
+    ["두부 100g 먹었어", "두부"],
+    ["계란 흰자 100g 먹었어", "달걀흰자"],
+    ["참치캔 100g 먹었어", "참치캔"],
+    ["아몬드 20g 먹었어", "아몬드"],
+    ["프로틴 파우더 30g 먹었어", "단백질 보충제"],
+    ["닭가슴살 샐러드 한 그릇 먹었어", "닭가슴살 샐러드"],
+  ])("%s → %s", async (sentence, name) => {
+    const match = await resolved(sentence);
+    expect(match.entry.name).toBe(name);
+  });
+
+  it("a bare 샐러드 asks which, rather than picking one", async () => {
+    expect((await resolveOne("샐러드 먹었어")).status).toBe("ambiguous");
+  });
+
+  it("a salad that is not in the dataset is not priced as one that is", async () => {
+    expect((await resolveOne("참치 샐러드 먹었어")).status).toBe("unknown");
+  });
+
+  it("a protein shake is never priced as powder", async () => {
+    const result = await resolveOne("프로틴 쉐이크 300ml 마셨어");
+    if (result.status === "resolved") {
+      expect(result.match.entry.name).not.toBe("단백질 보충제");
+    }
+  });
+
+  it("plain 요거트 still means the spoon yoghurt", async () => {
+    const match = await resolved("요거트 100g 먹었어");
+    expect(match.entry.name).toBe("떠먹는 요거트");
+  });
+});

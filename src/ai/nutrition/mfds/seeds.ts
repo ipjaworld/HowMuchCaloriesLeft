@@ -405,7 +405,7 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "R109-008000446-0000",
     query: "닭고기, 가슴, 삶은것",
     name: "닭가슴살",
-    aliases: ["삶은 닭가슴살", "닭고기, 가슴, 삶은것"],
+    aliases: ["삶은 닭가슴살", "닭찌찌살", "닭가슴", "닭고기, 가슴, 삶은것"],
   },
 
   // ── 과일 ──────────────────────────────────────────────────────────
@@ -640,5 +640,200 @@ export const FOOD_SEEDS: FoodSeed[] = [
     query: "탄산 음료, 사이다",
     name: "사이다",
     aliases: ["탄산 음료, 사이다"],
+  },
+
+  // ── 다이어트 · 운동 식단 ──────────────────────────────────────────
+  // Chosen 2026-09-27 from what diet and fitness content keeps putting on
+  // the plate — that only decided *which* foods; every figure is still the
+  // MFDS row's. Where a food is eaten in a particular state, the row is
+  // that state: steamed 단호박, blanched 브로콜리, roasted almonds.
+  //
+  // Most are raw 원재료성 rows with no portion, so they ask for grams. The
+  // two salads are 음식 rows with a stated 1인분 and include dressing, which
+  // is what makes them 135-145 kcal/100 g rather than a bare-leaf figure.
+  {
+    foodCode: "R101-001000000-0000",
+    query: "귀리, 오트밀",
+    // Dry oats, which is how a portion is weighed out.
+    name: "오트밀",
+    aliases: ["귀리, 오트밀"],
+  },
+  {
+    // Here so "오트밀크" matches a drink by name, instead of containing
+    // "오트밀" and being priced as dry oats at 382 kcal/100 g.
+    foodCode: "R121-029010000-0000",
+    query: "귀리 음료",
+    name: "오트밀크",
+    aliases: ["귀리 음료", "귀리우유", "오트 음료"],
+  },
+  {
+    foodCode: "R121-029140000-0000",
+    query: "아몬드 음료",
+    name: "아몬드밀크",
+    aliases: ["아몬드 음료", "아몬드우유"],
+  },
+  {
+    foodCode: "R121-029140000-0001",
+    query: "아몬드 음료, 무가당",
+    name: "무가당 아몬드밀크",
+    aliases: ["언스위트 아몬드밀크", "무가당 아몬드우유", "아몬드 음료, 무가당"],
+  },
+  {
+    foodCode: "R106-198040049-0000",
+    query: "호박, 단호박, 찐것",
+    name: "단호박",
+    aliases: ["찐 단호박", "호박, 단호박, 찐것"],
+  },
+  {
+    foodCode: "R121-043020300-0000",
+    query: "두부",
+    name: "두부",
+    aliases: ["생두부"],
+  },
+  {
+    // Raw: 연어 is eaten as sashimi, poke and salad. The bare "연어" row
+    // (R211-201090100-0000, 273 kcal/100 g) is not the fish as served.
+    foodCode: "R211-201093901-0000",
+    query: "연어, 생것",
+    name: "연어",
+    aliases: ["생연어", "연어회", "연어, 생것"],
+  },
+  {
+    foodCode: "R211-201093916-0000",
+    query: "연어, 훈제",
+    name: "훈제연어",
+    aliases: ["연어, 훈제"],
+  },
+  {
+    // Roasted: packaged almonds are sold roasted.
+    foodCode: "R105-020000058-0000",
+    query: "아몬드, 볶은것",
+    name: "아몬드",
+    aliases: ["아몬드, 볶은것"],
+  },
+  {
+    foodCode: "R105-035000002-0000",
+    query: "호두, 말린것",
+    name: "호두",
+    aliases: ["호두, 말린것"],
+  },
+  {
+    foodCode: "R108-047000001-0000",
+    query: "블루베리, 생것",
+    name: "블루베리",
+    aliases: ["블루베리, 생것"],
+  },
+  {
+    foodCode: "R108-064000001-0000",
+    query: "아보카도, 생것",
+    name: "아보카도",
+    aliases: ["아보카도, 생것"],
+  },
+  {
+    foodCode: "R106-092000047-0000",
+    query: "브로콜리, 데친것",
+    name: "브로콜리",
+    aliases: ["데친 브로콜리", "브로콜리, 데친것"],
+  },
+  {
+    foodCode: "R106-129000001-0000",
+    query: "양배추, 생것",
+    name: "양배추",
+    aliases: ["양배추, 생것"],
+  },
+  {
+    foodCode: "R106-148010001-0000",
+    query: "오이, 다다기, 생것",
+    name: "오이",
+    aliases: ["오이, 다다기, 생것"],
+  },
+  {
+    foodCode: "R102-009020001-0000",
+    query: "곤약(구약나물), 판형, 생것",
+    name: "곤약",
+    aliases: ["곤약(구약나물), 판형, 생것"],
+  },
+  {
+    foodCode: "R102-009010001-0000",
+    query: "곤약(구약나물), 국수형, 생것",
+    name: "곤약면",
+    aliases: ["곤약국수", "곤약(구약나물), 국수형, 생것"],
+  },
+  {
+    foodCode: "D114-640080000-0001",
+    query: "샐러드_닭가슴살",
+    name: "닭가슴살 샐러드",
+    aliases: ["샐러드_닭가슴살"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D114-640320000-0001",
+    query: "샐러드_채소",
+    name: "채소 샐러드",
+    // Not aliased to a bare "샐러드": "참치 샐러드" contains it, and would
+    // quietly be priced as this one. A bare "샐러드" asks which.
+    aliases: ["야채 샐러드", "그린 샐러드", "샐러드_채소"],
+    counter: "그릇",
+  },
+  {
+    // A tub of powder, which is what "프로틴 한 스쿱" is measured from. Not
+    // aliased to 쉐이크: a shake is powder plus water or milk, and "쉐이크
+    // 300ml" priced as 300 g of powder would be a silent 1,200 kcal.
+    foodCode: "R121-005010006-0000",
+    query: "단백질 보충제, 가루",
+    name: "단백질 보충제",
+    aliases: [
+      "프로틴 파우더",
+      "프로틴 가루",
+      "단백질 파우더",
+      "단백질 가루",
+      "보충제",
+      "단백질 보충제, 가루",
+    ],
+  },
+  {
+    // Ready-to-drink protein drinks, sold in cartons.
+    foodCode: "R121-029030000-0000",
+    query: "단백질 음료",
+    name: "단백질 음료",
+    aliases: ["프로틴 음료", "프로틴 드링크"],
+  },
+  {
+    // The 가공식품 품목대표 row for the whole category, not one brand's
+    // label: products run 47-227 kcal/100 g, from 0 % fat to honey-sweetened.
+    foodCode: "P119-004040200-F001-005",
+    query: "그릭요거트",
+    name: "그릭요거트",
+    aliases: ["플레인 그릭요거트", "무가당 그릭요거트", "그릭 요구르트"],
+  },
+  {
+    foodCode: "D327-758015600-0001",
+    query: "달걀_삶은것_흰자",
+    name: "달걀흰자",
+    aliases: ["계란흰자", "삶은 달걀 흰자", "삶은 계란 흰자", "달걀_삶은것_흰자"],
+  },
+  {
+    // Oil-packed skipjack, which is what 살코기참치 is.
+    foodCode: "R211-059013929-0000",
+    query: "다랑어, 가다랑어, 통조림, 유지",
+    name: "참치캔",
+    aliases: ["참치 통조림", "캔참치", "살코기참치", "다랑어, 가다랑어, 통조림, 유지"],
+  },
+  {
+    // MFDS has no raw 원재료성 row for chicken tenderloin; this is a plain,
+    // unseasoned product row named exactly that, at a figure in line with
+    // the breast row above.
+    foodCode: "P117-501050100-4893",
+    query: "닭안심",
+    name: "닭안심",
+    aliases: ["닭안심살", "닭 안심"],
+  },
+  {
+    // 한우 1등급, the middle grade — 우둔 runs 104-191 kcal/100 g across
+    // grades, and the list cannot know which one was bought.
+    foodCode: "R109-027066201-0000",
+    query: "소고기, 한우(1등급), 우둔, 생것",
+    name: "소고기 우둔살",
+    aliases: ["우둔살", "우둔", "소고기, 한우(1등급), 우둔, 생것"],
   },
 ];
