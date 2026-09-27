@@ -145,7 +145,7 @@ describe("toGrams", () => {
 
   it("scales a known counter from the portion table", () => {
     expect(toGrams({ value: 2, unit: "공기", text: "두 공기", assumed: false }, rice))
-      .toEqual({ grams: 400, estimated: false, unit: "공기" });
+      .toMatchObject({ grams: 400, estimated: false, unit: "공기" });
   });
 
   it("takes grams at face value", () => {
@@ -170,7 +170,7 @@ describe("toGrams", () => {
   });
 
   it("counts a bare name as one of the entry's natural portion", () => {
-    expect(toGrams(assumedQuantity(), rice)).toEqual({
+    expect(toGrams(assumedQuantity(), rice)).toMatchObject({
       grams: 200,
       estimated: true,
       unit: "공기",
@@ -414,5 +414,46 @@ describe("an explicit counter the food does not publish", () => {
     expect(result.status).toBe("unmeasurable");
     if (result.status !== "unmeasurable") return;
     expect(result.reason).toBe("missing_serving");
+  });
+});
+
+describe("a reference portion converts a human unit and says so", () => {
+  const egg: FoodEntry = {
+    id: "f-ref-egg",
+    name: "삶은 달걀",
+    caloriesPer100g: 150,
+    servings: [
+      {
+        unit: "개",
+        grams: 50,
+        basis: { kind: "reference", note: "계란 1개 50 g", citation: "test citation" },
+      },
+    ],
+    source: "test-fixture",
+  };
+  const eggResolver = createLocalDatasetResolver([egg]);
+
+  it("prices 두 개 from the reference weight, marked estimated", async () => {
+    const result = await eggResolver.resolve(only("삶은 달걀 두 개 먹었어"));
+    if (result.status !== "resolved") throw new Error("expected resolved");
+    // 150 kcal/100 g × 2 × 50 g — the energy is still the row's.
+    expect(result.match.calories).toBe(150);
+    expect(result.match.estimated).toBe(true);
+    expect(result.match.portionNote).toBe("1개 50g 기준 (계란 1개 50 g) · test citation");
+  });
+
+  it("leaves an MFDS-stated portion unmarked", async () => {
+    const result = await resolver.resolve(only("갈비탕 한 그릇 먹었어"));
+    if (result.status !== "resolved") throw new Error("expected resolved");
+    expect(result.match.estimated).toBe(false);
+    expect(result.match).not.toHaveProperty("portionNote");
+  });
+
+  it("still takes grams at face value, with no reference involved", async () => {
+    const result = await eggResolver.resolve(only("삶은 달걀 120g 먹었어"));
+    if (result.status !== "resolved") throw new Error("expected resolved");
+    expect(result.match.calories).toBe(180);
+    expect(result.match.estimated).toBe(false);
+    expect(result.match).not.toHaveProperty("portionNote");
   });
 });

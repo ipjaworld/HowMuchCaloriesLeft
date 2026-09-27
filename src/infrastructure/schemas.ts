@@ -25,6 +25,7 @@ export const foodItemSchema = z.object({
     message: "calorie value is not a usable number",
   }),
   caloriesEstimated: z.boolean(),
+  portionNote: z.string().min(1).max(200).optional(),
 });
 
 export const mealRecordSchema = z.object({

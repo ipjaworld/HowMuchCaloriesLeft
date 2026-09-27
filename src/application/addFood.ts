@@ -72,6 +72,7 @@ export function toFoodItem(match: NutritionMatch): NewFoodItem {
     amount: match.amount.text,
     calories: match.calories,
     caloriesEstimated: match.estimated,
+    ...(match.portionNote === undefined ? {} : { portionNote: match.portionNote }),
   };
 }
 

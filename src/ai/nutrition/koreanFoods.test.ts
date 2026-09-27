@@ -82,28 +82,35 @@ describe("resolving what people actually say", () => {
 });
 
 describe("a food we know but cannot weigh is not a food we do not know", () => {
-  it("will not price a boiled egg by the piece — MFDS states no egg weight", async () => {
-    const result = await resolveOne("삶은계란 두 개 먹었어");
-    expect(result.status).toBe("unmeasurable");
-    if (result.status !== "unmeasurable") return;
-    expect(result.entries[0]?.name).toContain("달걀");
-  });
-
-  it("will not price an americano by the cup — MFDS states no cup size", async () => {
-    const result = await resolveOne("아메리카노 한 잔 마셨어");
-    expect(result.status).toBe("unmeasurable");
-  });
+  // 삶은 달걀 and 아메리카노 used to be the examples here. MFDS still states
+  // no egg weight or cup size, but `servingReferences.ts` now supplies a
+  // published one — see `coverage.test.ts`. What is left here has no source.
 
   it("will not price a 삼각김밥 by the piece", async () => {
-    // MFDS gives a 200 g weight for this row, which is not one triangle, so
-    // the seed deliberately carries no counter.
+    // MFDS gives a 200 g weight for this row, which is not one triangle, and
+    // nothing public prints a per-piece weight, so it asks.
     const result = await resolveOne("삼각김밥 하나 먹었어");
     expect(result.status).toBe("unmeasurable");
   });
 
+  it("will not price a pack of chicken breast — packs are not one size", async () => {
+    const result = await resolveOne("닭가슴살 1팩 먹었어");
+    expect(result.status).toBe("unmeasurable");
+    if (result.status !== "unmeasurable") return;
+    expect(result.reason).toBe("missing_serving");
+    expect(result.entries[0]?.name).toBe("닭가슴살");
+  });
+
+  it("will not price a yoghurt cup, a fried egg or a can by the piece", async () => {
+    for (const sentence of ["요거트 1개 먹었어", "계란후라이 1개 먹었어", "콜라 한 캔 마셨어"]) {
+      const result = await resolveOne(sentence);
+      expect(result.status, sentence).toBe("unmeasurable");
+    }
+  });
+
   it("prices those same foods once the user names a weight", async () => {
     // This is what makes the distinction worth drawing: the user can fix it.
-    for (const sentence of ["커피 200ml 마셨어", "삶은계란 100g 먹었어"]) {
+    for (const sentence of ["커피 200ml 마셨어", "삶은계란 100g 먹었어", "닭가슴살 120g 먹었어"]) {
       const result = await resolveOne(sentence);
       expect(result.status).toBe("resolved");
     }
@@ -137,23 +144,24 @@ describe("representative scenarios", () => {
     expect(result.match.calories).toBeGreaterThan(0);
   });
 
-  it("밥 한 공기 → 쌀밥과 현미밥 사이의 진짜 ambiguity", async () => {
+  it("밥 한 공기 → 공기에 담는 밥 사이의 진짜 ambiguity", async () => {
     const result = await resolveOne("밥 한 공기 먹었어");
     expect(result.status).toBe("ambiguous");
     if (result.status !== "ambiguous") return;
 
-    // 김밥 and 비빔밥 also contain "밥" and score identically on the name,
-    // but neither publishes a 공기 portion, so the counter rules them out.
+    // 김밥, 비빔밥, 볶음밥 and the rest also contain "밥" and score
+    // identically on the name, but none publishes a 공기 portion, so the
+    // counter rules them out.
     const names = result.candidates.map((c) => c.entry.name).sort();
-    expect(names).toEqual(["쌀밥", "현미밥"]);
+    expect(names).toEqual(["쌀밥", "잡곡밥", "현미밥"]);
   });
 
-  it("커피 한잔 → unmeasurable", async () => {
+  it("커피 한잔 → resolved, as an estimated café cup", async () => {
     const result = await resolveOne("커피 한잔 마셨어");
-    expect(result.status).toBe("unmeasurable");
-    if (result.status !== "unmeasurable") return;
-    expect(result.reason).toBe("missing_serving");
-    expect(result.entries[0]?.name).toContain("아메리카노");
+    expect(result.status).toBe("resolved");
+    if (result.status !== "resolved") return;
+    expect(result.match.entry.name).toBe("아메리카노");
+    expect(result.match.estimated).toBe(true);
   });
 
   it("커피 200ml → resolved", async () => {
@@ -169,10 +177,10 @@ describe("representative scenarios", () => {
     expect(result.status).toBe("unknown");
   });
 
-  it("삶은계란 두 개 → unmeasurable", async () => {
+  it("삶은계란 두 개 → resolved, as two published-size eggs", async () => {
     const result = await resolveOne("삶은계란 두 개 먹었어");
-    expect(result.status).toBe("unmeasurable");
-    if (result.status !== "unmeasurable") return;
-    expect(result.reason).toBe("missing_serving");
+    expect(result.status).toBe("resolved");
+    if (result.status !== "resolved") return;
+    expect(result.match.estimated).toBe(true);
   });
 });

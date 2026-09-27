@@ -1,6 +1,7 @@
 import datasetJson from "../../../data/korean-foods.json";
 import { foodDatasetSchema, parseFoodEntries } from "./dataset";
 import { createLocalDatasetResolver } from "./localDatasetResolver";
+import { withServingReferences } from "./servingReferences";
 import type { FoodEntry, NutritionResolver } from "./types";
 
 /**
@@ -27,7 +28,19 @@ if (!parsed.success) {
 /** Where the figures came from, for attribution in the UI and the README. */
 export const DATASET_SOURCE = parsed.data.source;
 
-export const KOREAN_FOODS: FoodEntry[] = parseFoodEntries(parsed.data.entries);
+/**
+ * Exactly what MFDS published, as the sync wrote it. Kept separate so the
+ * seed invariants can be checked against the rows themselves.
+ */
+export const MFDS_FOOD_ENTRIES: FoodEntry[] = parseFoodEntries(parsed.data.entries);
+
+/**
+ * What the app resolves against: the MFDS entries plus the published
+ * household measures in `servingReferences.ts` — "계란 1개 = 50 g" — which
+ * MFDS itself does not carry. The references add grams per unit only; every
+ * calorie figure is still the row's.
+ */
+export const KOREAN_FOODS: FoodEntry[] = withServingReferences(MFDS_FOOD_ENTRIES);
 
 /**
  * How many foods the app can actually price. Deliberately exported: the gap

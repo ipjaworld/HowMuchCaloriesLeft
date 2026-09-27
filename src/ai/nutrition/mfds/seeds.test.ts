@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { KOREAN_FOODS } from "../koreanFoods";
+import { MFDS_FOOD_ENTRIES as KOREAN_FOODS } from "../koreanFoods";
 import { FOOD_SEEDS } from "./seeds";
 
 /**

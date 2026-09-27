@@ -13,7 +13,9 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["scripts/**/*.sync.ts"],
-    testTimeout: 600_000,
+    // One search per seed, most of them a single page once the pinned row
+    // stops the paging. An hour is a backstop, not an expectation.
+    testTimeout: 3_600_000,
     disableConsoleIntercept: true,
     pool: "threads",
     maxWorkers: 1,

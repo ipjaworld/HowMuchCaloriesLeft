@@ -22,6 +22,12 @@ export type FoodItem = {
    * differently.
    */
   caloriesEstimated: boolean;
+  /**
+   * What an estimate rests on, when the portion came from a published
+   * household measure rather than the MFDS row: "1개 50g 기준 · 식품교환표".
+   * Optional so records written before it existed stay valid.
+   */
+  portionNote?: string;
 };
 
 export type MealRecord = {

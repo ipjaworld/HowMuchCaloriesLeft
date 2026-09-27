@@ -82,8 +82,14 @@ const OPERATION = "getFoodNtrCpntDbInq03";
 /** The API's own cap per request. */
 const MAX_ROWS_PER_PAGE = 100;
 
-/** Refuses to page forever if `totalCount` and the rows ever disagree. */
-const MAX_PAGES = 20;
+/**
+ * Refuses to page forever if `totalCount` and the rows ever disagree.
+ *
+ * 40 rather than 20 because a plain "우유" matches 2,809 rows and the plain
+ * milk row (R113-009000000-0000) sits on page 28 — name search returns
+ * dishes first and raw ingredients last.
+ */
+const MAX_PAGES = 40;
 
 export class MfdsError extends Error {}
 
@@ -100,9 +106,19 @@ function redact(text: string, apiKey: string): string {
     .join("[REDACTED]");
 }
 
+export type SearchOptions = {
+  /**
+   * Stop paging once a page contains a row this accepts. The sync knows the
+   * exact food code it wants, and a broad name like "우유" is 29 pages; paging
+   * on after the row has turned up is most of what made a 78-seed sync
+   * exceed ten minutes.
+   */
+  stopWhen?: (row: MfdsRow) => boolean;
+};
+
 export type MfdsClient = {
-  /** Every row whose `FOOD_NM_KR` contains `name`. */
-  searchByName(name: string): Promise<MfdsRow[]>;
+  /** Every row whose `FOOD_NM_KR` contains `name` (or up to `stopWhen`). */
+  searchByName(name: string, options?: SearchOptions): Promise<MfdsRow[]>;
 };
 
 export function createMfdsClient({
@@ -169,7 +185,7 @@ export function createMfdsClient({
   }
 
   return {
-    async searchByName(name: string): Promise<MfdsRow[]> {
+    async searchByName(name: string, options: SearchOptions = {}): Promise<MfdsRow[]> {
       const collected: MfdsRow[] = [];
 
       for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
@@ -177,6 +193,7 @@ export function createMfdsClient({
         collected.push(...rows);
 
         if (rows.length === 0 || collected.length >= totalCount) break;
+        if (options.stopWhen !== undefined && rows.some(options.stopWhen)) break;
       }
 
       return collected;

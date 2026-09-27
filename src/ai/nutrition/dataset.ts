@@ -13,6 +13,17 @@ import type { FoodEntry } from "./types";
 const servingSchema = z.object({
   unit: z.string().min(1),
   grams: z.number().positive().finite(),
+  basis: z
+    .discriminatedUnion("kind", [
+      z.object({ kind: z.literal("mfds") }),
+      z.object({
+        kind: z.enum(["reference", "typical"]),
+        note: z.string().min(1),
+        citation: z.string().min(1),
+        measure: z.literal("mL").optional(),
+      }),
+    ])
+    .optional(),
 });
 
 export const foodEntrySchema = z.object({

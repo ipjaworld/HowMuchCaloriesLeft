@@ -110,6 +110,7 @@ describe("ambiguous — the record waits for a choice", () => {
     if (question?.type !== "choose_food") return;
     expect(question.candidates.map((c) => c.name).sort()).toEqual([
       "쌀밥",
+      "잡곡밥",
       "현미밥",
     ]);
 
@@ -152,29 +153,30 @@ describe("ambiguous — the record waits for a choice", () => {
 describe("unmeasurable — the record waits for an amount", () => {
   it("asks for a weight, and stores nothing until given one", async () => {
     const { repository, add, records } = fakeRepository();
-    const pending = await start("커피 한잔 마셨어");
+    // A pack of chicken breast has no published weight, so it waits for one.
+    const pending = await start("닭가슴살 1팩 먹었어");
 
     const question = nextQuestion(pending);
     expect(question?.type).toBe("provide_quantity");
     if (question?.type !== "provide_quantity") return;
     expect(question.reason).toBe("missing_serving");
-    expect(question.entries[0]?.name).toContain("아메리카노");
+    expect(question.entries[0]?.name).toBe("닭가슴살");
 
     expect(add).toHaveBeenCalledTimes(0);
 
-    // What /api/resolve returns for "200ml".
+    // What /api/resolve returns for "120g".
     const answered = answerQuantity(pending, question.partIndex, {
-      name: "커피_아메리카노",
-      amount: "200ml",
-      calories: 8,
-      caloriesEstimated: true,
+      name: "닭가슴살",
+      amount: "120g",
+      calories: 152,
+      caloriesEstimated: false,
     });
 
     expect(isComplete(answered)).toBe(true);
     await commit(repository, answered);
 
     expect(add).toHaveBeenCalledTimes(1);
-    expect(records[0]?.items[0]?.calories).toBe(8);
+    expect(records[0]?.items[0]?.calories).toBe(152);
   });
 });
 
@@ -247,7 +249,7 @@ describe("cancelling a pending question", () => {
 
   it("writes nothing when the sentence is abandoned", async () => {
     const { repository, add } = fakeRepository();
-    const pending = await start("커피 한잔 마셨어");
+    const pending = await start("닭가슴살 1팩 먹었어");
 
     expect(isComplete(pending)).toBe(false);
     // The screen drops the pending state; nothing ever reaches the repository.
@@ -358,5 +360,35 @@ describe("a correction reuses the add pipeline", () => {
 
     expect(isSameAs(resolved.item, { name: "갈비탕", calories: 362 })).toBe(true);
     expect(isSameAs(resolved.item, { name: "갈비탕", calories: 181 })).toBe(false);
+  });
+});
+
+describe("a counter the food does not publish", () => {
+  it("waits for an amount and says which counters would work", async () => {
+    const { add } = fakeRepository();
+    const pending = await start("고기만두 5개 먹었어");
+
+    const question = nextQuestion(pending);
+    expect(question?.type).toBe("provide_quantity");
+    if (question?.type !== "provide_quantity") return;
+    expect(question.reason).toBe("unsupported_unit");
+    expect(question.unit).toBe("개");
+    expect(question.knownUnits).toEqual(["인분"]);
+    expect(add).toHaveBeenCalledTimes(0);
+  });
+});
+
+describe("a published household measure", () => {
+  it("records 삶은 달걀 두 개 in one turn, marked estimated with its source", async () => {
+    const { repository, records } = fakeRepository();
+    const pending = await start("삶은 달걀 두 개 먹었어");
+
+    expect(isSettled(pending.parts)).toBe(true);
+    await commit(repository, pending);
+
+    const item = records[0]?.items[0];
+    expect(item?.name).toBe("삶은 달걀");
+    expect(item?.caloriesEstimated).toBe(true);
+    expect(item?.portionNote).toContain("50g");
   });
 });

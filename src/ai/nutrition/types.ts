@@ -9,12 +9,49 @@ import type { ParsedFoodPhrase } from "./foodPhrases";
  * the answer is "unknown", and the app asks.
  */
 
+/**
+ * Where the weight of one portion came from.
+ *
+ * The weight of "한 개" is a different fact from the energy of 100 g, and it
+ * often has to come from a different place: MFDS publishes a 갈비탕's bowl
+ * but not an egg's. So a portion carries its own provenance.
+ *
+ *   mfds       the row itself states it (Z10500 / NUTRI_AMOUNT_SERVING).
+ *              Absent `basis` means this, which is what every portion in
+ *              `data/korean-foods.json` is.
+ *   reference  a published household measure — "바나나 50 g (중 1/2개)" in the
+ *              diabetes food-exchange lists. A real source, but one egg is
+ *              not every egg, so the result is always marked estimated.
+ *   typical    a documented typical size where no measure is published for
+ *              this food itself — a café cup taken from MFDS's own café rows.
+ *              Also always estimated.
+ *
+ * None of these produce a calorie figure. They turn a human unit into grams;
+ * the energy still comes from the MFDS row.
+ */
+export type ServingBasis =
+  | { kind: "mfds" }
+  | {
+      kind: "reference" | "typical";
+      note: string;
+      citation: string;
+      /** The source measures a volume (a cup, a carton); read as grams at 1 g/mL. */
+      measure?: "mL";
+    };
+
 /** A portion this food is normally counted in: 한 공기 = 210 g. */
 export type Serving = {
   /** The counter, matching the units the quantity parser produces. */
   unit: string;
   grams: number;
+  /** Omitted for a portion the MFDS row states itself. */
+  basis?: ServingBasis;
 };
+
+/** True when a portion is a published or typical size rather than this row's own. */
+export function isEstimatedServing(serving: Serving): boolean {
+  return serving.basis !== undefined && serving.basis.kind !== "mfds";
+}
 
 /**
  * One food in the local dataset. Mirrors what the MFDS database publishes:
@@ -50,6 +87,12 @@ export type NutritionMatch = {
    * an unfamiliar counter, or millilitres read as grams.
    */
   estimated: boolean;
+  /**
+   * Why the portion is an estimate, when it came from a reference rather than
+   * the MFDS row: "1개 50g 기준 · 당뇨병 식품교환표". Carried onto the stored
+   * item so the "~" in the list can say what it stands for.
+   */
+  portionNote?: string;
   /** How well the name matched, 0-1. */
   score: number;
 };

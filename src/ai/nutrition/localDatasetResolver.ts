@@ -1,11 +1,13 @@
 import type { ParsedFoodPhrase } from "./foodPhrases";
 import type { Quantity } from "./quantity";
 import { findByName } from "./dataset";
-import type {
-  FoodEntry,
-  NutritionMatch,
-  NutritionResolver,
-  PhraseResolution,
+import {
+  isEstimatedServing,
+  type FoodEntry,
+  type NutritionMatch,
+  type NutritionResolver,
+  type PhraseResolution,
+  type Serving,
 } from "./types";
 
 /**
@@ -39,6 +41,8 @@ type Weighed = {
   estimated: boolean;
   /** The counter the portion was read in, or null for a raw weight. */
   unit: string | null;
+  /** The portion used, when a counter was converted through one. */
+  serving?: Serving;
 } | null;
 
 /**
@@ -68,7 +72,13 @@ export function toGrams(quantity: Quantity, entry: FoodEntry): Weighed {
 
     const serving = entry.servings?.find((candidate) => candidate.unit === unit);
     if (serving !== undefined) {
-      return { grams: value * serving.grams, estimated: quantity.assumed, unit };
+      return {
+        grams: value * serving.grams,
+        // A published egg weight is still not *this* egg's weight.
+        estimated: quantity.assumed || isEstimatedServing(serving),
+        unit,
+        serving,
+      };
     }
   }
 
@@ -85,11 +95,27 @@ export function toGrams(quantity: Quantity, entry: FoodEntry): Weighed {
 
   return {
     grams: value * fallback.grams,
-    // "하나" of a food counted in 그릇 is one 그릇; only an assumed amount
-    // makes it approximate.
-    estimated: quantity.assumed,
+    // "하나" of a food counted in 그릇 is one 그릇; only an assumed amount,
+    // or a portion that is itself a reference size, makes it approximate.
+    estimated: quantity.assumed || isEstimatedServing(fallback),
     unit: fallback.unit,
+    serving: fallback,
   };
+}
+
+/**
+ * "1개 50g 기준 (계란후라이 1개 (계란 50 g)) · 출처" — the conversion, the
+ * measure as the source printed it, and the source, for a portion that did
+ * not come from the MFDS row. A volume is shown as the volume it is ("1팩
+ * 200mL"), not as the grams it is read as.
+ */
+function portionNoteFor(serving: Serving | undefined): string | undefined {
+  const basis = serving?.basis;
+  if (serving === undefined || basis === undefined || basis.kind === "mfds") {
+    return undefined;
+  }
+  const measure = basis.measure ?? "g";
+  return `1${serving.unit} ${serving.grams}${measure} 기준 (${basis.note}) · ${basis.citation}`;
 }
 
 /** How the amount reads back to the user once it has been resolved. */
@@ -119,12 +145,14 @@ export function caloriesFor(
 ): NutritionMatch | null {
   const weighed = toGrams(quantity, entry);
   if (weighed === null) return null;
+  const portionNote = portionNoteFor(weighed.serving);
 
   return {
     entry,
     calories: Math.round((entry.caloriesPer100g * weighed.grams) / 100),
     amount: describeAmount(quantity, weighed),
     estimated: weighed.estimated,
+    ...(portionNote === undefined ? {} : { portionNote }),
     score: 0,
   };
 }

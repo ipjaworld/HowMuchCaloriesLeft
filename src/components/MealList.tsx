@@ -89,7 +89,15 @@ export function MealList({ records, isLoading = false }: Props) {
                     </span>
                     <span className="numeric shrink-0 text-[0.8125rem] text-ink-soft">
                       {item.caloriesEstimated && (
-                        <span title="추정값">~</span>
+                        <span
+                          title={
+                            item.portionNote === undefined
+                              ? "추정값"
+                              : `추정값 · ${item.portionNote}`
+                          }
+                        >
+                          ~
+                        </span>
                       )}
                       {numberFormat.format(item.calories)}
                       <span className="sr-only"> kcal</span>

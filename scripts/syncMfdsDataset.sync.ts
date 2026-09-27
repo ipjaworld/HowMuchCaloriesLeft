@@ -75,7 +75,9 @@ async function main(): Promise<void> {
   const unresolved: string[] = [];
 
   for (const seed of FOOD_SEEDS) {
-    const rows = await client.searchByName(seed.query);
+    const rows = await client.searchByName(seed.query, {
+      stopWhen: (row) => row.FOOD_CD === seed.foodCode,
+    });
     const { row, matched } = selectRow(rows, { foodCode: seed.foodCode });
 
     if (row === null) {
