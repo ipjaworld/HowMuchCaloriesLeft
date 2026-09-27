@@ -3,35 +3,50 @@
  *
  * Two kinds of string appear in this app and they must not be confused:
  *
- *   - an ISO datetime with offset  ("2026-09-20T12:40:00+09:00") — `consumedAt`
- *   - a date-only key             ("2026-09-20")                 — `DailyGoal.date`
+ *   - an ISO datetime            ("2026-09-20T03:40:00.000Z") — `consumedAt`
+ *   - a date-only key            ("2026-09-20")               — `DailyGoal.date`
  *
- * A date key is always in the *user's own* timezone. Asia/Seoul is never
- * hardcoded: whatever zone the browser is in decides where the day starts.
+ * **A day is a day in Korea.** Every date key is the calendar date in
+ * Asia/Seoul, 00:00:00 to 23:59:59 KST, whatever timezone the device is set
+ * to. The app is for Korean users and a travelling phone should not split
+ * one evening's meals across two days. This module is the only place that
+ * turns a moment into a day; nothing else may slice an ISO string or call
+ * the local date getters for that.
  */
+
+/** The zone every day boundary is drawn in. */
+export const APP_TIME_ZONE = "Asia/Seoul";
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+// en-CA formats a date as YYYY-MM-DD. Built once: constructing an
+// Intl.DateTimeFormat is far slower than using one.
+const dateKeyFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 /**
- * Local calendar date of a moment, as YYYY-MM-DD.
+ * The KST calendar date of a moment, as YYYY-MM-DD.
  *
- * Built from the local getters on purpose. `toISOString().slice(0, 10)` would
- * convert to UTC first and report the wrong day for anyone east or west of it
- * — in Seoul, everything before 09:00 would fall on the previous date.
+ * Never `toISOString().slice(0, 10)`: that is the UTC date, and in Seoul
+ * everything before 09:00 would land on the previous day.
  */
 export function toDateKey(date: Date): string {
-  const year = String(date.getFullYear()).padStart(4, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  const parts = dateKeyFormat.formatToParts(date);
+  const part = (type: "year" | "month" | "day") =>
+    parts.find((entry) => entry.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-/** Today's date key in the user's timezone. */
+/** Today's date key, in KST. */
 export function todayKey(now: Date = new Date()): string {
   return toDateKey(now);
 }
 
-/** The date key an ISO datetime falls on, locally. Null if unparseable. */
+/** The KST date key an ISO datetime falls on. Null if unparseable. */
 export function dateKeyOf(isoDateTime: string): string | null {
   const parsed = new Date(isoDateTime);
   return Number.isNaN(parsed.getTime()) ? null : toDateKey(parsed);
@@ -40,17 +55,18 @@ export function dateKeyOf(isoDateTime: string): string | null {
 export function isDateKey(value: unknown): value is string {
   if (typeof value !== "string" || !DATE_KEY_PATTERN.test(value)) return false;
 
-  // Rejects "2026-02-30": the parts must survive a round trip.
+  // Rejects "2026-02-30": the parts must survive a round trip. UTC so the
+  // check is pure calendar arithmetic, untouched by any zone.
   const [year, month, day] = value.split("-").map(Number) as [
     number,
     number,
     number,
   ];
-  const asDate = new Date(year, month - 1, day);
+  const asDate = new Date(Date.UTC(year, month - 1, day));
   return (
-    asDate.getFullYear() === year &&
-    asDate.getMonth() === month - 1 &&
-    asDate.getDate() === day
+    asDate.getUTCFullYear() === year &&
+    asDate.getUTCMonth() === month - 1 &&
+    asDate.getUTCDate() === day
   );
 }
 
@@ -60,4 +76,19 @@ export function isDateKey(value: unknown): value is string {
  */
 export function compareDateKeys(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/**
+ * The date key `days` after (or before) another. Calendar arithmetic on the
+ * key itself, done in UTC where no day is 23 or 25 hours long.
+ */
+export function addDays(dateKey: string, days: number): string {
+  const [year, month, day] = dateKey.split("-").map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  const pad = (value: number, width: number) => String(value).padStart(width, "0");
+  return `${pad(shifted.getUTCFullYear(), 4)}-${pad(shifted.getUTCMonth() + 1, 2)}-${pad(shifted.getUTCDate(), 2)}`;
 }

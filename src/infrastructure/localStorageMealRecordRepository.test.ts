@@ -4,9 +4,9 @@ import type { MealRecord } from "@/domain/meal";
 import { createLocalStorageMealRecordRepository } from "./localStorageMealRecordRepository";
 import { STORAGE_KEYS, createMemoryStorage } from "./storage";
 
-const DAY = new Date(2026, 8, 20, 12, 40);
+const DAY = new Date("2026-09-20T12:40:00+09:00");
 const DATE_KEY = toDateKey(DAY);
-const OTHER_DAY = new Date(2026, 8, 19, 12, 40);
+const OTHER_DAY = new Date("2026-09-19T12:40:00+09:00");
 
 function makeRecord(overrides: Partial<MealRecord> = {}): MealRecord {
   const iso = DAY.toISOString();
@@ -43,7 +43,7 @@ describe("localStorage meal record repository", () => {
     storage = createMemoryStorage();
     repository = createLocalStorageMealRecordRepository({
       storage,
-      now: () => new Date(2026, 8, 20, 18, 0),
+      now: () => new Date("2026-09-20T18:00:00+09:00"),
     });
   });
 
@@ -78,10 +78,10 @@ describe("localStorage meal record repository", () => {
 
   it("returns a day's records in the order they were consumed", async () => {
     await repository.add(
-      makeRecord({ id: "late", consumedAt: new Date(2026, 8, 20, 19, 0).toISOString() }),
+      makeRecord({ id: "late", consumedAt: new Date("2026-09-20T19:00:00+09:00").toISOString() }),
     );
     await repository.add(
-      makeRecord({ id: "early", consumedAt: new Date(2026, 8, 20, 8, 0).toISOString() }),
+      makeRecord({ id: "early", consumedAt: new Date("2026-09-20T08:00:00+09:00").toISOString() }),
     );
 
     const records = await repository.getByDate(DATE_KEY);
@@ -97,7 +97,7 @@ describe("localStorage meal record repository", () => {
     const [updated] = await repository.getByDate(DATE_KEY);
     expect(updated?.items).toHaveLength(1);
     expect(updated?.items[0]?.calories).toBe(160);
-    expect(updated?.updatedAt).toBe(new Date(2026, 8, 20, 18, 0).toISOString());
+    expect(updated?.updatedAt).toBe(new Date("2026-09-20T18:00:00+09:00").toISOString());
     expect(updated?.createdAt).toBe(DAY.toISOString());
   });
 

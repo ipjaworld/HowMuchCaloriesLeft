@@ -6,7 +6,7 @@ import { createLocalStorageMealRecordRepository } from "@/infrastructure/localSt
 import { createMemoryStorage } from "@/infrastructure/storage";
 import { addMealRecord, deleteMealRecord, updateMealRecord } from "./mealRecords";
 
-const DAY = new Date(2026, 8, 20, 12, 40);
+const DAY = new Date("2026-09-20T12:40:00+09:00");
 const DATE_KEY = toDateKey(DAY);
 
 describe("meal record use cases", () => {
@@ -64,7 +64,7 @@ describe("meal record use cases", () => {
   });
 
   it("honours an explicit consumedAt", async () => {
-    const earlier = new Date(2026, 8, 20, 8, 0).toISOString();
+    const earlier = new Date("2026-09-20T08:00:00+09:00").toISOString();
     const record = await addMealRecord(
       repository,
       {

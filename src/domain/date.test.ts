@@ -1,32 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { compareDateKeys, dateKeyOf, isDateKey, toDateKey, todayKey } from "./date";
+import { addDays, compareDateKeys, dateKeyOf, isDateKey, toDateKey, todayKey } from "./date";
 
-describe("toDateKey", () => {
-  it("uses the local calendar date, not UTC", () => {
-    // Built from local parts, so this holds in every timezone the test runs
-    // in — which is the point: `toISOString().slice(0, 10)` would not.
-    const local = new Date(2026, 8, 20, 1, 30);
-    expect(toDateKey(local)).toBe("2026-09-20");
+describe("toDateKey — the day is always a KST day", () => {
+  it("23:59 KST is still that day", () => {
+    expect(toDateKey(new Date("2026-09-27T23:59:59+09:00"))).toBe("2026-09-27");
   });
 
-  it("does not roll back across midnight the way a UTC conversion would", () => {
-    const justAfterMidnight = new Date(2026, 0, 1, 0, 5);
-    expect(toDateKey(justAfterMidnight)).toBe("2026-01-01");
+  it("00:00 KST is the next day", () => {
+    expect(toDateKey(new Date("2026-09-28T00:00:00+09:00"))).toBe("2026-09-28");
   });
 
-  it("does not roll forward late in the evening", () => {
-    const lateEvening = new Date(2026, 11, 31, 23, 55);
-    expect(toDateKey(lateEvening)).toBe("2026-12-31");
+  it("a UTC string is not sliced: 15:10Z is already the next morning in Seoul", () => {
+    // "2026-09-27T15:10:00.000Z".slice(0, 10) would say 09-27.
+    expect(toDateKey(new Date("2026-09-27T15:10:00.000Z"))).toBe("2026-09-28");
+  });
+
+  it("early-morning KST does not fall back onto the previous UTC date", () => {
+    expect(toDateKey(new Date("2026-09-28T08:59:00+09:00"))).toBe("2026-09-28");
+  });
+
+  it("crosses a year boundary on KST, not UTC", () => {
+    expect(toDateKey(new Date("2026-12-31T23:30:00+09:00"))).toBe("2026-12-31");
+    expect(toDateKey(new Date("2027-01-01T00:05:00+09:00"))).toBe("2027-01-01");
   });
 
   it("zero-pads single-digit months and days", () => {
-    expect(toDateKey(new Date(2026, 0, 5, 12, 0))).toBe("2026-01-05");
+    expect(toDateKey(new Date("2026-01-05T12:00:00+09:00"))).toBe("2026-01-05");
   });
 });
 
 describe("todayKey", () => {
   it("formats the moment it is given", () => {
-    expect(todayKey(new Date(2026, 8, 20, 14, 0))).toBe("2026-09-20");
+    expect(todayKey(new Date("2026-09-20T14:00:00+09:00"))).toBe("2026-09-20");
   });
 
   it("returns a well-formed key for the real clock", () => {
@@ -35,14 +40,28 @@ describe("todayKey", () => {
 });
 
 describe("dateKeyOf", () => {
-  it("reads the local day out of an ISO datetime", () => {
-    const iso = new Date(2026, 8, 20, 12, 40).toISOString();
-    expect(dateKeyOf(iso)).toBe("2026-09-20");
+  it("reads the KST day out of a stored UTC datetime", () => {
+    // What `new Date().toISOString()` writes at 00:10 KST on 9/28.
+    expect(dateKeyOf("2026-09-27T15:10:00.000Z")).toBe("2026-09-28");
+    expect(dateKeyOf("2026-09-27T14:50:00.000Z")).toBe("2026-09-27");
+  });
+
+  it("reads an offset datetime", () => {
+    expect(dateKeyOf("2026-09-20T12:40:00+09:00")).toBe("2026-09-20");
   });
 
   it("is null for something unparseable", () => {
     expect(dateKeyOf("점심때쯤")).toBeNull();
     expect(dateKeyOf("")).toBeNull();
+  });
+});
+
+describe("addDays", () => {
+  it("steps across month and year ends", () => {
+    expect(addDays("2026-09-30", 1)).toBe("2026-10-01");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+    expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+    expect(addDays("2028-03-01", -1)).toBe("2028-02-29");
   });
 });
 
