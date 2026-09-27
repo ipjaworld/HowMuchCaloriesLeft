@@ -1,6 +1,6 @@
 # HANDOFF
 
-> 마지막 갱신: **2026-09-27** · 상태: **v0.2 실사용 개선 — 구현·검증 완료, 커밋 전.** (production은 여전히 v0.1)
+> 마지막 갱신: **2026-09-27** · 상태: **v0.2 실사용 개선 — production 배포 완료.**
 
 다음 세션에서 이 파일부터 읽으면 컨텍스트 없이 바로 이어갈 수 있습니다.
 
@@ -10,11 +10,12 @@
 
 | | |
 | --- | --- |
-| production 기준 | `d9c7328` chore: ignore Vercel project metadata (HEAD `d669890`은 문서 커밋) |
-| working tree | **v0.2 변경 미커밋** (§20) |
+| production 기준 | `4f5df50` docs: record the v0.2 real-use iteration and pre-commit audit (v0.2 코드는 `6bb3531`..`92a406f`) |
+| working tree | clean, `origin/main`과 동기화 |
 | 완료 Phase | 0 · 1 · 2 · 3 · 4 · 4.5 · 5A · 5B · 6A · 6B · **v0.2** |
-| 상태 | v0.1 production 배포 완료. v0.2(음식 14→83 · 사람 단위 · 목표 계산기) 로컬 production 빌드로 QA 완료 |
-| 다음 할 일 | v0.2 커밋 → 배포 → 다시 며칠 사용 (§19) |
+| 상태 | v0.2(음식 14→83 · 사람 단위 · 목표 계산기) production 배포 완료 (§18) |
+| 다음 할 일 | 다시 며칠 사용하며 반복되는 `unknown`·g 질문만 기록 (§19) |
+| ⚠️ 배포 | **`main`에 push하면 Vercel이 자동으로 Production 배포한다** (Git 연동) |
 
 ### 런타임 환경변수 — 하나뿐
 
@@ -500,7 +501,17 @@ c54420f  feat: add deterministic nutrition resolution pipeline
 
 6A와 6B는 한 커밋으로 묶었다. `editFood.ts` 외의 파일은 6B가 6A의 코드를 같은 함수 안에서 고쳤기 때문에, 분리하려면 중간 상태를 손으로 복원하고 따로 검증해야 했고 얻는 것은 이력의 모양뿐이었다. Phase 경계는 `architecture.md` §4.1·§4.2에 문서로 남아 있다.
 
-`main`은 production 배포 기준 commit `d9c7328`까지 GitHub에 push했다.
+v0.2 (2026-09-27, 모두 push·배포됨):
+
+```
+4f5df50  docs: record the v0.2 real-use iteration and pre-commit audit
+92a406f  feat: estimate a daily target locally with a first-visit prompt
+a9c9d2e  feat: grow the dataset to 83 foods with cited serving references
+6bb3531  fix: ask instead of pricing an unpublished counter, and split 과/와 by 받침
+d669890  chore: record production deployment                           ← v0.1 배포 기록
+```
+
+v0.2의 네 커밋은 각각 단독으로 typecheck·lint·test를 통과하도록 나눴다(fix만 473 → +dataset 522 → +계산기 578).
 
 ## 17. 🚫 다음 작업자가 절대 하면 안 되는 것
 
@@ -544,6 +555,15 @@ c54420f  feat: add deterministic nutrition resolution pipeline
 | 영양 데이터 | `data/korean-foods.json` bundled file 사용. MFDS runtime 호출 없음 |
 | Production smoke test | **PASS** — 목표·추가·모호성 질문·양 후속 질문·상태 조회·수정·삭제·unknown 미저장·새로고침 복원 |
 | 기술 확인 | `/api/chat` Jev path, `/api/resolve`, localStorage, pending interaction, sticky input, 375px·430px·desktop 모두 PASS |
+
+위는 v0.1 배포다. **v0.2 배포 (2026-09-27)**:
+
+| 항목 | 결과 |
+| --- | --- |
+| 기준 commit | `4f5df50` — push 후 Vercel Git 연동이 자동 배포, GitHub status `Vercel: success` |
+| 마이그레이션 | 불필요 — DB 없음, 환경변수 변화 없음, localStorage 새 키는 없으면 "프로필 없음"으로 읽히고 `portionNote`는 선택 필드 |
+| Production smoke test | **PASS** (API, 실제 Jev) — `삶은 달걀` 2개 → 150 `~`(출처 포함) · `사과 반 개` → 62 · `바나나 1개` → 77 · `고기만두 5개` → `unsupported_unit`로 되물음 |
+| 미확인 | production 브라우저에서 첫 방문 계산기 dialog. 로컬 production 빌드에서는 QA 완료(§20) |
 
 아래는 배포 전에 코드에서 확인한 체크리스트다.
 
