@@ -1,6 +1,6 @@
 # HANDOFF
 
-> 마지막 갱신: **2026-09-24** · 상태: **MVP v0.1 — production 배포 완료.**
+> 마지막 갱신: **2026-09-27** · 상태: **v0.2 실사용 개선 — 구현·검증 완료, 커밋 전.** (production은 여전히 v0.1)
 
 다음 세션에서 이 파일부터 읽으면 컨텍스트 없이 바로 이어갈 수 있습니다.
 
@@ -10,11 +10,11 @@
 
 | | |
 | --- | --- |
-| production 기준 | `d9c7328` chore: ignore Vercel project metadata |
-| working tree | clean |
-| 완료 Phase | 0 · 1 · 2 · 3 · 4 · 4.5 · 5A · 5B · 6A · 6B |
-| 상태 | **MVP v0.1 production 배포 완료.** 자연어 기록·수정·삭제가 실제로 동작 |
-| 다음 할 일 | 실제로 며칠 사용하면서 반복되는 `unknown`만 기록 (§19) |
+| production 기준 | `d9c7328` chore: ignore Vercel project metadata (HEAD `d669890`은 문서 커밋) |
+| working tree | **v0.2 변경 미커밋** (§20) |
+| 완료 Phase | 0 · 1 · 2 · 3 · 4 · 4.5 · 5A · 5B · 6A · 6B · **v0.2** |
+| 상태 | v0.1 production 배포 완료. v0.2(음식 14→83 · 사람 단위 · 목표 계산기) 로컬 production 빌드로 QA 완료 |
+| 다음 할 일 | v0.2 커밋 → 배포 → 다시 며칠 사용 (§19) |
 
 ### 런타임 환경변수 — 하나뿐
 
@@ -309,13 +309,7 @@ live query를 쓰지 않는 이유: 331k행은 번들 불가, 요청 시점 선�
 
 그램 수는 **언제나 행이 명시한 값**(`Z10500` 1인분 총중량 / `NUTRI_AMOUNT_SERVING` 표시 제공량). 두 값이 기준(100g/100mL)과 같으면 "정보 없음"으로 읽는다. 단위 **이름**(공기·그릇·잔)만 `seeds.ts`가 정하고 **크기는 절대 정하지 않는다.**
 
-현재 14개 중 11개는 1인분 정보 있음, 3개는 없음 → `unknown`:
-
-- **삶은 달걀** — MFDS에 개당 무게가 없다
-- **아메리카노** — 잔 용량이 없다
-- **삼각김밥** — 행의 200g이 한 개가 아님
-
-이건 버그가 아니다. 채우지 말 것.
+v0.2 기준 83개 중 53개가 MFDS 1인분을 가진다. 나머지 30개(대부분 원재료)는 **데이터 파일에서는 여전히 1인분이 없다.** 그중 달걀·과일·우유 등은 `servingReferences.ts`의 **출처가 인쇄된 가정용 계량**을 로드 시에 붙여 "1개·1팩"을 읽는다(`~` 표시). 근거가 없는 것 — 삼각김밥·닭가슴살 팩·요거트 컵·계란후라이·캔 — 은 여전히 g을 묻는다. §20 참고.
 
 ## 8. 외부 자격증명
 
@@ -478,6 +472,9 @@ editFood      item이 속한 record를 찾아 기존 update/delete 함수를 고
 10. `src/application/addFood.ts` · `pendingAdd.ts` — 한 문장이 한 기록이 되는 과정
 11. `src/application/editFood.ts` — item과 record 사이의 틈을 건너는 곳
 12. `src/components/TodayScreen.tsx` — 위 셋을 순서대로 호출하는 유일한 곳
+13. `src/ai/nutrition/servingReferences.ts` — 사람 단위 → g, 출처 우선순위 (v0.2)
+14. `src/domain/dietProfile.ts` — 유지 칼로리 공식·계수·모드·자동 제안 하한과 그 근거 (v0.2)
+15. `src/privacy.test.ts` — 프로필이 서버로 갈 수 없음을 어떻게 고정했는지 (v0.2)
 
 TypeSafe 작업 시에는 `/typesafe:typesafe-ai` skill이 project scope에 설치되어 있습니다. **live docs가 source of truth이므로 추측하지 말 것.** SDK API는 `node_modules/@typesafe-ai/sdk/dist/index.d.mts`가 가장 정확합니다 (공개 문서 페이지는 요약적임).
 
@@ -517,7 +514,13 @@ c54420f  feat: add deterministic nutrition resolution pipeline
 8. 데이터가 없다는 이유로 **Phase를 억지로 "완료" 처리하지 마세요.** 막힌 것은 막혔다고 적습니다.
 9. **`AMT_NUM1` 검산을 제거하지 마세요.** 식약처 영양소 컬럼에는 이름이 없습니다. 검산이 사라지면 컬럼 순서가 바뀌는 날 조용히 틀린 칼로리가 들어갑니다.
 10. **이름으로 음식을 고르지 마세요.** `아메리카노` 정확 일치조차 인스턴트 분말(200 kcal/100g)을 물어옵니다. `FOOD_CD`를 눈으로 확인하고 `seeds.ts`에 넣으세요.
-11. **1인분 무게를 지어내지 마세요.** 삶은 달걀·아메리카노·삼각김밥이 `unmeasurable`인 건 버그가 아니라 데이터에 없기 때문입니다.
+11. **1인분 무게를 지어내지 마세요.** 개당 무게는 `servingReferences.ts`에만, **출처에 인쇄된 계량**과 인용과 함께 넣습니다. 기억·상식·모델로 채우지 마세요. 삼각김밥·닭가슴살 1팩·요거트 1개가 g을 묻는 건 근거가 없어서입니다.
+18. **`servingReferences.ts`에 칼로리를 넣지 마세요.** g만 담습니다. 에너지는 언제나 MFDS 행에서 옵니다. 테스트가 막습니다.
+19. **낯선 단위를 기본 1인분으로 대체하는 fallback을 되살리지 마세요.** `만두 5개`가 5인분이 됩니다. `unsupported_unit`으로 되묻습니다.
+20. **프로필을 요청 본문에 넣지 마세요.** `/api/chat` 본문은 `buildChatRequest` 한 곳에서만 만듭니다. 프로필 포트를 `domain/repository.ts`로 옮기지 마세요 — route에서 import 그래프로 닿게 되고 `privacy.test.ts`가 실패합니다.
+21. **계산된 목표를 화면 숫자로 저장하지 마세요.** `adoptCalculatedGoal`이 사실에서 다시 계산합니다. 유지 칼로리·목표를 프로필에 저장하지 마세요 — 파생값입니다.
+22. **자동 제안 하한(`SUGGESTED_TARGET_FLOOR`)을 `MIN_DAILY_GOAL_CALORIES`(500)와 합치지 마세요.** 하나는 오타 방지, 하나는 앱이 스스로 제안하는 범위에 거는 보수적인 guardrail입니다. **둘 다 안전·위험 기준이 아니며, UI·주석·문서에서 그렇게 쓰지 마세요.** guardrail은 제안만 막고 유지 모드와 수동 입력은 막지 않습니다.
+23. **범위에서 고른 값이나 빌린 값을 `reference`로 올리지 마세요.** 팩 200 mL·아메리카노 355 mL는 `typical`입니다. 식품교환표 과일 페이지의 괄호 없는 표는 개정 전 값이라 인용하지 않습니다.
 12. **되묻는 도중에 일부만 저장하지 마세요.** 한 문장은 한 기록입니다. 부분 저장은 취소를 복잡하게 만듭니다.
 13. **PendingAdd를 localStorage나 서버 세션에 넣지 마세요.** 반쯤 끝난 질문은 데이터가 아닙니다.
 14. **add_food에서 clarification noul을 다시 끌어들이지 마세요.** resolver가 확정적으로 답하는 질문입니다.
@@ -580,10 +583,74 @@ c54420f  feat: add deterministic nutrition resolution pipeline
 
 ## 19. 다음 단계 우선순위 (구현하지 말 것, 순서만)
 
-1. **실제로 며칠 써 보기** — 이 결과가 2번 seed 확장의 입력이 된다
-2. **usage-driven 음식 seed 확장** — `unknown`이 반복된 음식부터. 반드시 행을 눈으로 보고 `FOOD_CD` 추가 (→ §7의 함정)
-3. **UI polish** — 실사용에서 걸린 것만
+1. **v0.2 커밋·배포 후 다시 며칠 써 보기** — 이번엔 `unknown`이 드물어야 한다. 여전히 반복되는 것만 적는다
+2. **usage-driven seed 추가** — `pnpm candidates:mfds`로 행을 보고 `FOOD_CD` 추가 (→ §7의 함정)
+3. **정정 문법** (§13) — `갈비탕 반 그릇만 먹었어`
 4. **추천** — 남은 칼로리 + 부족한 것 정도. 생성형 코칭 금지
 5. **사진 입력** — 가장 나중
+
+---
+
+## 20. v0.2 — 실사용 개선 (2026-09-27)
+
+상세 설계·근거는 [`architecture.md` §4.3](architecture.md). 여기에는 다음 작업자가 알아야 할 것만.
+
+### 무엇이 바뀌었나
+
+| | 전 | 후 |
+| --- | --- | --- |
+| 음식 | 14 | **83** (원래 14개 수치 변화 0 — sync 전후 diff로 확인) |
+| `삶은 달걀 두 개` | g 질문 | **~150 kcal** (1개 50 g, 주달래 2010) |
+| `바나나 1개` / `사과 반 개` / `두유 1팩` | unknown | ~77 / ~62 / ~124 kcal |
+| `아메리카노 한 잔` | g/ml 질문 | ~14 kcal (카페 음료 355 mL, typical) |
+| `만두 5개` (인분만 있는 음식) | **조용히 5인분** | 되묻는다 (`unsupported_unit`) |
+| `사과 반 개` 문장 파싱 | **"사" + "반 개"로 쪼개져 사과 1개로 기록** | 받침 규칙으로 해결 |
+| 목표 | 숫자를 알아야 함 | 계산기 + 첫 방문 제안 (수동 입력 유지) |
+
+마지막 두 행의 **굵은 글씨는 v0.1의 조용한 오답**이었다. 커버리지를 넓히면서 드러났다 — `만두`·`사과`가 데이터셋에 들어오기 전에는 그 경로를 탈 입력이 없었다.
+
+### 새 파일
+
+```
+src/ai/nutrition/servingReferences.ts     사람 단위 → g, 출처 포함, 칼로리 없음
+src/domain/dietProfile.ts                 BMR·유지·모드·하한, DietProfile, DietProfileRepository
+src/application/calculatedGoal.ts         shouldOfferCalculator · adoptCalculatedGoal
+src/infrastructure/localStorageDietProfileRepository.ts   hmcl.v1.dietProfile · hmcl.v1.onboarding
+src/components/GoalCalculatorDialog.tsx   <dialog> 온보딩·계산기
+src/components/chatRequest.ts             /api/chat 본문 생성 (TodayScreen에서 분리)
+src/privacy.test.ts                       프로필이 서버에 닿을 경로가 없음을 구조로 검사
+scripts/mfdsCandidates.candidates.ts      pnpm candidates:mfds
+vitest.candidates.mts
+```
+
+### 검증
+
+| | |
+| --- | --- |
+| `pnpm typecheck` | ✅ |
+| `pnpm lint` | ✅ 경고 0 |
+| `pnpm test` | ✅ **28 files / 575 tests** (v0.1 463 → +112) |
+| `pnpm build` | ✅ `/` static, `/api/chat`·`/api/resolve` dynamic |
+| `pnpm sync:mfds` | ✅ 83/83, 에너지 검산 실패 0, 6분 |
+
+**브라우저 QA** (Chrome, `pnpm build && pnpm start`, 실제 Jev): 첫 방문 dialog(modal, 포커스 "계산하기") → 계산 폼(포커스 몸무게, Tab 이동) → 60kg/165cm/30세/여/좌식 = 유지 1,580·천천히 1,280·빠르게 880(**자동 제안 하한 아래라 원탭 선택 불가, 이유 표시**) → 활동 변경 시 2,050/1,750/1,350 → 모드 전환 → 1,350 적용 → 새로고침 후 유지·dialog 재등장 없음 → `삶은 달걀 두 개` ~150 (hover에 출처) · 바나나/사과 반 개/두유 1팩 · 닭가슴살 1팩 → 120g · 고기만두 5개 → 1인분 · 마라탕 미저장 · 아메리카노 ~14 → 목표 수정 1,500(수동이 이김) → 계산기 재오픈 시 값 복원 → ESC 닫힘·목표 불변. 새 사용자 "직접 입력할게요" → 입력칸이 열리고 포커스, 1,800 저장, 칸이 다시 열리지 않음, 프로필 없음. `/api/chat` 요청 본문 실측: `message·now·dailyGoalCalories·recentItems` 4개뿐. 320/375/430/768 폭에서 dialog 가로 overflow 0(16px 여백, 세로 스크롤). 키보드로 라디오 선택·포커스 링 확인. 콘솔 에러 0.
+
+**QA 중 찾아서 고친 것**: ① "직접 입력할게요" 후 목표 저장 시 레이아웃 전환으로 입력칸이 다시 열리던 문제(one-shot 플래그) ② dialog가 닫히며 포커스를 body로 되돌려 입력칸 autoFocus를 덮던 문제(다음 task에서 focus).
+
+**확인하지 못한 것**: 실제 모바일 기기(375/430은 같은 origin iframe으로 폭을 재현해 측정). 브라우저 창 크기 조절이 이 환경에서 적용되지 않았다. 스크린리더 실기기 낭독.
+
+### 사람이 한 번 봐 주면 좋은 것
+
+**커밋 전 감사 (2026-09-27).** 새 FOOD_CD 69개를 MFDS에서 다시 받아 출하본과 대조했다 — 코드·kcal·1인분 전부 일치, 에너지 검산 전부 통과. 의심 행은 후보 행과 비교했지만 더 나은 대안이 없어(대안은 전부 100mL "산출" 행, 1인분이 더 작거나 이상함) **seed는 바꾸지 않았다.** 사람이 볼 것:
+
+| 음식 | 1회 | 왜 |
+| --- | --- | --- |
+| 순두부찌개 (`D106-291030000-0001`, 순두부찌개_김치) | 200 g · 70 kcal | 1그릇치고 작다. 김치 변형이며 plain 순두부찌개 D1 행은 없다. 대안은 190 mL 산출 행 |
+| 떡볶이 (`D110-467000000-0001`) | 180 g · 259 kcal | 분식점 1인분치고 작다. 대안은 74.8 mL(!)·100 mL 산출 행 |
+| 설렁탕 · 육개장 · 미역국 | 120 · 132 · 48 kcal | 국물·건더기만의 값으로 보인다(밥 없음). 원래 14개의 갈비탕·김치찌개와 같은 성격 |
+| 제육덮밥 · 삼계탕 | 949 · 909 kcal | 크지만 요리로 그럴듯하다 |
+| 카페 3종 (D420) | 355 mL | 100 mL 기준 행. `source`에 `100mL 기준`이 남고 g=mL로 읽는다 |
+
+`servingReferences.ts` 감사에서는 과일 3개(귤·참외·복숭아)를 뺐고, 팩·아메리카노를 `typical`로 바꿨다(§17-23, architecture §4.3).
 
 ---
