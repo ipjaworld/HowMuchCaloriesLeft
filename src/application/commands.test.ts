@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Judgment, JudgmentInput, RecentItem } from "@/ai/judgment/types";
-import { decideCommand } from "./commands";
+import { asksToChangeGoal, decideCommand } from "./commands";
 
 const RECENT: RecentItem[] = [
   {
@@ -479,4 +479,28 @@ describe("a middling correction is confirmed, not discarded", () => {
       intent: "delete_food",
     });
   });
+});
+
+describe("the goal is changed with its control, not the chat", () => {
+  it("points a goal change at the control whatever the judge read", () => {
+    for (const intent of ["other", "ask_status", "modify_food"] as const) {
+      expect(
+        decideCommand(judgment({ intent }), input("목표 1800으로 바꿔줘")),
+      ).toEqual({ type: "answer", kind: "goal_setting" });
+    }
+  });
+
+  it.each(["목표 1800으로 바꿔줘", "목표를 2000으로 해줘", "목표 좀 낮춰줘", "목표 칼로리 변경"])(
+    "reads %s as a goal change",
+    (message) => {
+      expect(asksToChangeGoal(message)).toBe(true);
+    },
+  );
+
+  it.each(["목표 얼마야?", "목표보다 많이 먹었어", "치킨 먹었어", "갈비탕 말고 쌀국수로 해줘"])(
+    "leaves %s to the judge",
+    (message) => {
+      expect(asksToChangeGoal(message)).toBe(false);
+    },
+  );
 });

@@ -43,7 +43,7 @@ export type ClarifyCandidate = {
 };
 
 export type Command =
-  | { type: "answer"; kind: "status" | "recommendation" }
+  | { type: "answer"; kind: "status" | "recommendation" | "goal_setting" }
   | { type: "add_candidate"; sourceText: string; needsConfirmation: boolean }
   /**
    * `add_candidate` with the nutrition lookup done. `decideCommand` never
@@ -151,10 +151,33 @@ function contestedDeleteTargets(input: JudgmentInput): RecentItem[] {
   return distinct.size > 1 ? matches : [];
 }
 
+/**
+ * "목표 1800으로 바꿔줘" — a request to change the goal, which the chat does
+ * not do.
+ *
+ * The goal has its own control right under the number, and a sentence is a
+ * poor way to set it: "오늘 1800만 먹을래" could be a new goal or a resolve
+ * for today, and misreading it would quietly change the one figure the app
+ * exists to show. So the chat points at the control instead, and that
+ * decision is a fixed rule rather than a judgment — it needs 목표 plus a
+ * word for changing it, and nothing about eating.
+ */
+export function asksToChangeGoal(message: string): boolean {
+  if (!message.includes("목표")) return false;
+  if (/(먹|마셨|마심)/.test(message)) return false;
+  return /(바꿔|바꾸|바꿀|변경|수정|설정|정해|정할|올려|올릴|낮춰|낮출|내려|내릴|줄여|줄일|늘려|늘릴|[으]?로 해|[으]?로 할)/.test(
+    message,
+  );
+}
+
 export function decideCommand(
   judgment: Judgment,
   input: JudgmentInput,
 ): Command {
+  if (asksToChangeGoal(input.message)) {
+    return { type: "answer", kind: "goal_setting" };
+  }
+
   const decision = classifyIntentConfidence(
     judgment.intent,
     judgment.intentConfidence,
