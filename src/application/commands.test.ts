@@ -504,3 +504,64 @@ describe("the goal is changed with its control, not the chat", () => {
     },
   );
 });
+
+describe("a correction that could mean two entries asks which", () => {
+  const TWO_APPLES: RecentItem[] = [
+    { id: "a1", name: "사과", amount: "1개", calories: 125, consumedAt: "2026-09-20T08:00:00+09:00" },
+    { id: "a2", name: "사과", amount: "2개", calories: 250, consumedAt: "2026-09-20T15:00:00+09:00" },
+    { id: "y1", name: "떠먹는 요거트", amount: "200g", calories: 172, consumedAt: "2026-09-20T09:00:00+09:00" },
+    { id: "g1", name: "그릭요거트", amount: "100g", calories: 100, consumedAt: "2026-09-20T10:00:00+09:00" },
+  ];
+  const at = (message: string): JudgmentInput => ({ ...input(message), recentItems: TWO_APPLES });
+  const modify = (targetId: string) =>
+    judgment({ intent: "modify_food", referenceTargetId: targetId, referenceConfidence: 0.95 });
+
+  it("two 사과 entries: asks, offering both", () => {
+    const command = decideCommand(modify("a2"), at("아까 사과 두 개였어"));
+    expect(command).toMatchObject({ type: "clarify", reason: "unknown_target", intent: "modify_food" });
+    if (command.type !== "clarify") throw new Error("expected clarify");
+    expect(command.candidates?.map((candidate) => candidate.id).sort()).toEqual(["a1", "a2"]);
+  });
+
+  it("the replacement named in the sentence is not a candidate", () => {
+    // 그릭요거트 is already logged, but it is what 떠먹는 요거트 becomes.
+    const command = decideCommand(modify("y1"), at("떠먹는 요거트를 그릭 요거트로 바꾸고 싶어"));
+    expect(command).toMatchObject({ type: "modify_candidate", targetId: "y1" });
+  });
+
+  it("one matching entry is corrected without a question", () => {
+    const command = decideCommand(modify("y1"), at("떠먹는 요거트 말고 그릭요거트였어"));
+    expect(command.type).toBe("modify_candidate");
+  });
+
+  it("identical entries are not a choice worth asking about", () => {
+    const twins: RecentItem[] = [
+      { id: "b1", name: "바나나", amount: "1개", calories: 77, consumedAt: "2026-09-20T08:00:00+09:00" },
+      { id: "b2", name: "바나나", amount: "1개", calories: 77, consumedAt: "2026-09-20T09:00:00+09:00" },
+    ];
+    const command = decideCommand(modify("b2"), { ...input("바나나 두 개였어"), recentItems: twins });
+    expect(command.type).toBe("modify_candidate");
+  });
+});
+
+describe("a hesitant correction over duplicates still asks which record", () => {
+  it("below the modify floor, two 사과 entries are offered instead of 'say more'", () => {
+    const apples: RecentItem[] = [
+      { id: "a1", name: "사과", amount: "1개", calories: 125, consumedAt: "2026-09-20T08:00:00+09:00" },
+      { id: "a2", name: "사과", amount: "2개", calories: 250, consumedAt: "2026-09-20T15:00:00+09:00" },
+    ];
+    const command = decideCommand(
+      judgment({ intent: "modify_food", intentConfidence: 0.45, referenceTargetId: "a2", referenceConfidence: 0.5 }),
+      { ...input("아까 사과 두 개였어"), recentItems: apples },
+    );
+    expect(command).toMatchObject({ type: "clarify", reason: "unknown_target", intent: "modify_food" });
+  });
+
+  it("a hesitant correction with nothing duplicated is still 'say more'", () => {
+    const command = decideCommand(
+      judgment({ intent: "modify_food", intentConfidence: 0.45 }),
+      input("아까 그거 좀 그랬어"),
+    );
+    expect(command).toMatchObject({ type: "clarify", reason: "low_confidence" });
+  });
+});

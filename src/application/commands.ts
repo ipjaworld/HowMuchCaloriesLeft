@@ -5,6 +5,7 @@ import {
   isProbable,
 } from "@/ai/judgment/confidence";
 import type { AddPart } from "./addFood";
+import { splitCorrection } from "./correction";
 import {
   findReferenceMatches,
   resolveReferenceByName,
@@ -143,6 +144,26 @@ function usableTarget(judgment: Judgment, input: JudgmentInput): string | null {
  * ambiguity in any way the user could act on: either choice removes the same
  * number from the same day, so asking would be friction for nothing.
  */
+/**
+ * Entries a correction could equally be about: "사과 두 개였어" with two 사과
+ * logged today. Asked about rather than guessed, because a correction on the
+ * wrong one changes a number the user already checked.
+ *
+ * Only the old side of the sentence counts — in "떠먹는 요거트 말고 그릭
+ * 요거트" the 그릭 요거트 entry is the replacement, not a candidate — and a
+ * name must appear whole in it, so 요거트 alone does not pull in every
+ * yoghurt. Identical entries are not a choice worth asking about.
+ */
+function contestedModifyTargets(input: JudgmentInput, judgedId: string | null): RecentItem[] {
+  const judged = input.recentItems.find((item) => item.id === judgedId);
+  const { previous } = splitCorrection(input.message, judged?.name ?? null);
+  const said = (previous ?? input.message).replace(/\s+/g, "");
+
+  const named = input.recentItems.filter((item) => said.includes(item.name.replace(/\s+/g, "")));
+  const distinct = new Set(named.map((item) => `${item.name}|${item.amount ?? ""}|${item.calories}`));
+  return distinct.size > 1 ? named : [];
+}
+
 function contestedDeleteTargets(input: JudgmentInput): RecentItem[] {
   const matches = findReferenceMatches(input.message, input.recentItems);
   if (matches.length <= 1) return [];
@@ -184,6 +205,21 @@ export function decideCommand(
   );
 
   if (decision === "clarify") {
+    // Two entries of the same food make the judge unsure a sentence is a
+    // correction at all — "아까 사과 두 개였어" with two 사과 logged read as
+    // modify at 0.45-0.69. The ambiguity it is reacting to is the one worth
+    // asking about, and picking a record answers both questions at once.
+    if (judgment.intent === "modify_food") {
+      const contested = contestedModifyTargets(input, usableTarget(judgment, input));
+      if (contested.length > 0) {
+        return {
+          type: "clarify",
+          reason: "unknown_target",
+          intent: "modify_food",
+          candidates: toCandidates(contested),
+        };
+      }
+    }
     return { type: "clarify", reason: "low_confidence", intent: judgment.intent };
   }
 
@@ -241,6 +277,18 @@ export function decideCommand(
       }
 
       const targetId = usableTarget(judgment, input);
+
+      if (judgment.intent === "modify_food") {
+        const contested = contestedModifyTargets(input, targetId);
+        if (contested.length > 0) {
+          return {
+            type: "clarify",
+            reason: "unknown_target",
+            intent: "modify_food",
+            candidates: toCandidates(contested),
+          };
+        }
+      }
 
       // Still consulted here, where there is no resolver to ask instead:
       // which existing entry is meant is not something the dataset knows.

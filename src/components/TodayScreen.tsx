@@ -103,6 +103,12 @@ type State =
 type PendingClarification = {
   intent: Intent;
   candidates: { id: string; name: string }[];
+  /**
+   * The sentence that asked. A correction like "사과 두 개였어" is still the
+   * answer once the user has picked which 사과 — so it is sent again rather
+   * than thrown away and replaced by "how much?".
+   */
+  sourceText: string;
 };
 
 /**
@@ -286,7 +292,7 @@ export function TodayScreen() {
       return;
     }
 
-    setReply(describeDeleted(result.item.name, await reloadDay()));
+    setReply(describeDeleted(result.item, await reloadDay()));
   }
 
   /** Applies a finished correction to the item it was about. */
@@ -300,6 +306,7 @@ export function TodayScreen() {
       return;
     }
 
+    const before = locateItem(records, target.itemId)?.item;
     const result = await replaceFoodItem(
       repositories.meals,
       records,
@@ -312,7 +319,12 @@ export function TodayScreen() {
       return;
     }
 
-    setReply(describeModified(next.name, await reloadDay()));
+    const summaryAfter = await reloadDay();
+    setReply(
+      before === undefined
+        ? describeModified(next, next, summaryAfter)
+        : describeModified(before, next, summaryAfter),
+    );
   }
 
   /** Either finishes the sentence or asks the next question. */
@@ -452,7 +464,12 @@ export function TodayScreen() {
     closeCalculator();
   }
 
-  async function handleMessage(message: string) {
+  /**
+   * `onlyItemId` narrows what the judge sees to one entry: used after the
+   * user picked which record a correction is about, so the same sentence now
+   * has exactly one thing it can mean.
+   */
+  async function handleMessage(message: string, onlyItemId?: string) {
     setIsPending(true);
     setReply(null);
 
@@ -492,7 +509,15 @@ export function TodayScreen() {
             message,
             now: new Date(),
             dailyGoalCalories: summary.calorieTarget,
-            records,
+            records:
+              onlyItemId === undefined
+                ? records
+                : records
+                    .map((record) => ({
+                      ...record,
+                      items: record.items.filter((item) => item.id === onlyItemId),
+                    }))
+                    .filter((record) => record.items.length > 0),
           }),
         ),
       });
@@ -537,6 +562,7 @@ export function TodayScreen() {
         setClarification({
           intent: command.intent,
           candidates: command.candidates.map(({ id, name }) => ({ id, name })),
+          sourceText: message,
         });
       }
     } catch {
@@ -688,9 +714,14 @@ export function TodayScreen() {
           return;
         }
 
-        // The target is settled but the sentence that asked for the change is
-        // gone, so the amount is the one thing still missing. Asking for it
-        // reuses the same question the add pipeline asks.
+        // The target is settled; the sentence still says what to change it
+        // to. Only a confirmation's "yes" has no sentence worth resending, and
+        // then the amount is the one thing still missing.
+        const sourceText = clarification?.sourceText;
+        if (option.id !== "yes" && sourceText !== undefined) {
+          void handleMessage(sourceText, chosen.id);
+          return;
+        }
         void askAmountFor(chosen.id);
         return;
       }

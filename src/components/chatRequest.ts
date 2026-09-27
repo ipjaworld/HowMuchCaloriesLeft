@@ -36,6 +36,7 @@ export function toRecentItems(records: MealRecord[]): ChatRequest["recentItems"]
       name: item.name,
       ...(item.amount === undefined ? {} : { amount: item.amount }),
       calories: item.calories,
+      ...(item.calorieSource === undefined ? {} : { calorieSource: item.calorieSource }),
       ...(record.mealType === undefined ? {} : { mealType: record.mealType }),
       consumedAt: record.consumedAt,
     })),

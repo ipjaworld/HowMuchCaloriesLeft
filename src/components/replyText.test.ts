@@ -3,6 +3,8 @@ import type { Command } from "@/application/commands";
 import type { DailySummary } from "@/domain/calories";
 import {
   describeCommand,
+  describeDeleted,
+  describeModified,
   objectParticle,
   describeAdded,
   describeNothingAdded,
@@ -369,5 +371,43 @@ describe("으로/로", () => {
     expect(directionParticle("개")).toBe("로");
     expect(directionParticle("줄")).toBe("로");
     expect(directionParticle("g")).toBe("로");
+  });
+});
+
+describe("changes to the log say exactly what changed", () => {
+  const after = summary({ consumedCalories: 1255, calorieTarget: 2250, remainingCalories: 995, status: "under" });
+
+  it("a correction shows both sides and the calorie change", () => {
+    const reply = describeModified(
+      { name: "떠먹는 요거트", amount: "200g", calories: 172 },
+      { name: "그릭요거트", amount: "200g", calories: 200 },
+      after,
+    );
+    expect(reply.text).toBe(
+      "바꿨어요: 떠먹는 요거트 200g → 그릭요거트 200g (172 → 200 kcal). 오늘 1,255 kcal 먹었어요. 995 kcal 남았어요.",
+    );
+  });
+
+  it("a delete names the amount that went", () => {
+    expect(describeDeleted({ name: "바나나", amount: "2개" }, after).text).toMatch(/^바나나 2개를 지웠어요\./);
+  });
+
+  it("asks which record when the same food was logged twice", () => {
+    const reply = describeCommand(
+      {
+        type: "clarify",
+        reason: "unknown_target",
+        intent: "modify_food",
+        candidates: [
+          { id: "a1", name: "사과", amount: "1개" },
+          { id: "a2", name: "사과", amount: "2개" },
+        ],
+      },
+      after,
+    );
+    expect(reply).toMatchObject({ kind: "question", text: "사과를 두 번 기록했어요. 어느 기록인가요?" });
+    if (reply.kind === "question") {
+      expect(reply.options.map((option) => option.label)).toEqual(["사과 1개", "사과 2개"]);
+    }
   });
 });

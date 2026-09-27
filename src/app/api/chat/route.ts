@@ -1,6 +1,8 @@
 import { createJudge } from "@/ai/judgment";
 import { koreanFoodResolver } from "@/ai/nutrition/koreanFoods";
-import { resolveAddParts } from "@/application/addFood";
+import { resolveAddParts, userStatedItem, type AddPart } from "@/application/addFood";
+import { correctionFor } from "@/application/correction";
+import type { JudgmentInput } from "@/ai/judgment/types";
 import { decideCommand, type Command } from "@/application/commands";
 import { env } from "@/env";
 import { chatRequestSchema, toJudgmentInput, type ChatResponse } from "./schema";
@@ -46,7 +48,7 @@ export async function POST(request: Request): Promise<Response> {
     const judgment = await judge.judge(input);
     const decided = decideCommand(judgment, input);
 
-    const command = await expand(decided);
+    const command = await expand(decided, input);
 
     const response: ChatResponse = { command, judgment };
     return Response.json(response);
@@ -65,7 +67,7 @@ export async function POST(request: Request): Promise<Response> {
  * rather than in `decideCommand`, which stays a pure function over the
  * judgment.
  */
-async function expand(decided: Command): Promise<Command> {
+async function expand(decided: Command, input: JudgmentInput): Promise<Command> {
   if (decided.type === "add_candidate") {
     return {
       type: "add",
@@ -76,13 +78,30 @@ async function expand(decided: Command): Promise<Command> {
   }
 
   if (decided.type === "modify_candidate") {
-    return {
-      ...decided,
-      parts: await resolveAddParts(decided.sourceText, koreanFoodResolver),
-    };
+    return { ...decided, parts: await correctionParts(decided, input) };
   }
 
   return decided;
+}
+
+/**
+ * A correction is looked up as the plain phrase it boils down to —
+ * "떠먹는 요거트를 그릭 요거트로 바꾸고 싶어" as "그릭 요거트 200g" — using the
+ * entry the judge picked, which the browser sent along with today's items.
+ */
+async function correctionParts(
+  decided: Extract<Command, { type: "modify_candidate" }>,
+  input: JudgmentInput,
+): Promise<AddPart[]> {
+  const target = input.recentItems.find((item) => item.id === decided.targetId);
+  if (target === undefined) return resolveAddParts(decided.sourceText, koreanFoodResolver);
+
+  const correction = correctionFor(decided.sourceText, target);
+  if (correction.kind === "calories") {
+    const item = userStatedItem(target.name, correction.calories);
+    return [{ status: "resolved", phraseName: item.name, item }];
+  }
+  return resolveAddParts(correction.text, koreanFoodResolver);
 }
 
 /** Kept local so the route does not re-export zod helpers. */

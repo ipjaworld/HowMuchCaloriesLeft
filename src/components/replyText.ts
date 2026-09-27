@@ -81,6 +81,20 @@ function nameOf(command: Extract<Command, { type: "clarify" }>): string | null {
   return only?.name ?? null;
 }
 
+const TIMES = ["", "한", "두", "세", "네"];
+
+/**
+ * "사과를 두 번 기록했어요. 어느 기록을 고칠까요?" — when every candidate is
+ * the same food, saying so explains why the app is asking at all.
+ */
+function sameFoodTwice(candidates: { name: string }[]): string | null {
+  const first = candidates[0]?.name;
+  if (first === undefined || candidates.length < 2) return null;
+  if (!candidates.every((candidate) => candidate.name === first)) return null;
+  const times = TIMES[candidates.length] ?? `${candidates.length}`;
+  return `${first}${objectParticle(first)} ${times} 번 기록했어요. 어느 기록인가요?`;
+}
+
 function describeClarify(command: Extract<Command, { type: "clarify" }>): Reply {
   const yesNo: ClarifyOption[] = [
     { id: "yes", label: "네" },
@@ -105,10 +119,8 @@ function describeClarify(command: Extract<Command, { type: "clarify" }>): Reply 
       };
 
     case "unknown_target": {
-      const text =
-        command.intent === "delete_food"
-          ? "어떤 기록을 취소할까요?"
-          : "어떤 기록을 수정할까요?";
+      const verb = command.intent === "delete_food" ? "취소할까요?" : "수정할까요?";
+      const text = sameFoodTwice(command.candidates ?? []) ?? `어떤 기록을 ${verb}`;
       return candidateOptions.length > 0
         ? { kind: "question", text, options: candidateOptions }
         : { kind: "statement", text: "아직 오늘 기록이 없어요." };
@@ -365,13 +377,13 @@ export function describeCancelled(mode: "add" | "modify" = "add"): Reply {
   };
 }
 
-/**
- * Said after an item is taken off the log, with the totals already
- * recalculated from storage.
- */
-export function describeDeleted(name: string, summary: DailySummary): Reply {
-  const lines = [`${name}${objectParticle(name)} 지웠어요.`];
-  lines.push(`오늘 ${numberFormat.format(summary.consumedCalories)} kcal 먹었어요.`);
+/** "떠먹는 요거트 200g" — how an entry is named back to the user. */
+function entryLabel(entry: { name: string; amount?: string }): string {
+  return entry.amount === undefined ? entry.name : `${entry.name} ${entry.amount}`;
+}
+
+function totalsAfterChange(summary: DailySummary): string[] {
+  const lines = [`오늘 ${numberFormat.format(summary.consumedCalories)} kcal 먹었어요.`];
   if (summary.remainingCalories !== null) {
     lines.push(
       summary.remainingCalories >= 0
@@ -379,26 +391,47 @@ export function describeDeleted(name: string, summary: DailySummary): Reply {
         : `${numberFormat.format(-summary.remainingCalories)} kcal 넘었어요.`,
     );
   }
-  return { kind: "statement", text: lines.join(" ") };
+  return lines;
 }
 
 /**
- * Said after an item is re-priced.
- *
- * Names the food and nothing else: the new amount is already on the row above,
- * and gluing a particle onto a fragment like "반만" reads badly ("반만을").
+ * Said after an item is taken off the log, with the totals already
+ * recalculated from storage. Names the amount too: a delete is the change a
+ * user is least likely to notice, so the reply says exactly what went.
  */
-export function describeModified(name: string, summary: DailySummary): Reply {
-  const lines = [`${name}${objectParticle(name)} 고쳤어요.`];
-  lines.push(`오늘 ${numberFormat.format(summary.consumedCalories)} kcal 먹었어요.`);
-  if (summary.remainingCalories !== null) {
-    lines.push(
-      summary.remainingCalories >= 0
-        ? `${numberFormat.format(summary.remainingCalories)} kcal 남았어요.`
-        : `${numberFormat.format(-summary.remainingCalories)} kcal 넘었어요.`,
-    );
-  }
-  return { kind: "statement", text: lines.join(" ") };
+export function describeDeleted(
+  entry: { name: string; amount?: string },
+  summary: DailySummary,
+): Reply {
+  const label = entryLabel(entry);
+  return {
+    kind: "statement",
+    text: [`${label}${objectParticle(label)} 지웠어요.`, ...totalsAfterChange(summary)].join(" "),
+  };
+}
+
+/**
+ * Said after an item is re-priced: what it was and what it is now, then the
+ * totals. A correction rewrites something the user already saw, so the reply
+ * shows both sides rather than trusting them to spot the changed row.
+ *
+ * An arrow instead of particles: "200g을" / "200g으로" depends on how the
+ * unit is read aloud, and the arrow reads the same either way.
+ */
+export function describeModified(
+  before: { name: string; amount?: string; calories: number },
+  after: { name: string; amount?: string; calories: number },
+  summary: DailySummary,
+): Reply {
+  const change = `${entryLabel(before)} → ${entryLabel(after)}`;
+  const calories =
+    before.calories === after.calories
+      ? ""
+      : ` (${numberFormat.format(before.calories)} → ${numberFormat.format(after.calories)} kcal)`;
+  return {
+    kind: "statement",
+    text: [`바꿨어요: ${change}${calories}.`, ...totalsAfterChange(summary)].join(" "),
+  };
 }
 
 /**

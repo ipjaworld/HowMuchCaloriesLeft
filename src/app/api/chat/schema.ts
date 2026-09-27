@@ -3,7 +3,7 @@ import { INTENTS } from "@/ai/judgment/types";
 import type { Judgment, JudgmentInput } from "@/ai/judgment/types";
 import type { Command } from "@/application/commands";
 import { isValidCalorieValue } from "@/domain/limits";
-import { MEAL_TYPES } from "@/domain/meal";
+import { CALORIE_SOURCES, MEAL_TYPES } from "@/domain/meal";
 
 /**
  * The wire contract for `/api/chat`.
@@ -32,6 +32,7 @@ export const recentItemSchema = z.object({
   calories: z.number().refine(isValidCalorieValue, {
     message: "calorie value is not a usable number",
   }),
+  calorieSource: z.enum(CALORIE_SOURCES).optional(),
   mealType: z.enum(MEAL_TYPES).optional(),
   consumedAt: isoDateTime,
 });

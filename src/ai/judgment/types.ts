@@ -32,6 +32,8 @@ export type RecentItem = {
   name: string;
   amount?: string;
   calories: number;
+  /** "user" when the user stated the figure; absent means the dataset. */
+  calorieSource?: "dataset" | "user";
   mealType?: string;
   /** ISO datetime. */
   consumedAt: string;
