@@ -34,3 +34,6 @@ pnpm-debug.log*
 
 # nutrition dataset build artifacts (Phase 5)
 /data/raw/
+
+# local LLM eval output (docs/local-llm.md)
+/eval-results/

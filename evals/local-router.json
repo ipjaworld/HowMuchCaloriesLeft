@@ -1,0 +1,727 @@
+{
+  "version": 1,
+  "description": "Local router eval. expectedIntent is one of the app's intents, or goal_setting for sentences the code rule asksToChangeGoal answers before any judge. acceptIntents lists other readings that lead to an acceptable app response.",
+  "contexts": [
+    {
+      "id": "empty",
+      "now": "2026-09-29T09:00:00+09:00",
+      "dailyGoalCalories": 1800,
+      "recentItems": []
+    },
+    {
+      "id": "morning",
+      "now": "2026-09-29T10:30:00+09:00",
+      "dailyGoalCalories": 1800,
+      "recentItems": [
+        {
+          "id": "m-egg",
+          "name": "삶은 계란",
+          "amount": "2개",
+          "calories": 150,
+          "consumedAt": "2026-09-29T07:50:00+09:00"
+        },
+        {
+          "id": "m-banana",
+          "name": "바나나",
+          "amount": "1개",
+          "calories": 90,
+          "consumedAt": "2026-09-29T08:00:00+09:00"
+        },
+        {
+          "id": "m-americano",
+          "name": "아메리카노",
+          "amount": "1잔",
+          "calories": 10,
+          "consumedAt": "2026-09-29T08:30:00+09:00"
+        }
+      ]
+    },
+    {
+      "id": "lunch",
+      "now": "2026-09-29T13:10:00+09:00",
+      "dailyGoalCalories": 1800,
+      "recentItems": [
+        {
+          "id": "l-banana",
+          "name": "바나나",
+          "amount": "1개",
+          "calories": 90,
+          "consumedAt": "2026-09-29T08:00:00+09:00"
+        },
+        {
+          "id": "l-stew",
+          "name": "김치찌개",
+          "amount": "1그릇",
+          "calories": 250,
+          "consumedAt": "2026-09-29T12:30:00+09:00"
+        },
+        {
+          "id": "l-rice",
+          "name": "흰쌀밥",
+          "amount": "1공기",
+          "calories": 300,
+          "consumedAt": "2026-09-29T12:31:00+09:00"
+        }
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "req-egg",
+      "input": "아침에 계란 두 개 먹었어",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "required",
+        "number"
+      ]
+    },
+    {
+      "id": "req-stew-rice",
+      "input": "점심 김치찌개랑 밥",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "required",
+        "no_verb",
+        "multi_food"
+      ]
+    },
+    {
+      "id": "req-cancel-banana",
+      "input": "아까 먹은 바나나 취소해줘",
+      "expectedIntent": "delete_food",
+      "contextId": "morning",
+      "tags": [
+        "required"
+      ]
+    },
+    {
+      "id": "req-goal",
+      "input": "오늘 목표 1800으로 바꿔줘",
+      "expectedIntent": "goal_setting",
+      "contextId": "empty",
+      "tags": [
+        "required",
+        "goal"
+      ]
+    },
+    {
+      "id": "req-how-much-more",
+      "input": "나 오늘 얼마나 더 먹어도 돼?",
+      "expectedIntent": "ask_status",
+      "contextId": "lunch",
+      "tags": [
+        "required"
+      ],
+      "acceptIntents": [
+        "ask_recommendation"
+      ],
+      "note": "남은 양을 묻는 말. 추천으로 읽어도 앱의 답은 같은 숫자다."
+    },
+    {
+      "id": "req-hungry",
+      "input": "배고프다",
+      "expectedIntent": "other",
+      "contextId": "lunch",
+      "tags": [
+        "required",
+        "ambiguous"
+      ],
+      "acceptIntents": [
+        "ask_recommendation"
+      ],
+      "note": "기록을 읽지도 바꾸지도 않는다. 무엇을 먹을지 묻는 말로 읽을 수는 있다."
+    },
+    {
+      "id": "req-exercise",
+      "input": "오늘 운동했는데 더 먹어도 돼?",
+      "expectedIntent": "ask_status",
+      "contextId": "lunch",
+      "tags": [
+        "required",
+        "ambiguous"
+      ],
+      "acceptIntents": [
+        "ask_recommendation"
+      ],
+      "note": "앱은 운동량을 모른다. 남은 양을 묻는 말로 답하는 게 최선."
+    },
+    {
+      "id": "typo-egg",
+      "input": "게란 두개 먹엇어",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "typo",
+        "number"
+      ]
+    },
+    {
+      "id": "typo-stew",
+      "input": "김치찌게 먹었어",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "typo"
+      ]
+    },
+    {
+      "id": "typo-latte",
+      "input": "라떼 한잔 마셧어",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "typo"
+      ]
+    },
+    {
+      "id": "typo-cancel",
+      "input": "바나나 취소해져",
+      "expectedIntent": "delete_food",
+      "contextId": "morning",
+      "tags": [
+        "typo"
+      ]
+    },
+    {
+      "id": "typo-left",
+      "input": "오늘 얼마나 남앗어",
+      "expectedIntent": "ask_status",
+      "contextId": "lunch",
+      "tags": [
+        "typo"
+      ]
+    },
+    {
+      "id": "typo-dinner",
+      "input": "저녁 뭐먹지",
+      "expectedIntent": "ask_recommendation",
+      "contextId": "lunch",
+      "tags": [
+        "typo",
+        "no_space"
+      ]
+    },
+    {
+      "id": "abbr-aa",
+      "input": "아아 두잔 마심",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "abbreviation",
+        "number"
+      ]
+    },
+    {
+      "id": "abbr-samgim",
+      "input": "편의점 삼김 하나",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "abbreviation",
+        "no_verb"
+      ]
+    },
+    {
+      "id": "abbr-chicken-breast",
+      "input": "닭찌찌살 한팩 먹음",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "abbreviation"
+      ]
+    },
+    {
+      "id": "abbr-chimac",
+      "input": "어제 저녁 치맥함",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "abbreviation"
+      ],
+      "note": "어제 먹은 것도 기록 요청이다."
+    },
+    {
+      "id": "abbr-kcal-left",
+      "input": "ㅇㅇ 몇칼 남음?",
+      "expectedIntent": "ask_status",
+      "contextId": "lunch",
+      "tags": [
+        "abbreviation"
+      ]
+    },
+    {
+      "id": "abbr-ok",
+      "input": "떡볶이 먹어도 됨?",
+      "expectedIntent": "ask_recommendation",
+      "contextId": "lunch",
+      "tags": [
+        "abbreviation"
+      ]
+    },
+    {
+      "id": "abbr-lunch-pick",
+      "input": "점메추",
+      "expectedIntent": "ask_recommendation",
+      "contextId": "morning",
+      "tags": [
+        "abbreviation"
+      ],
+      "note": "점심 메뉴 추천."
+    },
+    {
+      "id": "nop-two-foods",
+      "input": "아침 계란 두개 바나나 하나",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "no_particle",
+        "multi_food",
+        "number"
+      ]
+    },
+    {
+      "id": "nop-cutlet",
+      "input": "점심 돈까스 한개 먹음",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "no_particle"
+      ]
+    },
+    {
+      "id": "nop-delete",
+      "input": "바나나 삭제",
+      "expectedIntent": "delete_food",
+      "contextId": "morning",
+      "tags": [
+        "no_particle"
+      ]
+    },
+    {
+      "id": "nop-status",
+      "input": "오늘 칼로리 몇",
+      "expectedIntent": "ask_status",
+      "contextId": "lunch",
+      "tags": [
+        "no_particle"
+      ]
+    },
+    {
+      "id": "num-milk",
+      "input": "우유 250ml 마셨어",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "number"
+      ]
+    },
+    {
+      "id": "num-chicken",
+      "input": "닭가슴살 150g 먹었어",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "number"
+      ]
+    },
+    {
+      "id": "num-stated-kcal",
+      "input": "샌드위치 450kcal 먹었어",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "number"
+      ]
+    },
+    {
+      "id": "num-bare",
+      "input": "계란 3개",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "number",
+        "no_verb"
+      ]
+    },
+    {
+      "id": "num-rice",
+      "input": "밥 2공기 먹었다",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "number"
+      ]
+    },
+    {
+      "id": "num-goal-set",
+      "input": "목표 칼로리 2000으로 설정해줘",
+      "expectedIntent": "goal_setting",
+      "contextId": "empty",
+      "tags": [
+        "goal",
+        "number"
+      ]
+    },
+    {
+      "id": "num-goal-lower",
+      "input": "하루 목표 1500kcal로 낮춰줘",
+      "expectedIntent": "goal_setting",
+      "contextId": "empty",
+      "tags": [
+        "goal",
+        "number"
+      ]
+    },
+    {
+      "id": "num-goal-will",
+      "input": "목표를 1700으로 할래",
+      "expectedIntent": "goal_setting",
+      "contextId": "empty",
+      "tags": [
+        "goal",
+        "number"
+      ]
+    },
+    {
+      "id": "multi-jjajang",
+      "input": "점심에 짜장면이랑 탕수육 먹었어",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "multi_food"
+      ]
+    },
+    {
+      "id": "multi-three",
+      "input": "아침에 토스트랑 우유랑 사과 먹었어",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "multi_food"
+      ]
+    },
+    {
+      "id": "multi-commas",
+      "input": "고구마 한개, 삶은 계란 두개, 두유",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "multi_food",
+        "no_verb",
+        "number"
+      ]
+    },
+    {
+      "id": "mod-egg-count",
+      "input": "계란 두 개 아니고 세 개였어",
+      "expectedIntent": "modify_food",
+      "contextId": "morning",
+      "tags": [
+        "modify",
+        "number"
+      ]
+    },
+    {
+      "id": "mod-banana-half",
+      "input": "바나나 반만 먹었어",
+      "expectedIntent": "modify_food",
+      "contextId": "morning",
+      "tags": [
+        "modify"
+      ]
+    },
+    {
+      "id": "mod-latte",
+      "input": "아메리카노 말고 카페라떼였어",
+      "expectedIntent": "modify_food",
+      "contextId": "morning",
+      "tags": [
+        "modify"
+      ]
+    },
+    {
+      "id": "mod-rice-half",
+      "input": "밥은 반공기만 먹었어",
+      "expectedIntent": "modify_food",
+      "contextId": "lunch",
+      "tags": [
+        "modify"
+      ]
+    },
+    {
+      "id": "mod-stew",
+      "input": "김치찌개가 아니라 된장찌개였어",
+      "expectedIntent": "modify_food",
+      "contextId": "lunch",
+      "tags": [
+        "modify"
+      ]
+    },
+    {
+      "id": "del-americano",
+      "input": "아메리카노 지워줘",
+      "expectedIntent": "delete_food",
+      "contextId": "morning",
+      "tags": [
+        "delete"
+      ]
+    },
+    {
+      "id": "del-not-eaten",
+      "input": "바나나 안 먹었어",
+      "expectedIntent": "delete_food",
+      "contextId": "morning",
+      "tags": [
+        "delete"
+      ]
+    },
+    {
+      "id": "del-last",
+      "input": "방금 거 삭제",
+      "expectedIntent": "delete_food",
+      "contextId": "lunch",
+      "tags": [
+        "delete"
+      ]
+    },
+    {
+      "id": "del-wrong",
+      "input": "김치찌개 잘못 넣었어",
+      "expectedIntent": "delete_food",
+      "contextId": "lunch",
+      "tags": [
+        "delete"
+      ]
+    },
+    {
+      "id": "status-so-far",
+      "input": "지금까지 얼마나 먹었어?",
+      "expectedIntent": "ask_status",
+      "contextId": "lunch",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "id": "status-left",
+      "input": "오늘 몇 칼로리 남았어?",
+      "expectedIntent": "ask_status",
+      "contextId": "lunch",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "id": "status-breakfast",
+      "input": "아침에 먹은 거 뭐였지?",
+      "expectedIntent": "ask_status",
+      "contextId": "lunch",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "id": "status-to-goal",
+      "input": "목표까지 얼마 남았어?",
+      "expectedIntent": "ask_status",
+      "contextId": "lunch",
+      "tags": [
+        "status",
+        "goal_lookalike"
+      ],
+      "note": "목표라는 말이 있어도 바꾸라는 말이 아니다."
+    },
+    {
+      "id": "rec-dinner",
+      "input": "저녁으로 뭐 먹으면 좋을까?",
+      "expectedIntent": "ask_recommendation",
+      "contextId": "lunch",
+      "tags": [
+        "recommendation"
+      ]
+    },
+    {
+      "id": "rec-chicken",
+      "input": "남은 칼로리로 치킨 먹어도 돼?",
+      "expectedIntent": "ask_recommendation",
+      "contextId": "lunch",
+      "tags": [
+        "recommendation"
+      ]
+    },
+    {
+      "id": "rec-late-night",
+      "input": "야식 뭐 먹을까",
+      "expectedIntent": "ask_recommendation",
+      "contextId": "lunch",
+      "tags": [
+        "recommendation"
+      ]
+    },
+    {
+      "id": "rec-snack",
+      "input": "단백질 많은 간식 추천해줘",
+      "expectedIntent": "ask_recommendation",
+      "contextId": "lunch",
+      "tags": [
+        "recommendation"
+      ]
+    },
+    {
+      "id": "rec-goal-lookalike",
+      "input": "목표 1800이면 저녁 뭐 먹지?",
+      "expectedIntent": "ask_recommendation",
+      "contextId": "lunch",
+      "tags": [
+        "recommendation",
+        "goal_lookalike"
+      ]
+    },
+    {
+      "id": "chat-hi",
+      "input": "안녕",
+      "expectedIntent": "other",
+      "contextId": "empty",
+      "tags": [
+        "general_chat"
+      ]
+    },
+    {
+      "id": "chat-thanks",
+      "input": "고마워",
+      "expectedIntent": "other",
+      "contextId": "lunch",
+      "tags": [
+        "general_chat"
+      ]
+    },
+    {
+      "id": "chat-ramen-kcal",
+      "input": "라면 칼로리 얼마야?",
+      "expectedIntent": "other",
+      "contextId": "empty",
+      "tags": [
+        "general_chat",
+        "knowledge"
+      ]
+    },
+    {
+      "id": "chat-fruit",
+      "input": "다이어트 중에 과일 먹어도 괜찮아?",
+      "expectedIntent": "other",
+      "contextId": "empty",
+      "tags": [
+        "general_chat",
+        "knowledge"
+      ],
+      "acceptIntents": [
+        "ask_recommendation"
+      ]
+    },
+    {
+      "id": "chat-plan",
+      "input": "내일 삼겹살 먹을 예정",
+      "expectedIntent": "other",
+      "contextId": "empty",
+      "tags": [
+        "general_chat",
+        "not_consumption"
+      ]
+    },
+    {
+      "id": "chat-weather",
+      "input": "오늘 날씨 좋다",
+      "expectedIntent": "other",
+      "contextId": "empty",
+      "tags": [
+        "general_chat"
+      ]
+    },
+    {
+      "id": "chat-carbs",
+      "input": "탄수화물 줄이면 살 빠져?",
+      "expectedIntent": "other",
+      "contextId": "empty",
+      "tags": [
+        "general_chat",
+        "knowledge"
+      ]
+    },
+    {
+      "id": "amb-rice",
+      "input": "밥",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "ambiguous",
+        "no_verb"
+      ],
+      "note": "골든셋의 '라면'과 같은 기준. 양이 없으니 앱이 되묻는 게 맞는 답."
+    },
+    {
+      "id": "amb-coffee",
+      "input": "커피",
+      "expectedIntent": "add_food",
+      "contextId": "empty",
+      "tags": [
+        "ambiguous",
+        "no_verb"
+      ]
+    },
+    {
+      "id": "amb-ate-a-lot",
+      "input": "많이 먹었다",
+      "expectedIntent": "add_food",
+      "contextId": "lunch",
+      "tags": [
+        "ambiguous"
+      ],
+      "acceptIntents": [
+        "ask_status"
+      ]
+    },
+    {
+      "id": "amb-chicken-maybe",
+      "input": "치킨 먹을까 말까",
+      "expectedIntent": "ask_recommendation",
+      "contextId": "lunch",
+      "tags": [
+        "ambiguous"
+      ]
+    },
+    {
+      "id": "amb-regret",
+      "input": "아 너무 먹었다 ㅠㅠ",
+      "expectedIntent": "add_food",
+      "contextId": "lunch",
+      "tags": [
+        "ambiguous"
+      ],
+      "acceptIntents": [
+        "other"
+      ]
+    },
+    {
+      "id": "amb-skipped",
+      "input": "점심 걸렀어",
+      "expectedIntent": "other",
+      "contextId": "morning",
+      "tags": [
+        "ambiguous",
+        "not_consumption"
+      ]
+    },
+    {
+      "id": "amb-snack",
+      "input": "간식으로 과자 조금",
+      "expectedIntent": "add_food",
+      "contextId": "lunch",
+      "tags": [
+        "ambiguous",
+        "no_verb"
+      ]
+    }
+  ]
+}

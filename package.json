@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "eval:jev": "vitest run --config vitest.eval.mts",
+    "eval:jev": "vitest run --config vitest.eval.mts evalJev",
+    "eval:local-router": "vitest run --config vitest.eval.mts evalLocalRouter",
     "sync:mfds": "vitest run --config vitest.sync.mts",
     "candidates:mfds": "vitest run --config vitest.candidates.mts"
   },
