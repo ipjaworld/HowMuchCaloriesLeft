@@ -85,6 +85,14 @@ corepack enable --install-directory ~/.local/bin pnpm
 | `MFDS_FOOD_NUTRITION_API_KEY` | `scripts/syncMfdsDataset.sync.ts`·`scripts/mfdsCandidates.candidates.ts`에서만. 데이터셋을 다시 만들거나 음식을 추가할 때만 필요 |
 | `MFDS_FOOD_NUTRITION_ENDPOINT` | 같은 스크립트. 기본값이 있어 보통 건드릴 일 없다 |
 
+### 개발 전용 실험 — Local LLM router (배포에 불필요)
+
+| 변수 | 사용처 |
+| --- | --- |
+| `LOCAL_LLM_MODE` · `LOCAL_LLM_BASE_URL` · `LOCAL_LLM_MODEL` · `LOCAL_LLM_TIMEOUT_MS` · `LOCAL_LLM_MIN_CONFIDENCE` | `src/ai/local/` — Ollama로 intent를 먼저 분류해 보는 실험. 기본 `off`, **production에서는 강제 off.** 실행법과 모드는 [`docs/local-llm.md`](docs/local-llm.md) |
+
+2026-09-29 측정 결과 exaone 2.4B 79.4% · qwen 3B 79.4% · qwen 7B 88.9% vs Jev 98.4%, latency도 Jev가 가장 빨라(평균 214ms vs 7B 593ms) **production 도입은 보류**했다. 구조와 67개 eval은 다음 모델을 같은 기준으로 다시 재기 위해 남겨 둔다.
+
 ### 아직 쓰이지 않음
 
 | 변수 | 상태 |
