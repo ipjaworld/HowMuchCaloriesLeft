@@ -62,7 +62,7 @@ export const judgmentSchema = z.object({
   clarificationProbability: z.number().min(0).max(1),
   referenceTargetId: z.string().nullable(),
   referenceConfidence: z.number().min(0).max(1).nullable(),
-  source: z.enum(["jev", "mock"]),
+  source: z.enum(["jev", "mock", "local"]),
 });
 
 export type ChatResponse = {

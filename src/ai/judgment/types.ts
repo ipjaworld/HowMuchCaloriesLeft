@@ -75,7 +75,7 @@ export type Judgment = {
   referenceConfidence: number | null;
 
   /** Which implementation answered. Surfaced so QA can tell them apart. */
-  source: "jev" | "mock";
+  source: "jev" | "mock" | "local";
 };
 
 /** The port. `/api/chat` depends on this, never on the SDK. */

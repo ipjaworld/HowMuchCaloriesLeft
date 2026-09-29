@@ -20,7 +20,7 @@ export const NO_REFERENCE = "none";
 /** How many recent entries are offered as reference candidates. */
 export const MAX_REFERENCE_CANDIDATES = 12;
 
-const INTENT_CRITERIA: Record<Intent, string> = {
+export const INTENT_CRITERIA: Record<Intent, string> = {
   add_food:
     "The user is reporting food or drink they have already consumed, and a new entry should be created for it.",
   modify_food:

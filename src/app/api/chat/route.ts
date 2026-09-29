@@ -1,4 +1,5 @@
 import { createJudge } from "@/ai/judgment";
+import { withLocalRouter } from "@/ai/local/routing";
 import { koreanFoodResolver } from "@/ai/nutrition/koreanFoods";
 import { resolveAddParts, userStatedItem, type AddPart } from "@/application/addFood";
 import { correctionFor } from "@/application/correction";
@@ -23,8 +24,9 @@ import { chatRequestSchema, toJudgmentInput, type ChatResponse } from "./schema"
  */
 
 // The judge is stateless and cheap to keep; rebuilding a client per request
-// would throw away connection reuse for nothing.
-const judge = createJudge(env.TYPESAFE_API_KEY);
+// would throw away connection reuse for nothing. The local router wraps it
+// only in development and only when asked — see `docs/local-llm.md`.
+const judge = withLocalRouter(createJudge(env.TYPESAFE_API_KEY), env);
 
 export async function POST(request: Request): Promise<Response> {
   let body: unknown;

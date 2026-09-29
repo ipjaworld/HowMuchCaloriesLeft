@@ -20,6 +20,14 @@ const optionalSecret = z.preprocess(
   z.string().min(1).optional(),
 );
 
+/** Lets `KEY=` fall through to the schema's default, like an unset key. */
+function blankAsUnset<T extends z.ZodType>(schema: T) {
+  return z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    schema,
+  );
+}
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
@@ -53,6 +61,19 @@ const envSchema = z.object({
     .string()
     .min(1)
     .default("https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo03"),
+
+  /**
+   * Local LLM router experiment (Ollama). Development only — see
+   * `docs/local-llm.md`. `off` is the app exactly as it was; production is
+   * forced to `off` whatever this says (`effectiveLocalMode`).
+   */
+  LOCAL_LLM_MODE: blankAsUnset(z.enum(["off", "shadow", "active"]).default("off")),
+  LOCAL_LLM_BASE_URL: blankAsUnset(z.url().default("http://localhost:11434")),
+  /** Any Ollama tag. Unset means the experiment cannot run, so it stays off. */
+  LOCAL_LLM_MODEL: optionalSecret,
+  LOCAL_LLM_TIMEOUT_MS: blankAsUnset(z.coerce.number().int().positive().default(5000)),
+  /** A local answer below this is not used; the judge answers instead. */
+  LOCAL_LLM_MIN_CONFIDENCE: blankAsUnset(z.coerce.number().min(0).max(1).default(0.85)),
 });
 
 const parsed = envSchema.safeParse(process.env);
