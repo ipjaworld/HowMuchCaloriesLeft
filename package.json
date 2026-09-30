@@ -16,6 +16,8 @@
     "test:watch": "vitest",
     "eval:jev": "vitest run --config vitest.eval.mts evalJev",
     "eval:local-router": "vitest run --config vitest.eval.mts evalLocalRouter",
+    "eval:food-judgment": "vitest run --config vitest.eval.mts evalFoodJudgment",
+    "eval:food-coverage": "vitest run --config vitest.eval.mts evalFoodCoverage",
     "sync:mfds": "vitest run --config vitest.sync.mts",
     "candidates:mfds": "vitest run --config vitest.candidates.mts"
   },

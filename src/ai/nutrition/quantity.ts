@@ -118,6 +118,18 @@ const numeralPattern = Object.keys(ATTRIBUTIVE_NUMERALS)
 const halfPattern = Object.keys(HALF_WORDS).join("|");
 
 /**
+ * "반 그릇만", "두 개만", "반만": 만 ("only") after an amount is how people
+ * say they ate less than they might have. It stresses the amount without
+ * changing it, so it is read past — and left out of the text kept for
+ * display, where "반 그릇" is the amount.
+ */
+const ONLY = "(?:[ ]?만)?";
+
+function spoken(matched: string): string {
+  return matched.trim().replace(/[ ]?만$/, "");
+}
+
+/**
  * Ordered by specificity: "한 그릇 반" has to be tried before "한 그릇",
  * or the trailing 반 is silently dropped and 1.5 becomes 1.
  */
@@ -125,7 +137,7 @@ const PATTERNS: { re: RegExp; read: (m: RegExpMatchArray) => Quantity | null }[]
   // 한 그릇 반, 두 공기 반
   {
     re: new RegExp(
-      `(${numeralPattern})[ ]*(${unitPattern})[ ]*(${halfPattern})[ ]*$`,
+      `(${numeralPattern})[ ]*(${unitPattern})[ ]*(${halfPattern})${ONLY}[ ]*$`,
     ),
     read: (m) => {
       const whole = readNumeral(m[1]);
@@ -133,58 +145,58 @@ const PATTERNS: { re: RegExp; read: (m: RegExpMatchArray) => Quantity | null }[]
       return {
         value: whole + 0.5,
         unit: asUnit(m[2]),
-        text: m[0].trim(),
+        text: spoken(m[0]),
         assumed: false,
       };
     },
   },
   // 1.5공기, 200ml, 2개
   {
-    re: new RegExp(`([0-9]+(?:[.][0-9]+)?)[ ]*(${unitPattern})[ ]*$`),
+    re: new RegExp(`([0-9]+(?:[.][0-9]+)?)[ ]*(${unitPattern})${ONLY}[ ]*$`),
     read: (m) => ({
       value: Number(m[1]),
       unit: asUnit(m[2]),
-      text: m[0].trim(),
+      text: spoken(m[0]),
       assumed: false,
     }),
   },
   // 반 공기, 절반 그릇
   {
-    re: new RegExp(`(${halfPattern})[ ]*(${unitPattern})[ ]*$`),
+    re: new RegExp(`(${halfPattern})[ ]*(${unitPattern})${ONLY}[ ]*$`),
     read: (m) => ({
       value: 0.5,
       unit: asUnit(m[2]),
-      text: m[0].trim(),
+      text: spoken(m[0]),
       assumed: false,
     }),
   },
   // 한 공기, 두 개, 세개, 한잔
   {
-    re: new RegExp(`(${numeralPattern})[ ]*(${unitPattern})[ ]*$`),
+    re: new RegExp(`(${numeralPattern})[ ]*(${unitPattern})${ONLY}[ ]*$`),
     read: (m) => {
       const value = readNumeral(m[1]);
       if (value === null) return null;
       return {
         value,
         unit: asUnit(m[2]),
-        text: m[0].trim(),
+        text: spoken(m[0]),
         assumed: false,
       };
     },
   },
   // 하나, 둘, 셋 — a bare count with no counter
   {
-    re: new RegExp(`(${Object.keys(STANDALONE_NUMERALS).join("|")})[ ]*$`),
+    re: new RegExp(`(${Object.keys(STANDALONE_NUMERALS).join("|")})${ONLY}[ ]*$`),
     read: (m) => {
       const value = m[1] === undefined ? undefined : STANDALONE_NUMERALS[m[1]];
       if (value === undefined) return null;
-      return { value, unit: null, text: m[0].trim(), assumed: false };
+      return { value, unit: null, text: spoken(m[0]), assumed: false };
     },
   },
   // 반, 절반 — "아까 밥은 반만"
   {
-    re: new RegExp(`(${halfPattern})(?:만)?[ ]*$`),
-    read: (m) => ({ value: 0.5, unit: null, text: m[0].trim(), assumed: false }),
+    re: new RegExp(`(${halfPattern})${ONLY}[ ]*$`),
+    read: (m) => ({ value: 0.5, unit: null, text: spoken(m[0]), assumed: false }),
   },
   // 2, 3 — a bare digit
   {
@@ -192,7 +204,7 @@ const PATTERNS: { re: RegExp; read: (m: RegExpMatchArray) => Quantity | null }[]
     read: (m) => ({
       value: Number(m[1]),
       unit: null,
-      text: m[0].trim(),
+      text: spoken(m[0]),
       assumed: false,
     }),
   },
@@ -252,6 +264,22 @@ export function parseAmountOnly(text: string): Quantity | null {
   }
 
   return null;
+}
+
+/**
+ * Reads the reply to "얼마나 드셨어요?".
+ *
+ * `parseAmountOnly` with the endings an answer picks up: "반 그릇이요",
+ * "200ml 정도요", "두 개요.". Returns null for anything that is not an
+ * amount, and the caller treats it as a new sentence rather than a failed
+ * answer — the same rule as the calorie question, because someone who types
+ * "김밥 먹었어" here has moved on.
+ */
+export function readAmountAnswer(message: string): Quantity | null {
+  const text = normalizeSpacing(message)
+    .replace(/[.!?~]+$/, "")
+    .replace(/[ ]?(?:정도|쯤)?[ ]?(?:이에요|예요|이요|요)?$/, "");
+  return parseAmountOnly(text);
 }
 
 /**

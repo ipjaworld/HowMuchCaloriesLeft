@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { KOREAN_FOODS } from "@/ai/nutrition/koreanFoods";
 import { caloriesFor } from "@/ai/nutrition/localDatasetResolver";
-import { parseAmountOnly } from "@/ai/nutrition/quantity";
+import { readAmountAnswer } from "@/ai/nutrition/quantity";
 import { toFoodItem } from "@/application/addFood";
 import type { NewFoodItem } from "@/application/mealRecords";
 
@@ -62,7 +62,7 @@ export async function POST(request: Request): Promise<Response> {
 
   // The whole message is the amount, which is the one context where a bare
   // "200ml" is a quantity rather than a food name.
-  const quantity = parseAmountOnly(parsed.data.amountText);
+  const quantity = readAmountAnswer(parsed.data.amountText);
   if (quantity === null) {
     const response: ResolveResponse = { status: "unparseable" };
     return Response.json(response);

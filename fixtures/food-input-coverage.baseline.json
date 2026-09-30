@@ -1,0 +1,1391 @@
+{
+  "version": 1,
+  "note": "현재 production 파이프라인의 case별 verdict. 기대값이 아니라 현재 상태다. FOOD_COVERAGE_UPDATE=1 pnpm eval:food-coverage 로만 갱신한다.",
+  "cases": [
+    {
+      "id": "clean-01",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (1인분) ← \"떡볶이\""
+      ]
+    },
+    {
+      "id": "clean-02",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (한 줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "clean-03",
+      "verdict": "correct_ask",
+      "actual": [
+        "unmeasurable 그릭요거트 [missing_serving] ← \"그릭 요거트\""
+      ]
+    },
+    {
+      "id": "clean-04",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 제육덮밥 (1그릇) ← \"제육덮밥\""
+      ]
+    },
+    {
+      "id": "clean-05",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 아메리카노 (한 잔) ← \"아메리카노\""
+      ]
+    },
+    {
+      "id": "clean-06",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 갈비탕 (한 그릇) ← \"갈비탕\""
+      ]
+    },
+    {
+      "id": "clean-07",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 바나나 (1개) ← \"바나나\""
+      ]
+    },
+    {
+      "id": "clean-08",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 닭가슴살 (100g) ← \"닭가슴살\""
+      ]
+    },
+    {
+      "id": "clean-09",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 삶은 달걀 (2개) ← \"삶은 계란\""
+      ]
+    },
+    {
+      "id": "clean-10",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 짜장면 (1그릇) ← \"짜장면\""
+      ]
+    },
+    {
+      "id": "clean-11",
+      "verdict": "correct_ask",
+      "actual": [
+        "ambiguous 닭가슴살 샐러드|채소 샐러드 ← \"샐러드\""
+      ]
+    },
+    {
+      "id": "clean-12",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 햄버거 (하나) ← \"햄버거\""
+      ]
+    },
+    {
+      "id": "narr-01",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (1인분) ← \"기분이 안좋아져서 떡볶이를\""
+      ]
+    },
+    {
+      "id": "narr-02",
+      "verdict": "correct_ask",
+      "actual": [
+        "unmeasurable 그릭요거트 [missing_serving] ← \"운동 끝나고 그릭 요거트\""
+      ]
+    },
+    {
+      "id": "narr-03",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (한 줄) ← \"회의 끝나고 김밥\""
+      ]
+    },
+    {
+      "id": "narr-04",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 라면 (1그릇) ← \"야근하다가 라면\""
+      ]
+    },
+    {
+      "id": "narr-05",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (1인분) ← \"기분이 안좋아서 떡볶이를\""
+      ]
+    },
+    {
+      "id": "narr-06",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 짜장면 (1그릇) ← \"너무 배고파서 짜장면\""
+      ]
+    },
+    {
+      "id": "narr-07",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (1인분) ← \"떡볶이\""
+      ]
+    },
+    {
+      "id": "narr-08",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김치찌개 (1그릇) ← \"엄마가 해준 김치찌개\""
+      ]
+    },
+    {
+      "id": "narr-09",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 바나나 (하나) ← \"편의점에서 바나나\""
+      ]
+    },
+    {
+      "id": "narr-10",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 짜장면 (1그릇) ← \"다이어트 중인데 못 참고 짜장면\""
+      ]
+    },
+    {
+      "id": "narr-11",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (1인분) ← \"배달로 떡볶이\""
+      ]
+    },
+    {
+      "id": "narr-12",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 닭가슴살 (100g) ← \"헬스 끝나고 닭가슴살\""
+      ]
+    },
+    {
+      "id": "narr-13",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 제육덮밥 (1그릇) ← \"회사 근처에서 제육덮밥\""
+      ]
+    },
+    {
+      "id": "narr-14",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 칼국수 (1그릇) ← \"비 와서 칼국수\""
+      ]
+    },
+    {
+      "id": "narr-15",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 삼겹살구이 (1인분) ← \"삼겹살\""
+      ]
+    },
+    {
+      "id": "multi-01",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (한 줄) ← \"김밥\"",
+        "resolved 우유 (1컵) ← \"우유\""
+      ]
+    },
+    {
+      "id": "multi-02",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 라면 (1그릇) ← \"라면\"",
+        "resolved 아메리카노 (1잔) ← \"커피\""
+      ]
+    },
+    {
+      "id": "multi-03",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (1인분) ← \"떡볶\"",
+        "resolved 순대 (1인분) ← \"순대\""
+      ]
+    },
+    {
+      "id": "multi-04",
+      "verdict": "correct_ask",
+      "actual": [
+        "resolved 김치찌개 (1그릇) ← \"김치찌개\"",
+        "ambiguous 쌀밥|현미밥|잡곡밥 ← \"밥\""
+      ]
+    },
+    {
+      "id": "multi-05",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 갈비탕 (하나) ← \"갈비탕\"",
+        "resolved 쌀밥 (1공기) ← \"공기밥\""
+      ]
+    },
+    {
+      "id": "multi-06",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 바나나 (하나) ← \"바나나\"",
+        "resolved 우유 (한 컵) ← \"우유\""
+      ]
+    },
+    {
+      "id": "multi-07",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 삶은 달걀 (2개) ← \"삶은 계란\"",
+        "resolved 고구마 (1개) ← \"고구마\""
+      ]
+    },
+    {
+      "id": "multi-08",
+      "verdict": "correct_ask",
+      "actual": [
+        "resolved 아메리카노 (1잔) ← \"커피\"",
+        "ambiguous 햄에그 샌드위치|참치 샌드위치|닭가슴살 샌드위치 ← \"샌드위치\""
+      ]
+    },
+    {
+      "id": "multi-09",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 비빔밥 (1그릇) ← \"비빔밥\"",
+        "resolved 라면 (1그릇) ← \"라면\""
+      ]
+    },
+    {
+      "id": "trap-01",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"감자탕\""
+      ]
+    },
+    {
+      "id": "trap-02",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"감자튀김\""
+      ]
+    },
+    {
+      "id": "trap-03",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"감자전\""
+      ]
+    },
+    {
+      "id": "trap-04",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"딸기케이크\""
+      ]
+    },
+    {
+      "id": "trap-05",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"사과주스\""
+      ]
+    },
+    {
+      "id": "trap-06",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"수박바\""
+      ]
+    },
+    {
+      "id": "trap-07",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"치킨버거\""
+      ]
+    },
+    {
+      "id": "trap-08",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"새우버거\""
+      ]
+    },
+    {
+      "id": "trap-09",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"버거킹 와퍼\""
+      ]
+    },
+    {
+      "id": "trap-10",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"불닭볶음면\""
+      ]
+    },
+    {
+      "id": "trap-11",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"순대볶음\""
+      ]
+    },
+    {
+      "id": "trap-12",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"컵라면\""
+      ]
+    },
+    {
+      "id": "trap-13",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"참치김밥\""
+      ]
+    },
+    {
+      "id": "trap-14",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"치즈김밥\""
+      ]
+    },
+    {
+      "id": "trap-15",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"커피우유\""
+      ]
+    },
+    {
+      "id": "trap-16",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"딸기우유\""
+      ]
+    },
+    {
+      "id": "trap-17",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"바나나우유\""
+      ]
+    },
+    {
+      "id": "trap-18",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"고구마라떼\""
+      ]
+    },
+    {
+      "id": "trap-19",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"로제떡볶이\""
+      ]
+    },
+    {
+      "id": "trap-20",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"짜장라면\""
+      ]
+    },
+    {
+      "id": "trap-21",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"두부김치\""
+      ]
+    },
+    {
+      "id": "trap-22",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"연어덮밥\""
+      ]
+    },
+    {
+      "id": "trap-23",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"포도주스\""
+      ]
+    },
+    {
+      "id": "homo-neg-01",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "homo-neg-02",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"진짜 죽겠다\""
+      ]
+    },
+    {
+      "id": "homo-neg-03",
+      "verdict": "false_negative",
+      "actual": [
+        "unknown ← \"회의 끝나고 밥\""
+      ]
+    },
+    {
+      "id": "homo-neg-04",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 라면 (1그릇) ← \"라면\""
+      ]
+    },
+    {
+      "id": "homo-neg-05",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"빵 터졌네\""
+      ]
+    },
+    {
+      "id": "homo-neg-06",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"차 타고 가다가 김밥\""
+      ]
+    },
+    {
+      "id": "homo-neg-07",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"배가 고파서 김밥\""
+      ]
+    },
+    {
+      "id": "homo-neg-08",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"배불러 죽겠다\""
+      ]
+    },
+    {
+      "id": "homo-neg-09",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (1인분) ← \"떡볶이\""
+      ]
+    },
+    {
+      "id": "homo-neg-10",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"전 오늘 김밥\""
+      ]
+    },
+    {
+      "id": "homo-neg-11",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"사과했는데 안 받아줬어\""
+      ]
+    },
+    {
+      "id": "homo-pos-01",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 사과 (하나) ← \"사과\""
+      ]
+    },
+    {
+      "id": "homo-pos-02",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"죽\""
+      ]
+    },
+    {
+      "id": "homo-pos-03",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"회\""
+      ]
+    },
+    {
+      "id": "homo-pos-04",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"밤 몇 개\""
+      ]
+    },
+    {
+      "id": "homo-pos-05",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"빵\""
+      ]
+    },
+    {
+      "id": "homo-pos-06",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 배 (한 개) ← \"배\""
+      ]
+    },
+    {
+      "id": "homo-pos-07",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"김\""
+      ]
+    },
+    {
+      "id": "homo-pos-08",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"떡\""
+      ]
+    },
+    {
+      "id": "pol-01",
+      "verdict": "false_negative",
+      "actual": [
+        "unknown ← \"참고 샐러드\""
+      ]
+    },
+    {
+      "id": "pol-02",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "pol-03",
+      "verdict": "correct_not_consumed",
+      "actual": []
+    },
+    {
+      "id": "pol-04",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 바나나 (1개) ← \"바나나\""
+      ]
+    },
+    {
+      "id": "pol-05",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 우유 (1컵) ← \"우유\""
+      ]
+    },
+    {
+      "id": "pol-06",
+      "verdict": "correct_not_consumed",
+      "actual": []
+    },
+    {
+      "id": "pol-07",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"고민 중이야\""
+      ]
+    },
+    {
+      "id": "pol-08",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"그냥 굶었어\""
+      ]
+    },
+    {
+      "id": "qty-01",
+      "verdict": "correct_unknown",
+      "actual": [
+        "resolved 떡볶이 (반) ← \"떡볶이는\"",
+        "unknown ← \"튀김\""
+      ]
+    },
+    {
+      "id": "qty-02",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (반 줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "qty-03",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 라면 (하나) ← \"라면\"",
+        "resolved 삶은 달걀 (두 개) ← \"계란\""
+      ]
+    },
+    {
+      "id": "qty-04",
+      "verdict": "correct_ask",
+      "actual": [
+        "ambiguous 쌀밥|현미밥|잡곡밥 ← \"밥\""
+      ]
+    },
+    {
+      "id": "qty-05",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (2인분) ← \"떡볶이\""
+      ]
+    },
+    {
+      "id": "qty-06",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (반 줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "qty-07",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 사과 (반 개) ← \"사과\""
+      ]
+    },
+    {
+      "id": "unk-01",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"마라탕\""
+      ]
+    },
+    {
+      "id": "unk-02",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"치킨\""
+      ]
+    },
+    {
+      "id": "unk-03",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"우동\""
+      ]
+    },
+    {
+      "id": "unk-04",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"포케\""
+      ]
+    },
+    {
+      "id": "unk-05",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"소주\""
+      ]
+    },
+    {
+      "id": "unk-06",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"타코\""
+      ]
+    },
+    {
+      "id": "unk-07",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"엽떡\""
+      ]
+    },
+    {
+      "id": "unk-08",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"마라샹궈\""
+      ]
+    },
+    {
+      "id": "unk-09",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"교촌 치킨\""
+      ]
+    },
+    {
+      "id": "unkmix-01",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"마라탕\"",
+        "resolved 떡볶이 (1인분) ← \"떡볶이\""
+      ]
+    },
+    {
+      "id": "unkmix-02",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"치킨\"",
+        "unmeasurable 콜라 [missing_serving] ← \"콜라\""
+      ]
+    },
+    {
+      "id": "unkmix-03",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"감자탕\"",
+        "resolved 쌀밥 (1공기) ← \"공기밥\""
+      ]
+    },
+    {
+      "id": "unkmix-04",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"우동\"",
+        "resolved 김밥 (1줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "unkmix-05",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"딸기케이크\"",
+        "resolved 아메리카노 (1잔) ← \"아메리카노\""
+      ]
+    },
+    {
+      "id": "unkmix-06",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"포케\"",
+        "resolved 아메리카노 (1잔) ← \"아메리카노\""
+      ]
+    },
+    {
+      "id": "narr-16",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (1인분) ← \"떡볶이\""
+      ]
+    },
+    {
+      "id": "narr-17",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "narr-18",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 라면 (1그릇) ← \"라면\""
+      ]
+    },
+    {
+      "id": "narr-19",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 제육덮밥 (1그릇) ← \"회의 끝나고 제육덮밥\""
+      ]
+    },
+    {
+      "id": "narr-20",
+      "verdict": "spurious_ask",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\"",
+        "unknown ← \"운동했어\""
+      ]
+    },
+    {
+      "id": "narr-21",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 바나나 (1개) ← \"편의점 가서 바나나\""
+      ]
+    },
+    {
+      "id": "narr-22",
+      "verdict": "correct_ask",
+      "actual": [
+        "ambiguous 토마토 스파게티|크림 스파게티 ← \"파스타\""
+      ]
+    },
+    {
+      "id": "narr-23",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 삼겹살구이 (1인분) ← \"삼겹살\""
+      ]
+    },
+    {
+      "id": "narr-24",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 바나나 (하나) ← \"늦잠 자서 바나나\""
+      ]
+    },
+    {
+      "id": "narr-25",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김치찌개 (1그릇) ← \"김치찌개\""
+      ]
+    },
+    {
+      "id": "multi-10",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\"",
+        "resolved 우유 (1컵) ← \"우유\""
+      ]
+    },
+    {
+      "id": "multi-11",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (1인분) ← \"떡볶이\"",
+        "resolved 순대 (1인분) ← \"순대\""
+      ]
+    },
+    {
+      "id": "multi-12",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\"",
+        "resolved 라면 (1그릇) ← \"라면도\""
+      ]
+    },
+    {
+      "id": "multi-13",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 바나나 (1개) ← \"바나나\"",
+        "resolved 비빔밥 (1그릇) ← \"비빔밥\""
+      ]
+    },
+    {
+      "id": "multi-15",
+      "verdict": "correct_ask",
+      "actual": [
+        "resolved 아메리카노 (1잔) ← \"커피\"",
+        "ambiguous 햄에그 샌드위치|참치 샌드위치|닭가슴살 샌드위치 ← \"샌드위치\""
+      ]
+    },
+    {
+      "id": "pol-09",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 짬뽕 (1그릇) ← \"짬뽕\""
+      ]
+    },
+    {
+      "id": "pol-10",
+      "verdict": "correct_ask",
+      "actual": [
+        "ambiguous 닭가슴살 샐러드|채소 샐러드 ← \"샐러드\""
+      ]
+    },
+    {
+      "id": "pol-11",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "pol-12",
+      "verdict": "correct_not_consumed",
+      "actual": []
+    },
+    {
+      "id": "pol-13",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 아메리카노 (1잔) ← \"아메리카노\""
+      ]
+    },
+    {
+      "id": "pol-14",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 순대 (1인분) ← \"순대만\""
+      ]
+    },
+    {
+      "id": "pol-15",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 라면 (1그릇) ← \"하다가 라면\""
+      ]
+    },
+    {
+      "id": "qty-08",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 갈비탕 (반 그릇) ← \"갈비탕\""
+      ]
+    },
+    {
+      "id": "qty-09",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 쌀밥 (한 공기) ← \"쌀밥\""
+      ]
+    },
+    {
+      "id": "qty-10",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 삶은 달걀 (두 개) ← \"계란\""
+      ]
+    },
+    {
+      "id": "qty-11",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (한 줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "qty-12",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 라면 (반) ← \"라면\""
+      ]
+    },
+    {
+      "id": "qty-13",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"치킨\""
+      ]
+    },
+    {
+      "id": "unk-10",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"소고기\""
+      ]
+    },
+    {
+      "id": "unk-11",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"순두부\""
+      ]
+    },
+    {
+      "id": "unk-12",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"망고\""
+      ]
+    },
+    {
+      "id": "unkmix-07",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"마라탕\"",
+        "resolved 떡볶이 (1인분) ← \"떡볶이\""
+      ]
+    },
+    {
+      "id": "unkmix-08",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"밤\"",
+        "resolved 고구마 (1개) ← \"고구마\""
+      ]
+    },
+    {
+      "id": "unkmix-09",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"망고\"",
+        "unmeasurable 떠먹는 요거트 [missing_serving] ← \"요거트\""
+      ]
+    },
+    {
+      "id": "homo-neg-12",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"사과 받고 기분 풀려서 케이크\""
+      ]
+    },
+    {
+      "id": "homo-pos-09",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"밤\""
+      ]
+    },
+    {
+      "id": "blind-01",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (두 줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "blind-02",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 순대국밥 (한 그릇) ← \"회사 앞에서 순대국밥\""
+      ]
+    },
+    {
+      "id": "blind-03",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 라면 (1그릇) ← \"라면\""
+      ]
+    },
+    {
+      "id": "blind-04",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 떡볶이 (2인분) ← \"배고파 죽겠어서 떡볶이\""
+      ]
+    },
+    {
+      "id": "blind-05",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 아메리카노 (한 잔) ← \"커피\"",
+        "resolved 바나나 (하나) ← \"바나나\""
+      ]
+    },
+    {
+      "id": "blind-06",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"헬스장 가기 전\"",
+        "resolved 바나나 (1개) ← \"바나나\""
+      ]
+    },
+    {
+      "id": "blind-07",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"남은 치킨\""
+      ]
+    },
+    {
+      "id": "blind-08",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 삼계탕 (1그릇) ← \"삼계탕\""
+      ]
+    },
+    {
+      "id": "blind-09",
+      "verdict": "correct_unknown",
+      "actual": [
+        "resolved 김치찌개 (1그릇) ← \"김치찌개\"",
+        "unknown ← \"계란말이\""
+      ]
+    },
+    {
+      "id": "blind-10",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 아메리카노 (두 잔) ← \"아이스 아메리카노\""
+      ]
+    },
+    {
+      "id": "blind-11",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 짜장면 (1그릇) ← \"짜장면\""
+      ]
+    },
+    {
+      "id": "blind-12",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 아메리카노 (1잔) ← \"아메리카노로\""
+      ]
+    },
+    {
+      "id": "blind-13",
+      "verdict": "correct_unknown",
+      "actual": [
+        "resolved 비빔밥 (1그릇) ← \"비빔밥\"",
+        "unknown ← \"나서 아이스크림\""
+      ]
+    },
+    {
+      "id": "blind-14",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"점심을 걸러서 저녁\"",
+        "resolved 삼겹살구이 (2인분) ← \"삼겹살\""
+      ]
+    },
+    {
+      "id": "blind-15",
+      "verdict": "correct_ask",
+      "actual": [
+        "ambiguous 닭가슴살 샐러드|채소 샐러드 ← \"샐러드만\""
+      ]
+    },
+    {
+      "id": "blind-16",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 순대 (반) ← \"순대\""
+      ]
+    },
+    {
+      "id": "blind-17",
+      "verdict": "spurious_ask",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\"",
+        "unknown ← \"너무 맛있었어\""
+      ]
+    },
+    {
+      "id": "blind-18",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 고구마 (두 개) ← \"고구마\"",
+        "resolved 우유 (한 잔) ← \"우유\""
+      ]
+    },
+    {
+      "id": "blind-19",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 아메리카노 (1잔) ← \"친구가 사준 커피\""
+      ]
+    },
+    {
+      "id": "blind-20",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"술\""
+      ]
+    },
+    {
+      "id": "blind-21",
+      "verdict": "correct_ask",
+      "actual": [
+        "ambiguous 쌀밥|현미밥|잡곡밥|김밥|비빔밥|볶음밥|김치볶음밥|제육덮밥|순대국밥 ← \"밥\"",
+        "resolved 아메리카노 (1잔) ← \"커피\""
+      ]
+    },
+    {
+      "id": "blind-22",
+      "verdict": "correct_not_consumed",
+      "actual": []
+    },
+    {
+      "id": "blind-23",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"다이어트 때문\"",
+        "unknown ← \"저녁은 굶었어\""
+      ]
+    },
+    {
+      "id": "blind-24",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"케이크\""
+      ]
+    },
+    {
+      "id": "blind-25",
+      "verdict": "correct_unknown",
+      "actual": [
+        "resolved 우유 (1컵) ← \"우유\"",
+        "unknown ← \"시리얼 말아\""
+      ]
+    },
+    {
+      "id": "blind-26",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"동생이\"",
+        "unknown ← \"남긴 피자\""
+      ]
+    },
+    {
+      "id": "blind-27",
+      "verdict": "partial_multi_food",
+      "actual": [
+        "resolved 라면 (1그릇) ← \"라면\"",
+        "ambiguous 김치볶음밥|김치찌개|순두부찌개 ← \"김치\""
+      ]
+    },
+    {
+      "id": "blind-28",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"참았어\""
+      ]
+    },
+    {
+      "id": "review-01",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"치킨 배달시켜서 동생이랑\""
+      ]
+    },
+    {
+      "id": "review-02",
+      "verdict": "partial_multi_food",
+      "actual": [
+        "unknown ← \"김밥 사서 집\"",
+        "resolved 라면 (1그릇) ← \"와서 라면\"",
+        "unknown ← \"같이\""
+      ]
+    },
+    {
+      "id": "review-03",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"민수\"",
+        "resolved 떡볶이 (1인분) ← \"떡볶이\""
+      ]
+    },
+    {
+      "id": "review-04",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"팀원들\"",
+        "resolved 삼겹살구이 (1인분) ← \"회식에서 삼겹살\""
+      ]
+    },
+    {
+      "id": "review-05",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 짜장면 (1그릇) ← \"점심때 짜장면\""
+      ]
+    },
+    {
+      "id": "review-06",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 라면 (1그릇) ← \"라면\""
+      ]
+    },
+    {
+      "id": "review-07",
+      "verdict": "partial_multi_food",
+      "actual": [
+        "ambiguous 라면|삶은 달걀 ← \"라면 끓여서 계란 두 개 넣고\""
+      ]
+    },
+    {
+      "id": "review-08",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (한 줄 반) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "review-09",
+      "verdict": "partial_multi_food",
+      "actual": [
+        "unknown ← \"떡볶이는 맛없어서 조금만\"",
+        "resolved 순대 (1인분) ← \"순대\""
+      ]
+    },
+    {
+      "id": "review-10",
+      "verdict": "correct_ask",
+      "actual": [
+        "unmeasurable 비빔밥 [partly_left] ← \"비빔밥\""
+      ]
+    },
+    {
+      "id": "review-11",
+      "verdict": "spurious_ask",
+      "actual": [
+        "unknown ← \"굶고 점심\"",
+        "resolved 김밥 (1줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "review-12",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 아메리카노 (1잔) ← \"아메리카노\""
+      ]
+    },
+    {
+      "id": "review-13",
+      "verdict": "spurious_ask",
+      "actual": [
+        "resolved 라면 (1그릇) ← \"라면\"",
+        "unknown ← \"나니까 배불러\""
+      ]
+    },
+    {
+      "id": "review-14",
+      "verdict": "false_negative",
+      "actual": [
+        "unknown ← \"김치찌개 먹는 중\""
+      ]
+    },
+    {
+      "id": "review-15",
+      "verdict": "spurious_ask",
+      "actual": [
+        "resolved 떡볶이 (1인분) ← \"떡볶이\"",
+        "unknown ← \"너무 매워\""
+      ]
+    },
+    {
+      "id": "review-16",
+      "verdict": "partial_multi_food",
+      "actual": [
+        "resolved 바나나 (1개) ← \"바나나\"",
+        "unknown ← \"우유로 아침 해결했어\""
+      ]
+    },
+    {
+      "id": "review-17",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\"",
+        "resolved 라면 (1그릇) ← \"저녁은 라면\""
+      ]
+    },
+    {
+      "id": "review-18",
+      "verdict": "false_negative",
+      "actual": [
+        "unknown ← \"아메리카노 한 잔 더\""
+      ]
+    },
+    {
+      "id": "review-19",
+      "verdict": "false_negative",
+      "actual": [
+        "unknown ← \"먹은 떡볶이 기록 안 했는데 지금 추가해줘\""
+      ]
+    },
+    {
+      "id": "review-20",
+      "verdict": "spurious_ask",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\"",
+        "unknown ← \"ㅎㅎ 맛있었다\""
+      ]
+    }
+  ]
+}

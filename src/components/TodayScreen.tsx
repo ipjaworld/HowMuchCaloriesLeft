@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Intent } from "@/ai/judgment/types";
+import { readAmountAnswer } from "@/ai/nutrition/quantity";
 import { readCalorieAnswer } from "@/ai/nutrition/statedCalories";
 import {
   isAllUnknown,
   isSameAs,
   isSettled,
+  isUnreadCorrectionOf,
   namesASubstitution,
   itemsOf,
   preferTargetFood,
@@ -30,8 +32,10 @@ import {
   confirmAdd,
   isCancelMessage,
   isComplete,
+  isModifyPart,
   isSkipMessage,
   nextQuestion,
+  planModifyCommit,
   skipUnknown,
   type PendingAdd,
 } from "@/application/pendingAdd";
@@ -333,14 +337,23 @@ export function TodayScreen() {
     setReply(describeRestored(removed.item, await reloadDay()));
   }
 
-  /** Applies a finished correction to the item it was about. */
+  /**
+   * Applies a finished correction to the item it was about, and adds
+   * whatever else the sentence settled. Nothing settled is discarded.
+   */
   async function commitModify(pending: PendingAdd): Promise<void> {
     const target = pending.target;
     if (target === undefined) return;
 
-    const next = itemsOf(pending.parts)[0];
-    if (next === undefined) {
-      setReply(describeNothingAdded(pending.parts));
+    const { replacement, additions, skipped } = planModifyCommit(pending);
+
+    // The correction itself was skipped; what the sentence added still stands.
+    if (replacement === null) {
+      if (additions.length === 0) {
+        setReply(describeNothingAdded(pending.parts));
+        return;
+      }
+      await commitAdd({ ...pending, target: undefined, parts: pending.parts.filter((_, index) => !isModifyPart(pending, index)) });
       return;
     }
 
@@ -349,7 +362,7 @@ export function TodayScreen() {
       repositories.meals,
       records,
       target.itemId,
-      next,
+      replacement,
     );
 
     if (result.status === "not_found") {
@@ -357,11 +370,17 @@ export function TodayScreen() {
       return;
     }
 
+    if (additions.length > 0) {
+      await addMealRecord(repositories.meals, {
+        sourceText: pending.sourceText,
+        items: additions,
+        consumedAt: pending.now,
+      });
+    }
+
     const summaryAfter = await reloadDay();
     setReply(
-      before === undefined
-        ? describeModified(next, next, summaryAfter)
-        : describeModified(before, next, summaryAfter),
+      describeModified(before ?? replacement, replacement, summaryAfter, additions, skipped),
     );
   }
 
@@ -381,16 +400,27 @@ export function TodayScreen() {
     if (question !== null) setReply(describeQuestion(question));
   }
 
-  /** A follow-up amount for a food the dataset knows but cannot size. */
+  /**
+   * A follow-up amount for a food the dataset knows but cannot size. Returns
+   * false when it was not an amount at all, so the caller can read it as a
+   * new sentence — the same rule as `handleCalorieAnswer`.
+   */
   async function handleQuantityAnswer(
     pending: PendingAdd,
     amountText: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const question = nextQuestion(pending);
-    if (question === null || question.type !== "provide_quantity") return;
+    if (question === null || question.type !== "provide_quantity") return false;
+
+    // "몰라" has no amount but is still about the question, so it stands.
+    if (isSkipMessage(amountText)) {
+      setReply(describeUnreadableAmount());
+      return true;
+    }
+    if (readAmountAnswer(amountText) === null) return false;
 
     const foodName = question.entries[0]?.name;
-    if (foodName === undefined) return;
+    if (foodName === undefined) return false;
 
     const response = await fetch("/api/resolve", {
       method: "POST",
@@ -400,17 +430,18 @@ export function TodayScreen() {
 
     if (!response.ok) {
       setReply(describeAddFailure());
-      return;
+      return true;
     }
 
     const result = (await response.json()) as ResolveResponse;
     if (result.status !== "resolved") {
       // Still pending: the question stands, so the user can try again.
       setReply(describeUnreadableAmount());
-      return;
+      return true;
     }
 
     await advance(answerQuantity(pending, question.partIndex, result.item));
+    return true;
   }
 
   /**
@@ -526,8 +557,10 @@ export function TodayScreen() {
         }
 
         const question = nextQuestion(pendingAdd);
-        if (question?.type === "provide_quantity") {
-          await handleQuantityAnswer(pendingAdd, message);
+        if (
+          question?.type === "provide_quantity" &&
+          (await handleQuantityAnswer(pendingAdd, message))
+        ) {
           return;
         }
         if (
@@ -572,6 +605,7 @@ export function TodayScreen() {
           command.sourceText,
           command.parts,
           command.needsConfirmation,
+          command.extraParts ?? [],
         );
         return;
       }
@@ -623,6 +657,8 @@ export function TodayScreen() {
     sourceText: string,
     parts: AddPart[],
     needsConfirmation: boolean,
+    /** Other foods the sentence reported, added beside the correction. */
+    extraParts: AddPart[] = [],
   ): Promise<void> {
     const found = locateItem(records, targetId);
     if (found === null) {
@@ -640,14 +676,26 @@ export function TodayScreen() {
     const pending: PendingAdd = {
       sourceText,
       now: new Date().toISOString(),
-      parts: narrowed,
+      parts: [...narrowed, ...extraParts],
       needsConfirmation,
-      target: { itemId: targetId, foodName: found.item.name },
+      target: { itemId: targetId, foodName: found.item.name, modifyParts: narrowed.length },
     };
 
     const only = itemsOf(narrowed)[0];
     const nothingChanged =
       isSettled(narrowed) && only !== undefined && isSameAs(only, found.item);
+    const unreadable =
+      narrowed.length === 0 ||
+      nothingChanged ||
+      isUnreadCorrectionOf(narrowed, found.item.name, substitutes);
+
+    // The correction changes nothing or cannot be read, but the sentence also
+    // named other foods. Those still go ahead — as an add the user confirms,
+    // which names them — rather than vanishing behind "how much was it?".
+    if (unreadable && extraParts.length > 0) {
+      await startAdd(sourceText, extraParts, true);
+      return;
+    }
 
     // "2개라니까" about an entry already at 2개: the user is insisting on what
     // is there, not failing to be understood. Say so instead of asking again.
@@ -660,7 +708,7 @@ export function TodayScreen() {
       return;
     }
 
-    if (narrowed.length === 0 || nothingChanged) {
+    if (unreadable) {
       // The sentence was a correction the phrase parser cannot read. Rather
       // than guess at its grammar, ask for the amount.
       askAmountFor(targetId);

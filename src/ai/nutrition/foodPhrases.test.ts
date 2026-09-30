@@ -176,3 +176,115 @@ describe("the eating verb, however it is typed", () => {
     expect(parse("마시는 요구르트 1개")[0]?.name).toBe("마시는 요구르트");
   });
 });
+
+describe("clauses: several verbs in one sentence", () => {
+  const names = (sentence: string) => parse(sentence).map((phrase) => phrase.name);
+
+  it("keeps every food an eating verb governs — two foods are not an ambiguity", () => {
+    expect(names("라면 먹고 커피 마셨어")).toEqual(["라면", "커피"]);
+    expect(names("점심에 비빔밥 먹고 저녁에 라면 먹었어")).toEqual(["비빔밥", "라면"]);
+    expect(names("김밥 먹었는데 라면도 먹었어")).toEqual(["김밥", "라면도"]);
+  });
+
+  it.each([
+    ["라면 안 먹고 김밥 먹었어", ["김밥"]],
+    ["짜장면 먹으려고 했는데 짬뽕 먹었어", ["짬뽕"]],
+    ["치킨 먹고 싶었는데 샐러드 먹었어", ["샐러드"]],
+    ["사과 말고 바나나 먹었어", ["바나나"]],
+    ["라면 대신 김밥 먹었어", ["김밥"]],
+  ])("leaves out the food a closed marker says was not eaten: %s", (sentence, expected) => {
+    expect(names(sentence)).toEqual(expected);
+  });
+
+  it.each([
+    ["떡볶이 먹으려다 참고 샐러드 먹었어", "떡볶이"],
+    ["라면 먹을까 고민 중이야", "라면"],
+    ["김밥 먹으려다가 그냥 굶었어", "김밥"],
+  ])("never keeps the food before 먹으려다 / 먹을까: %s", (sentence, notEaten) => {
+    expect(names(sentence).join(" ")).not.toContain(notEaten);
+  });
+
+  it.each(["떡볶이 먹고 싶다", "오늘 아무것도 안 먹었어"])(
+    "finds nothing eaten when the eating verb itself says so: %s",
+    (sentence) => {
+      expect(parse(sentence)).toEqual([]);
+    },
+  );
+
+  it("leaves a sentence that ends on some other verb to Jev", () => {
+    // Whether "빵 터졌네" reports a meal is Jev's consumption judgment. The
+    // parser once guessed it from the ending and, guessing wrong, dropped
+    // "바나나랑 우유로 아침 해결했어" whole. It no longer guesses.
+    expect(names("빵 터졌네")).toEqual(["빵 터졌네"]);
+    expect(names("바나나랑 우유로 아침 해결했어")).toContain("바나나");
+  });
+
+  it("reads a finished eating verb in mid-sentence as the end of a clause", () => {
+    expect(names("김밥 먹었어요 ㅎㅎ 맛있었다")[0]).toBe("김밥");
+  });
+
+  it("reads an eating verb typed onto the food", () => {
+    expect(names("김밥먹었어")).toEqual(["김밥"]);
+    expect(names("떡볶이 시켜먹었어")).toEqual(["떡볶이"]);
+  });
+});
+
+describe("story around the food is not food", () => {
+  const names = (sentence: string) => parse(sentence).map((phrase) => phrase.name);
+
+  it.each([
+    ["퇴근하고 떡볶이 먹었어", ["떡볶이"]],
+    ["친구랑 김밥 먹었어", ["김밥"]],
+    ["김 대리랑 떡볶이 먹었어", ["떡볶이"]],
+    ["밤에 라면 먹었어", ["라면"]],
+    ["친구한테 사과하고 김밥 먹었어", ["김밥"]],
+  ])("drops framing only by the separator after it: %s", (sentence, expected) => {
+    expect(names(sentence)).toEqual(expected);
+  });
+
+  it.each([
+    ["오늘 퇴근하고 기분이 안좋아져서 떡볶이를 먹었어", "기분이 안좋아져서 떡볶이를"],
+    ["회의 끝나고 밥 먹었어", "회의 끝나고 밥"],
+    ["편의점 가서 바나나 사 먹었어", "편의점 가서 바나나"],
+  ])("leaves story in place for the matcher, never cutting it away: %s", (sentence, phrase) => {
+    // The matcher takes a food only where it ends the phrase; what it cannot
+    // place is asked about. Cutting "everything before the last connective"
+    // once cut eaten foods with it — "치킨 배달시켜서 동생이랑 먹었어".
+    expect(names(sentence)).toEqual([phrase]);
+  });
+
+  it("decides by the pair, so a food that is also a word is kept", () => {
+    // 밤 before 에 is a time; before 이랑 it is a chestnut.
+    expect(names("밤이랑 고구마 먹었어")).toEqual(["밤", "고구마"]);
+    // An unknown food before 이랑 is still a food, not company.
+    expect(names("마라탕이랑 떡볶이 먹었어")).toEqual(["마라탕", "떡볶이"]);
+    // 망고 ends in 고 like a verb does, and is still a food.
+    expect(names("망고 먹었어")).toEqual(["망고"]);
+  });
+});
+
+describe("an amount corrected in the same sentence", () => {
+  it("takes the amount a later clause gives the one food before it", () => {
+    expect(parse("김밥 한 줄 먹었는데 반 줄만 먹은 거였어")).toEqual([
+      { name: "김밥", value: 0.5, unit: "줄", assumed: false },
+    ]);
+  });
+
+  it("subtracts what was left", () => {
+    expect(parse("라면 먹었는데 반은 남겼어")).toEqual([
+      { name: "라면", value: 0.5, unit: null, assumed: false },
+    ]);
+  });
+
+  it("reads past 만 on an amount", () => {
+    expect(parse("갈비탕 반 그릇만 먹었어")).toEqual([
+      { name: "갈비탕", value: 0.5, unit: "그릇", assumed: false },
+    ]);
+  });
+});
+
+describe("a stated total keeps the single-clause reading", () => {
+  it("does not cut 합쳐서 away from the foods it totals", () => {
+    expect(parseFoodPhrases("김치찌개랑 밥 합쳐서 800칼로리").map((p) => p.name)[0]).toBe("김치찌개");
+  });
+});

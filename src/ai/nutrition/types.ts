@@ -108,8 +108,13 @@ export type NutritionMatch = {
  *                     portion size by a count of a different unit is exactly
  *                     the silent wrong number this layer exists to prevent,
  *                     so it now asks instead.
+ *   partly_left       the user said they left some of it in a way no
+ *                     arithmetic settles — "비빔밥 먹었는데 밥은 반
+ *                     남겼어" left half the *rice*, and nothing states how
+ *                     much of a 비빔밥 its rice is. Neither the full bowl nor
+ *                     half of it is the answer, so the amount is asked for.
  */
-export type UnmeasurableReason = "missing_serving" | "unsupported_unit";
+export type UnmeasurableReason = "missing_serving" | "unsupported_unit" | "partly_left";
 
 /**
  * Four outcomes, because "we don't know" splits into two answers that call

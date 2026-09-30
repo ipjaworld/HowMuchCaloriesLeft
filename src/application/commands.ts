@@ -78,6 +78,14 @@ export type Command =
        * `decideCommand` stays a pure function over the judgment.
        */
       parts: AddPart[];
+      /**
+       * Other foods the same sentence reports eating, to be added beside the
+       * correction: 튀김 in "떡볶이랑 튀김 먹었는데 떡볶이는 반만" when 떡볶이
+       * is already logged. A sentence can correct one entry and report a new
+       * one at once, and treating it as only one of the two loses the other
+       * without a word. Filled in by the route with `parts`.
+       */
+      extraParts?: AddPart[];
     }
   | { type: "delete_candidate"; targetId: string }
   | {

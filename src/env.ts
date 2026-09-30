@@ -28,7 +28,8 @@ function blankAsUnset<T extends z.ZodType>(schema: T) {
   );
 }
 
-const envSchema = z.object({
+/** Exported for tests of the defaults; the app reads `env` below. */
+export const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
@@ -74,6 +75,15 @@ const envSchema = z.object({
   LOCAL_LLM_TIMEOUT_MS: blankAsUnset(z.coerce.number().int().positive().default(5000)),
   /** A local answer below this is not used; the judge answers instead. */
   LOCAL_LLM_MIN_CONFIDENCE: blankAsUnset(z.coerce.number().min(0).max(1).default(0.85)),
+
+  /**
+   * Phase 8 per-food filter: a second Jev request, sent alongside the intent
+   * request, that drops questions about phrases the user did not eat. `off`
+   * is the app exactly as it was. See `application/candidateFilter.ts`.
+   */
+  FOOD_CANDIDATE_FILTER: blankAsUnset(z.enum(["off", "on"]).default("off")),
+  /** One attempt, no retries; past this the sentence is asked about as before. */
+  FOOD_CANDIDATE_TIMEOUT_MS: blankAsUnset(z.coerce.number().int().positive().default(1500)),
 });
 
 const parsed = envSchema.safeParse(process.env);

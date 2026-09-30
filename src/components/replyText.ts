@@ -292,6 +292,23 @@ export function describeCaloriesWanted(): Reply {
 export function describeQuestion(question: PendingQuestion): Reply {
   if (question.type === "confirm_add") {
     const what = question.names.length > 0 ? listNames(question.names) : null;
+    const added = question.addNames !== undefined && question.addNames.length > 0
+      ? listNames(question.addNames)
+      : null;
+    // A correction that also adds says both, so no food it touches is hidden.
+    if (added !== null) {
+      return {
+        kind: "question",
+        text:
+          what === null
+            ? `${added}${objectParticle(added)} 새로 기록할까요?`
+            : `${what}${objectParticle(what)} 고치고 ${added}${objectParticle(added)} 새로 기록할까요?`,
+        options: [
+          { id: "yes", label: "네" },
+          { id: "no", label: "아니요" },
+        ],
+      };
+    }
     const verb = question.mode === "modify" ? "고칠까요?" : "기록할까요?";
     return {
       kind: "question",
@@ -336,6 +353,18 @@ export function describeQuestion(question: PendingQuestion): Reply {
   }
 
   const name = question.entries[0]?.name ?? question.phraseName;
+
+  // Some of it was left, and how much of the whole that was cannot be
+  // worked out — "밥은 반 남겼어" of a 비빔밥. Ask for what was eaten in
+  // total, in the counters the food has, and say why.
+  if (question.reason === "partly_left") {
+    const known = question.knownUnits ?? [];
+    const example = known[0] === undefined ? "200g" : `반 ${known[0]}`;
+    return {
+      kind: "statement",
+      text: `${name}${topicParticle(name)} 일부만 남기신 걸 정확히 계산하기 어려워요. 전체로 얼마나 드셨는지 알려주세요. (예: ${example})`,
+    };
+  }
 
   // The food has portions, just not in the counter that was said. Saying
   // which counters it does have turns "g으로 알려주세요" into something a
@@ -440,15 +469,22 @@ export function describeModified(
   before: { name: string; amount?: string; calories: number },
   after: { name: string; amount?: string; calories: number },
   summary: DailySummary,
+  /** Foods the same sentence added beside the correction. */
+  added: { name: string; amount?: string }[] = [],
+  /** Foods left out because their calories were not known. */
+  skipped: string[] = [],
 ): Reply {
   const change = `${entryLabel(before)} → ${entryLabel(after)}`;
   const calories =
     before.calories === after.calories
       ? ""
       : ` (${numberFormat.format(before.calories)} → ${numberFormat.format(after.calories)} kcal)`;
+  const also =
+    added.length === 0 ? [] : [`${listNames(added.map(entryLabel))}도 기록했어요.`];
+  const left = skipped.length === 0 ? [] : [`${unknownSubject(skipped)} 빼고 기록했어요.`];
   return {
     kind: "statement",
-    text: [`바꿨어요: ${change}${calories}.`, ...totalsAfterChange(summary)].join(" "),
+    text: [`바꿨어요: ${change}${calories}.`, ...also, ...left, ...totalsAfterChange(summary)].join(" "),
   };
 }
 

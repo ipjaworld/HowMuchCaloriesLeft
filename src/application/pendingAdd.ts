@@ -41,8 +41,24 @@ export type PendingAdd = {
    * questions and the same answers apply either way — only what happens at
    * the end differs, so there is no second pending structure for modify.
    */
-  target?: { itemId: string; foodName: string };
+  target?: {
+    itemId: string;
+    foodName: string;
+    /**
+     * How many leading parts are the correction. The parts after them are
+     * other foods the same sentence reported, added as new entries — see
+     * `mixedModify.ts`. Absent means every part is the correction.
+     */
+    modifyParts?: number;
+  };
 };
+
+/** Whether the part at `partIndex` corrects the target rather than adding beside it. */
+export function isModifyPart(pending: PendingAdd, partIndex: number): boolean {
+  if (pending.target === undefined) return false;
+  const count = pending.target.modifyParts ?? pending.parts.length;
+  return partIndex < count;
+}
 
 export type PendingQuestion =
   | {
@@ -55,6 +71,11 @@ export type PendingQuestion =
       names: string[];
       /** Correcting reads differently from adding, and must say so. */
       mode: "add" | "modify";
+      /**
+       * For a modify: foods that will be added beside the correction. Named
+       * in the question, so the user sees every food the sentence touches.
+       */
+      addNames?: string[];
     }
   | {
       type: "choose_food";
@@ -100,12 +121,29 @@ export const MAX_CHOICES = 5;
 /** The first thing still standing between this sentence and a record. */
 export function nextQuestion(pending: PendingAdd): PendingQuestion | null {
   if (pending.needsConfirmation) {
+    const named = pending.parts
+      .map((part, partIndex) => ({ part, partIndex }))
+      .filter(({ part }) => part.status !== "skipped");
+    const names = named
+      .filter(
+        ({ part, partIndex }) =>
+          part.status !== "unknown" &&
+          (pending.target === undefined || isModifyPart(pending, partIndex)),
+      )
+      .map(({ part }) => part.phraseName);
+    // An addition is named even when unknown: 튀김 has no dataset entry, and
+    // a question that left it out would hide that it is about to be asked.
+    const addNames =
+      pending.target === undefined
+        ? []
+        : named
+            .filter(({ partIndex }) => !isModifyPart(pending, partIndex))
+            .map(({ part }) => part.phraseName);
     return {
       type: "confirm_add",
       mode: pending.target === undefined ? "add" : "modify",
-      names: pending.parts
-        .filter((part) => part.status === "resolved" || part.status === "ambiguous" || part.status === "unmeasurable")
-        .map((part) => part.phraseName),
+      names,
+      ...(addNames.length === 0 ? {} : { addNames }),
     };
   }
 
@@ -114,7 +152,7 @@ export function nextQuestion(pending: PendingAdd): PendingQuestion | null {
       return {
         type: "choose_food",
         partIndex,
-        mode: pending.target === undefined ? "add" : "modify",
+        mode: isModifyPart(pending, partIndex) ? "modify" : "add",
         phraseName: part.phraseName,
         candidates: part.candidates
           .slice(0, MAX_CHOICES)
@@ -232,6 +270,36 @@ export function skipUnknown(pending: PendingAdd, partIndex: number): PendingAdd 
     status: "skipped",
     phraseName: part.phraseName,
   });
+}
+
+export type ModifyCommit = {
+  /** What the target entry becomes, or null when the correction itself was skipped. */
+  replacement: NewFoodItem | null;
+  /** Everything else the sentence settled, stored as one new record. Never dropped. */
+  additions: NewFoodItem[];
+  /** Foods left out because the user did not know their calories. */
+  skipped: string[];
+};
+
+/**
+ * How a finished correction is written.
+ *
+ * The first item the correction settled replaces the target. Every other
+ * settled item — a second food in the correction, or a food the sentence
+ * reported beside it — is added, never discarded: storing only the first
+ * was how "떡볶이랑 튀김 먹었는데 떡볶이는 반만" lost its 튀김.
+ */
+export function planModifyCommit(pending: PendingAdd): ModifyCommit {
+  const modifyItems: NewFoodItem[] = [];
+  const addItems: NewFoodItem[] = [];
+  const skipped: string[] = [];
+  for (const [partIndex, part] of pending.parts.entries()) {
+    if (part.status === "skipped") skipped.push(part.phraseName);
+    if (part.status !== "resolved") continue;
+    (isModifyPart(pending, partIndex) ? modifyItems : addItems).push(part.item);
+  }
+  const [replacement, ...rest] = modifyItems;
+  return { replacement: replacement ?? null, additions: [...rest, ...addItems], skipped };
 }
 
 /** "모르겠어", "빼고" — an answer to the calorie question that has no number. */

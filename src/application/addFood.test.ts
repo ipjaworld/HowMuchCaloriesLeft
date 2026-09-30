@@ -8,6 +8,8 @@ import {
   resolveAddParts,
   preferTargetFood,
   isSameAs,
+  isUnreadCorrectionOf,
+  namesASubstitution,
 } from "./addFood";
 import { addMealRecord } from "./mealRecords";
 import {
@@ -442,15 +444,38 @@ describe("a correction reuses the add pipeline", () => {
   });
 
   it("spots a correction that produced no change", async () => {
-    // "갈비탕 반 그릇만 먹었어" is grammar the phrase parser cannot read: it
-    // keeps the whole thing as a name and assumes one serving, landing back
-    // on the stored figure. Reporting "고쳤어요" there would be a lie.
-    const parts = await resolveAddParts("갈비탕 반 그릇만 먹었어", koreanFoodResolver);
+    // Re-pricing that lands on the stored figure changed nothing. Reporting
+    // "고쳤어요" there would be a lie.
+    const parts = await resolveAddParts("갈비탕 한 그릇 먹었어", koreanFoodResolver);
     const resolved = preferTargetFood(parts, "갈비탕")[0];
     if (resolved?.status !== "resolved") throw new Error("expected resolved");
+    const stored = resolved.item.calories;
 
-    expect(isSameAs(resolved.item, { name: "갈비탕", calories: 362 })).toBe(true);
-    expect(isSameAs(resolved.item, { name: "갈비탕", calories: 181 })).toBe(false);
+    expect(isSameAs(resolved.item, { name: "갈비탕", calories: stored })).toBe(true);
+    expect(isSameAs(resolved.item, { name: "갈비탕", calories: Math.round(stored / 2) })).toBe(false);
+  });
+
+  it("reads the amount a correction already gives", async () => {
+    // "그릇만" used to defeat the quantity parser, which left the app asking
+    // for an amount the user had just said.
+    const [part] = await resolveAddParts("갈비탕 반 그릇만 먹었어", koreanFoodResolver);
+    if (part?.status !== "resolved") throw new Error("expected resolved");
+    expect(part.item.amount).toBe("반 그릇");
+  });
+
+  it("recognises a correction of the target it could not read", async () => {
+    // "국물만" is no amount the parser knows, so the whole phrase is the
+    // name, and the matcher does not price the 갈비탕 inside it as one bowl.
+    // The part is unknown and about the target: ask for the amount.
+    const parts = await resolveAddParts("갈비탕 국물만 먹었어", koreanFoodResolver);
+    expect(parts.map((part) => part.status)).toEqual(["unknown"]);
+    expect(isUnreadCorrectionOf(parts, "갈비탕")).toBe(true);
+
+    // A replacement is a real question about the new food, even though its
+    // phrase contains the target's name.
+    const sentence = "갈비탕 아니고 마라탕";
+    const other = await resolveAddParts(sentence, koreanFoodResolver);
+    expect(isUnreadCorrectionOf(other, "갈비탕", namesASubstitution(sentence))).toBe(false);
   });
 });
 
@@ -482,4 +507,28 @@ describe("a published household measure", () => {
     expect(item?.caloriesEstimated).toBe(true);
     expect(item?.portionNote).toContain("50g");
   });
+});
+
+describe("some of it was left", () => {
+  it("subtracts a leftover the arithmetic can settle", async () => {
+    const [part] = await resolveAddParts("라면 먹었는데 반은 남겼어", koreanFoodResolver);
+    if (part?.status !== "resolved") throw new Error("expected resolved");
+    expect(part.item.amount).toBe("반");
+  });
+
+  it.each(["비빔밥 먹었는데 밥은 반 남겼어", "비빔밥 먹었는데 조금 남겼어"])(
+    "asks rather than storing the full or half amount: %s",
+    async (sentence) => {
+      // Half the *rice* is not half the 비빔밥, and "조금" is no amount at
+      // all. Storing 1그릇 would count what was left as eaten.
+      const parts = await resolveAddParts(sentence, koreanFoodResolver);
+      expect(parts).toHaveLength(1);
+      const [part] = parts;
+      expect(part?.status).toBe("unmeasurable");
+      if (part?.status !== "unmeasurable") return;
+      expect(part.reason).toBe("partly_left");
+      expect(part.entries.map((entry) => entry.name)).toEqual(["비빔밥"]);
+      expect(isSettled(parts)).toBe(false);
+    },
+  );
 });

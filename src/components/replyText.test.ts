@@ -438,3 +438,20 @@ describe("a delete can be undone in one tap", () => {
     expect(describeRestored({ name: "바나나", amount: "2개" }, after).text).toMatch(/^바나나 2개를 되돌렸어요\./);
   });
 });
+
+describe("part of it was left", () => {
+  it("asks for the total eaten, and says why it cannot work it out", () => {
+    const reply = describeQuestion({
+      type: "provide_quantity",
+      partIndex: 0,
+      phraseName: "비빔밥",
+      entries: [{ id: "e1", name: "비빔밥" }],
+      reason: "partly_left",
+      knownUnits: ["그릇"],
+    });
+    expect(reply).toEqual({
+      kind: "statement",
+      text: "비빔밥은 일부만 남기신 걸 정확히 계산하기 어려워요. 전체로 얼마나 드셨는지 알려주세요. (예: 반 그릇)",
+    });
+  });
+});

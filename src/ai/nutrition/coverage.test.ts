@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { findByName } from "./dataset";
 import { parseFoodPhrases } from "./foodPhrases";
 import { KOREAN_FOODS, koreanFoodResolver } from "./koreanFoods";
 
@@ -72,10 +73,14 @@ describe("human units — the serving reference layer", () => {
     }
   });
 
-  it("빵 2조각 — two slices of bread", async () => {
-    const match = await resolved("빵 2조각 먹었어");
+  it("식빵 2조각 — two slices of bread", async () => {
+    const match = await resolved("식빵 2조각 먹었어");
     expect(match.entry.name).toBe("식빵");
     expect(match.calories).toBe(Math.round((match.entry.caloriesPer100g * 70) / 100));
+  });
+
+  it("a bare 빵 is not narrowed to 식빵 — nothing says it was the sliced loaf", async () => {
+    expect((await resolveOne("빵 2조각 먹었어")).status).toBe("unknown");
   });
 
   it("우유 한 컵 and a bare 바나나 each count one unit", async () => {
@@ -190,6 +195,60 @@ describe("the traps name search sets are still avoided", () => {
   it("every shipped name is unique, so a stored name finds its row again", () => {
     const names = KOREAN_FOODS.map((entry) => entry.name);
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe("a name inside a longer word is not that food", () => {
+  /**
+   * The matcher once scored "the phrase contains a dataset name" at 0.65,
+   * which priced 감자탕 as 감자 and 딸기케이크 as one strawberry. A name now
+   * counts inside a phrase only as a word of its own, with at most a particle
+   * after it; otherwise the answer is unknown.
+   */
+  it.each([
+    "감자탕", "감자튀김", "딸기케이크", "사과주스", "수박바", "불닭볶음면",
+    "치킨버거", "컵라면", "참치김밥", "로제떡볶이", "커피우유", "두부김치",
+  ])("%s → unknown", async (food) => {
+    expect((await resolveOne(`${food} 먹었어`)).status).toBe("unknown");
+  });
+
+  it.each([
+    ["오늘 기분이 안좋아서 떡볶이를 먹었어", "떡볶이"],
+    ["엄마가 해준 김치찌개 먹었어", "김치찌개"],
+    ["너무 배고파서 짜장면 먹었어", "짜장면"],
+    ["배달로 떡볶이 시켜 먹었어", "떡볶이"],
+    ["회사 근처에서 제육덮밥 먹었어", "제육덮밥"],
+  ])("still finds the food a story ends on: %s", async (sentence, name) => {
+    expect((await resolved(sentence)).entry.name).toBe(name);
+  });
+
+  it("prefers the longest name: 그릭 요거트 is not also 요거트", async () => {
+    const result = await resolveOne("운동 끝나고 그릭 요거트 하나 먹었어");
+    expect(result.status).toBe("unmeasurable");
+    if (result.status !== "unmeasurable") return;
+    expect(result.entries.map((entry) => entry.name)).toEqual(["그릭요거트"]);
+  });
+
+  it("does not take a food that something else follows", () => {
+    // The parser now cuts this sentence at 먹으려다; the matcher must still
+    // refuse the phrase on its own, for whatever the parser cannot cut.
+    expect(findByName(KOREAN_FOODS, "떡볶이 먹으려다 참고 샐러드").kind).toBe("none");
+  });
+
+  it("never reads 사과 inside a longer phrase — it is an apology as often as an apple", async () => {
+    expect(findByName(KOREAN_FOODS, "친구한테 사과").kind).toBe("none");
+    expect((await resolved("사과 하나 먹었어")).entry.name).toBe("사과");
+  });
+
+  it.each(["빵", "회", "김", "떡"])(
+    "a single syllable is not narrowed to the one food it is part of: %s",
+    async (word) => {
+      expect((await resolveOne(`${word} 먹었어`)).status).toBe("unknown");
+    },
+  );
+
+  it("a single syllable that heads several foods still asks", async () => {
+    expect((await resolveOne("밥 한 공기 먹었어")).status).toBe("ambiguous");
   });
 });
 

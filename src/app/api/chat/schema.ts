@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { INTENTS } from "@/ai/judgment/types";
 import type { Judgment, JudgmentInput } from "@/ai/judgment/types";
+import type { CandidateFilterReport } from "@/application/candidateFilter";
 import type { Command } from "@/application/commands";
 import { isValidCalorieValue } from "@/domain/limits";
 import { CALORIE_SOURCES, MEAL_TYPES } from "@/domain/meal";
@@ -68,6 +69,8 @@ export const judgmentSchema = z.object({
 export type ChatResponse = {
   command: Command;
   judgment: Judgment;
+  /** What the per-food filter did to an add, for QA. The app reads nothing from it. */
+  candidateFilter?: CandidateFilterReport;
 };
 
 export function toJudgmentInput(request: ChatRequest): JudgmentInput {

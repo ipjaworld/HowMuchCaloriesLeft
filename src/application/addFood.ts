@@ -1,4 +1,4 @@
-import { splitFoodSegments, toFoodPhrase } from "@/ai/nutrition/foodPhrases";
+import { segmentFoods, toFoodPhrase } from "@/ai/nutrition/foodPhrases";
 import {
   UNNAMED_FOOD_LABEL,
   cleanFoodLabel,
@@ -149,13 +149,13 @@ export async function resolveAddParts(
   sourceText: string,
   resolver: NutritionResolver,
 ): Promise<AddPart[]> {
-  const segments = splitFoodSegments(sourceText);
+  const segments = segmentFoods(sourceText);
 
-  const whole = wholeSentenceFigure(segments);
+  const whole = wholeSentenceFigure(segments.map((segment) => segment.text));
   if (whole !== null) return [whole];
 
   const resolved = await Promise.all(
-    segments.map(async (segment): Promise<AddPart | null> => {
+    segments.map(async ({ text: segment, amountUnresolved }): Promise<AddPart | null> => {
       const stated = findStatedCalories(segment);
       if (stated !== null) return userStatedPart(stated.label, stated.calories);
 
@@ -163,6 +163,27 @@ export async function resolveAddParts(
       if (phrase === null) return null;
 
       const resolution = await resolver.resolve(phrase);
+
+      // Part of it was left in a way no arithmetic settles. The food is
+      // still worth naming — the dataset knows it — but its amount is not
+      // the one said, so it is asked for rather than priced. An unknown
+      // food needs its calories asked for anyway, which covers this too.
+      if (amountUnresolved === true && resolution.status !== "unknown") {
+        const entries =
+          resolution.status === "resolved"
+            ? [resolution.match.entry]
+            : resolution.status === "ambiguous"
+              ? resolution.candidates.map((match) => match.entry)
+              : resolution.entries;
+        const knownUnits = (entries[0]?.servings ?? []).map((serving) => serving.unit);
+        return {
+          status: "unmeasurable",
+          phraseName: phrase.name,
+          entries: entries.map((entry) => ({ id: entry.id, name: entry.name })),
+          reason: "partly_left",
+          ...(knownUnits.length === 0 ? {} : { knownUnits }),
+        };
+      }
 
       switch (resolution.status) {
         case "resolved":
@@ -206,7 +227,45 @@ export async function resolveAddParts(
     }),
   );
 
-  return resolved.filter((part): part is AddPart => part !== null);
+  return lastSayWins(
+    segments.flatMap((segment, index) => {
+      const part = resolved[index];
+      if (part === undefined || part === null) return [];
+      const explicit = toFoodPhrase(segment.text)?.quantity.assumed === false;
+      return [{ part, clause: segment.clause, explicit }];
+    }),
+  );
+}
+
+/**
+ * One food, one record — when the sentence settles it twice.
+ *
+ * "떡볶이랑 튀김 먹었는데 떡볶이는 반만 먹었어" names 떡볶이 once with no
+ * amount and again, in a later clause, with 반. Nothing is stored yet, so
+ * this is not a modify: the later, explicit amount is simply what was meant,
+ * and it replaces the earlier part where it stood. Two parts in the same
+ * clause are two helpings and are left alone.
+ */
+function lastSayWins(
+  parts: { part: AddPart; clause: number; explicit: boolean }[],
+): AddPart[] {
+  const kept: { part: AddPart; clause: number }[] = [];
+  for (const { part, clause, explicit } of parts) {
+    if (part.status === "resolved" && explicit && part.item.calorieSource !== "user") {
+      const earlier = kept.findIndex(
+        (other) =>
+          other.clause < clause &&
+          other.part.status === "resolved" &&
+          other.part.item.name === part.item.name,
+      );
+      if (earlier !== -1) {
+        kept[earlier] = { part, clause };
+        continue;
+      }
+    }
+    kept.push({ part, clause });
+  }
+  return kept.map((entry) => entry.part);
 }
 
 /**
@@ -276,6 +335,35 @@ export function preferTargetFood(
  */
 export function namesASubstitution(message: string): boolean {
   return /(말고|아니고|아니라)/.test(message);
+}
+
+/**
+ * True when a correction names the entry's own food but could not be read.
+ *
+ * A correction whose amount the quantity parser cannot read keeps that
+ * wording inside the name ("갈비탕 … 먹었어" with an amount it does not
+ * know). The matcher refuses a food that is not the last thing in its
+ * phrase, so the part comes back `unknown`; asking for its calories would be
+ * the wrong question about a food already logged. The amount is what the
+ * user was correcting, so that is what to ask for.
+ *
+ * Not for "갈비탕 아니고 마라탕", which also comes back as one unknown phrase
+ * containing 갈비탕: that names a replacement, and 마라탕 is a real question.
+ */
+export function isUnreadCorrectionOf(
+  parts: AddPart[],
+  targetFoodName: string,
+  namesASubstitution = false,
+): boolean {
+  if (namesASubstitution) return false;
+  const target = targetFoodName.replace(/\s+/g, "");
+  return (
+    parts.length > 0 &&
+    parts.every(
+      (part) =>
+        part.status === "unknown" && part.phraseName.replace(/\s+/g, "").includes(target),
+    )
+  );
 }
 
 /**

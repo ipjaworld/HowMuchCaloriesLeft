@@ -1,10 +1,8 @@
 import { createJudge } from "@/ai/judgment";
+import { candidateJudgeFor } from "@/ai/judgment/candidateJudge";
 import { withLocalRouter } from "@/ai/local/routing";
 import { koreanFoodResolver } from "@/ai/nutrition/koreanFoods";
-import { resolveAddParts, userStatedItem, type AddPart } from "@/application/addFood";
-import { correctionFor } from "@/application/correction";
-import type { JudgmentInput } from "@/ai/judgment/types";
-import { decideCommand, type Command } from "@/application/commands";
+import { runChat } from "@/application/chatPipeline";
 import { env } from "@/env";
 import { chatRequestSchema, toJudgmentInput, type ChatResponse } from "./schema";
 
@@ -14,19 +12,17 @@ import { chatRequestSchema, toJudgmentInput, type ChatResponse } from "./schema"
  * This handler reads no storage, holds no session and changes nothing. It
  * turns one sentence plus the state the browser sent into a Command, and the
  * browser decides what to do with it. The API keys live here and nowhere
- * else.
- *
- * An `add_candidate` or a `modify_candidate` is expanded here rather than in
- * `decideCommand`: looking food up is async and needs a dataset, while the
- * confidence policy is a pure function worth keeping that way. What goes back
- * is typed per phrase — the client never parses a sentence to work out what
- * happened.
+ * else. What happens between the two is `runChat`.
  */
 
 // The judge is stateless and cheap to keep; rebuilding a client per request
 // would throw away connection reuse for nothing. The local router wraps it
 // only in development and only when asked — see `docs/local-llm.md`.
 const judge = withLocalRouter(createJudge(env.TYPESAFE_API_KEY), env);
+
+// The per-food filter (Phase 8): off unless asked for, and never without a
+// real key. See `candidateJudgeFor`.
+const candidateJudge = candidateJudgeFor(env);
 
 export async function POST(request: Request): Promise<Response> {
   let body: unknown;
@@ -44,15 +40,12 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const input = toJudgmentInput(parsed.data);
-
   try {
-    const judgment = await judge.judge(input);
-    const decided = decideCommand(judgment, input, parsed.data.chosen);
-
-    const command = await expand(decided, input);
-
-    const response: ChatResponse = { command, judgment };
+    const response: ChatResponse = await runChat(
+      toJudgmentInput(parsed.data),
+      parsed.data.chosen,
+      { judge, resolver: koreanFoodResolver, candidateJudge },
+    );
     return Response.json(response);
   } catch (error) {
     // A judgment failure is not a reason to guess. The client says so and the
@@ -60,50 +53,6 @@ export async function POST(request: Request): Promise<Response> {
     console.error("[chat] judgment failed", error);
     return Response.json({ error: "judgment_unavailable" }, { status: 503 });
   }
-}
-
-/**
- * Fills a decided command in with what the dataset knows.
- *
- * Both an add and a correction need the same lookup, so both get it here
- * rather than in `decideCommand`, which stays a pure function over the
- * judgment.
- */
-async function expand(decided: Command, input: JudgmentInput): Promise<Command> {
-  if (decided.type === "add_candidate") {
-    return {
-      type: "add",
-      sourceText: decided.sourceText,
-      needsConfirmation: decided.needsConfirmation,
-      parts: await resolveAddParts(decided.sourceText, koreanFoodResolver),
-    };
-  }
-
-  if (decided.type === "modify_candidate") {
-    return { ...decided, parts: await correctionParts(decided, input) };
-  }
-
-  return decided;
-}
-
-/**
- * A correction is looked up as the plain phrase it boils down to —
- * "떠먹는 요거트를 그릭 요거트로 바꾸고 싶어" as "그릭 요거트 200g" — using the
- * entry the judge picked, which the browser sent along with today's items.
- */
-async function correctionParts(
-  decided: Extract<Command, { type: "modify_candidate" }>,
-  input: JudgmentInput,
-): Promise<AddPart[]> {
-  const target = input.recentItems.find((item) => item.id === decided.targetId);
-  if (target === undefined) return resolveAddParts(decided.sourceText, koreanFoodResolver);
-
-  const correction = correctionFor(decided.sourceText, target);
-  if (correction.kind === "calories") {
-    const item = userStatedItem(target.name, correction.calories);
-    return [{ status: "resolved", phraseName: item.name, item }];
-  }
-  return resolveAddParts(correction.text, koreanFoodResolver);
 }
 
 /** Kept local so the route does not re-export zod helpers. */

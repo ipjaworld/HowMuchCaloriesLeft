@@ -142,6 +142,17 @@ export const NOUL_THRESHOLDS = {
    * only the first one belongs in a noul.
    */
   clarificationNeeded: 0.85,
+  /**
+   * Below this, a phrase the parser could not settle is not asked about —
+   * "팀원들", "너무 매워" — because the user did not eat it. Never applied
+   * to a food that resolved: this removes questions, not records.
+   *
+   * Measured in Phase 8 (3 runs, 236 parts): parts that would be a question
+   * about something eaten never scored below 0.52 ("밤 몇 개"), and parts
+   * about nothing eaten never above 0.18. 0.3 sits in that gap, and every
+   * threshold from 0.1 to 0.5 gave the same result on the corpus.
+   */
+  candidateEaten: 0.3,
 } as const;
 
 export function isProbable(probability: number, threshold: number): boolean {

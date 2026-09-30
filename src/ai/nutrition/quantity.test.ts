@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { assumedQuantity, normalizeSpacing, parseTrailingQuantity, parseAmountOnly } from "./quantity";
+import {
+  assumedQuantity,
+  normalizeSpacing,
+  parseTrailingQuantity,
+  parseAmountOnly,
+  readAmountAnswer,
+} from "./quantity";
 
 function parse(phrase: string) {
   return parseTrailingQuantity(phrase)?.quantity ?? null;
@@ -151,4 +157,27 @@ describe("parseAmountOnly — answering 'how much of it?'", () => {
     // quantity is the food being named, not its amount.
     expect(parseTrailingQuantity("200ml")).toBeNull();
   });
+});
+
+describe("readAmountAnswer — the reply to the quantity question", () => {
+  it.each([
+    ["200ml", 200, "ml"],
+    ["반 그릇", 0.5, "그릇"],
+    ["반 그릇이요", 0.5, "그릇"],
+    ["두 개요.", 2, "개"],
+    ["200ml 정도요", 200, "ml"],
+    ["반 정도", 0.5, null],
+    ["하나요", 1, null],
+  ] as const)("reads %s", (text, value, unit) => {
+    const quantity = readAmountAnswer(text);
+    expect(quantity?.value).toBe(value);
+    expect(quantity?.unit).toBe(unit);
+  });
+
+  it.each(["김밥 먹었어", "라면 반", "커피 200ml", "몰라", "요", ""])(
+    "returns null for %s, which the caller reads as a new sentence",
+    (text) => {
+      expect(readAmountAnswer(text)).toBeNull();
+    },
+  );
 });
