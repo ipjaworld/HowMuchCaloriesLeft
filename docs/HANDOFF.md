@@ -1,5 +1,7 @@
 # HANDOFF
 
+> **⚠️ 2026-10-01: 최신 상태는 [`HANDOFF-2026-10-01-food-input.md`](HANDOFF-2026-10-01-food-input.md) 에 있다.** 음식 입력 해석 **Release Candidate**(M2-final · 양 질문 escape · 정정+추가 silent drop 수정 · 8A 후보 필터(기본 off))가 커밋 전 working tree에 있다. 아래 §0의 "working tree clean"과 v0.2 상태 요약은 더 이상 최신이 아니다.
+
 > 마지막 갱신: **2026-09-27** · 상태: **v0.2 실사용 개선 — production 배포 완료.**
 
 다음 세션에서 이 파일부터 읽으면 컨텍스트 없이 바로 이어갈 수 있습니다.
