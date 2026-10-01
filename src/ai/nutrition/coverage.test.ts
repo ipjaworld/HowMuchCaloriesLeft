@@ -206,11 +206,38 @@ describe("a name inside a longer word is not that food", () => {
    * after it; otherwise the answer is unknown.
    */
   it.each([
-    "감자탕", "감자튀김", "딸기케이크", "사과주스", "수박바", "불닭볶음면",
-    "치킨버거", "컵라면", "참치김밥", "로제떡볶이", "커피우유", "두부김치",
+    "감자전", "감자튀김", "딸기케이크", "사과주스", "수박바", "불닭볶음면",
+    "치킨버거", "컵라면", "돈가스김밥", "로제떡볶이", "커피우유", "두부김치",
+    "잡채밥", "김치전", "깍두기볶음밥", "뼈다귀감자탕",
   ])("%s → unknown", async (food) => {
     expect((await resolveOne(`${food} 먹었어`)).status).toBe("unknown");
   });
+
+  // 감자탕 and 참치김밥 were in the list above until they got rows of their
+  // own (2026-10-01). What matters now is that each is its own entry and not
+  // the shorter name inside it.
+  it.each([
+    ["감자탕", "감자탕"],
+    ["참치김밥", "참치김밥"],
+    ["치즈김밥", "치즈김밥"],
+    ["불고기덮밥", "불고기덮밥"],
+    ["해물파전", "해물파전"],
+    ["유부초밥", "유부초밥"],
+    ["잡채", "잡채"],
+    ["깍두기", "깍두기"],
+    ["감자", "감자"],
+    ["김밥", "김밥"],
+    ["불고기", "소불고기"],
+  ])("a compound with its own row is that row: %s", async (food, name) => {
+    expect((await resolved(`${food} 먹었어`)).entry.name).toBe(name);
+  });
+
+  it.each(["파전", "초밥", "덮밥"])(
+    "a generic dish name is not narrowed to the one variant in the dataset: %s",
+    async (word) => {
+      expect((await resolveOne(`${word} 먹었어`)).status).not.toBe("resolved");
+    },
+  );
 
   it.each([
     ["오늘 기분이 안좋아서 떡볶이를 먹었어", "떡볶이"],

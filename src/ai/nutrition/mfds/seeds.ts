@@ -96,6 +96,38 @@ export const FOOD_SEEDS: FoodSeed[] = [
     counter: "줄",
   },
   {
+    // Their own rows, so "참치김밥" is priced as itself rather than staying
+    // unknown beside the plain 김밥 row above.
+    foodCode: "D101-007450000-0001",
+    query: "김밥_참치",
+    name: "참치김밥",
+    aliases: ["참치 김밥", "김밥_참치"],
+    counter: "줄",
+  },
+  {
+    foodCode: "D101-007490000-0001",
+    query: "김밥_치즈",
+    name: "치즈김밥",
+    aliases: ["치즈 김밥", "김밥_치즈"],
+    counter: "줄",
+  },
+  {
+    // Counted in 인분 because that is what the row states; "유부초밥 5개" is
+    // a different unit and asks, the same as 만두.
+    foodCode: "D101-042410000-0001",
+    query: "초밥_유부초밥",
+    name: "유부초밥",
+    aliases: ["초밥_유부초밥"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D101-010240000-0001",
+    query: "덮밥_불고기",
+    name: "불고기덮밥",
+    aliases: ["불고기 덮밥", "덮밥_불고기"],
+    counter: "그릇",
+  },
+  {
     foodCode: "D101-018000000-0001",
     query: "비빔밥",
     name: "비빔밥",
@@ -150,6 +182,14 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D105-199000000-0001",
     query: "갈비탕",
     name: "갈비탕",
+    counter: "그릇",
+  },
+  {
+    // The row states 530 g, which is MFDS's portion and not any particular
+    // restaurant's bowl — it stays an approximate 그릇 like the other soups.
+    foodCode: "D106-260000000-0001",
+    query: "감자탕",
+    name: "감자탕",
     counter: "그릇",
   },
   {
@@ -343,6 +383,30 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D107-344000000-0001",
     query: "족발",
     name: "족발",
+    counter: "인분",
+  },
+
+  // ── 반찬 · 전 ──────────────────────────────────────────────────────
+  {
+    foodCode: "D110-492000000-0001",
+    query: "잡채",
+    name: "잡채",
+    counter: "인분",
+  },
+  {
+    // Not aliased to a bare "파전": that is its own row (D309-441000000-0001)
+    // at a different figure, so a bare "파전" stays unknown rather than
+    // quietly becoming the seafood one.
+    foodCode: "D109-441110000-0001",
+    query: "파전_해물",
+    name: "해물파전",
+    aliases: ["해물 파전", "파전_해물"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D115-665000000-0001",
+    query: "깍두기",
+    name: "깍두기",
     counter: "인분",
   },
 

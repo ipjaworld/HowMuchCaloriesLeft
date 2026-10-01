@@ -712,11 +712,15 @@
       "category": "compound_trap",
       "input": "감자탕 먹었어",
       "consumed": true,
-      "why": "감사 실측: 감자로 확정됨. 감자탕은 데이터셋에 없다.",
+      "why": "감사 실측: 감자로 확정됐었다. 2026-10-01 감자탕이 데이터셋에 들어와 이제 자기 항목으로 기록된다 — 감자로 읽히면 안 된다.",
       "foods": [
         {
           "said": "감자탕",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "감자탕",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -871,11 +875,15 @@
       "category": "compound_trap",
       "input": "참치김밥 먹었어",
       "consumed": true,
-      "why": "감사 실측: 김밥으로 확정됨. 정확한 항목이 없으면 unknown.",
+      "why": "감사 실측: 김밥으로 확정됐었다. 2026-10-01 참치김밥이 데이터셋에 들어와 이제 자기 항목으로 기록된다 — 김밥으로 읽히면 안 된다.",
       "foods": [
         {
           "said": "참치김밥",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "참치김밥",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -884,11 +892,15 @@
       "category": "compound_trap",
       "input": "치즈김밥 먹었어",
       "consumed": true,
-      "why": "감사 실측: 김밥으로 확정됨.",
+      "why": "감사 실측: 김밥으로 확정됐었다. 2026-10-01 치즈김밥이 데이터셋에 들어와 이제 자기 항목으로 기록된다.",
       "foods": [
         {
           "said": "치즈김밥",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "치즈김밥",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -1753,11 +1765,15 @@
       "category": "unknown_mixed",
       "input": "감자탕에 공기밥 먹었어",
       "consumed": true,
-      "why": "아는 이름(감자)을 품은 모르는 음식 + 아는 음식.",
+      "why": "감자탕은 2026-10-01부터 아는 음식이다(감자가 아니라 감자탕으로). 두 음식 모두 기록된다.",
       "foods": [
         {
           "said": "감자탕",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "감자탕",
+          "amount": {
+            "value": 1
+          }
         },
         {
           "said": "공기밥",

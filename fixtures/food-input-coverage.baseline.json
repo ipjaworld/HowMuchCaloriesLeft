@@ -265,9 +265,9 @@
     },
     {
       "id": "trap-01",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"감자탕\""
+        "resolved 감자탕 (1그릇) ← \"감자탕\""
       ]
     },
     {
@@ -349,16 +349,16 @@
     },
     {
       "id": "trap-13",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"참치김밥\""
+        "resolved 참치김밥 (1줄) ← \"참치김밥\""
       ]
     },
     {
       "id": "trap-14",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"치즈김밥\""
+        "resolved 치즈김밥 (1줄) ← \"치즈김밥\""
       ]
     },
     {
@@ -741,9 +741,9 @@
     },
     {
       "id": "unkmix-03",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"감자탕\"",
+        "resolved 감자탕 (1그릇) ← \"감자탕\"",
         "resolved 쌀밥 (1공기) ← \"공기밥\""
       ]
     },
@@ -1181,7 +1181,7 @@
       "id": "blind-21",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 쌀밥|현미밥|잡곡밥|김밥|비빔밥|볶음밥|김치볶음밥|제육덮밥|순대국밥 ← \"밥\"",
+        "ambiguous 쌀밥|현미밥|잡곡밥|김밥|참치김밥|치즈김밥|유부초밥|불고기덮밥|비빔밥|볶음밥|김치볶음밥|제육덮밥|순대국밥 ← \"밥\"",
         "resolved 아메리카노 (1잔) ← \"커피\""
       ]
     },
