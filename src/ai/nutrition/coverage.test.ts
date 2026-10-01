@@ -206,9 +206,9 @@ describe("a name inside a longer word is not that food", () => {
    * after it; otherwise the answer is unknown.
    */
   it.each([
-    "감자전", "감자튀김", "딸기케이크", "사과주스", "수박바", "불닭볶음면",
+    "감자튀김", "딸기케이크", "사과주스", "수박바", "불닭볶음면",
     "치킨버거", "컵라면", "돈가스김밥", "로제떡볶이", "커피우유", "두부김치",
-    "잡채밥", "김치전", "깍두기볶음밥", "뼈다귀감자탕",
+    "김치전", "깍두기볶음밥", "뼈다귀감자탕", "백순대", "순대곱창볶음", "감자전골",
   ])("%s → unknown", async (food) => {
     expect((await resolveOne(`${food} 먹었어`)).status).toBe("unknown");
   });
@@ -228,11 +228,19 @@ describe("a name inside a longer word is not that food", () => {
     ["감자", "감자"],
     ["김밥", "김밥"],
     ["불고기", "소불고기"],
+    ["잡채밥", "잡채밥"],
+    ["순대볶음", "순대볶음"],
+    ["순대", "순대"],
+    ["감자전", "감자전"],
   ])("a compound with its own row is that row: %s", async (food, name) => {
     expect((await resolved(`${food} 먹었어`)).entry.name).toBe(name);
   });
 
-  it.each(["파전", "초밥", "덮밥"])(
+  it("감자전 한 장 asks instead of pricing a 장 the row never sized", async () => {
+    expect((await resolveOne("감자전 한 장 먹었어")).status).not.toBe("resolved");
+  });
+
+  it.each(["파전", "초밥", "덮밥", "전", "밥"])(
     "a generic dish name is not narrowed to the one variant in the dataset: %s",
     async (word) => {
       expect((await resolveOne(`${word} 먹었어`)).status).not.toBe("resolved");

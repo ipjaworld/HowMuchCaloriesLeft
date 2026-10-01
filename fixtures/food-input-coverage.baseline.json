@@ -279,9 +279,9 @@
     },
     {
       "id": "trap-03",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"감자전\""
+        "resolved 감자전 (1인분) ← \"감자전\""
       ]
     },
     {
@@ -335,9 +335,9 @@
     },
     {
       "id": "trap-11",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"순대볶음\""
+        "resolved 순대볶음 (1인분) ← \"순대볶음\""
       ]
     },
     {
@@ -1181,7 +1181,7 @@
       "id": "blind-21",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 쌀밥|현미밥|잡곡밥|김밥|참치김밥|치즈김밥|유부초밥|불고기덮밥|비빔밥|볶음밥|김치볶음밥|제육덮밥|순대국밥 ← \"밥\"",
+        "ambiguous 쌀밥|현미밥|잡곡밥|김밥|참치김밥|치즈김밥|유부초밥|불고기덮밥|잡채밥|비빔밥|볶음밥|김치볶음밥|제육덮밥|순대국밥 ← \"밥\"",
         "resolved 아메리카노 (1잔) ← \"커피\""
       ]
     },

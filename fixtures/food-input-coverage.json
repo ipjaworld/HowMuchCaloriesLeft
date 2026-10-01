@@ -742,11 +742,15 @@
       "category": "compound_trap",
       "input": "감자전 먹었어",
       "consumed": true,
-      "why": "감사 실측: 감자로 확정됨.",
+      "why": "감사 실측: 감자로 확정됐었다. 2026-10-01 감자전이 데이터셋에 들어와 이제 자기 항목으로 기록된다 — 감자로 읽히면 안 된다.",
       "foods": [
         {
           "said": "감자전",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "감자전",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -849,11 +853,15 @@
       "category": "compound_trap",
       "input": "순대볶음 먹었어",
       "consumed": true,
-      "why": "감사 실측: 순대로 확정됨.",
+      "why": "감사 실측: 순대로 확정됐었다. 2026-10-01 순대볶음이 데이터셋에 들어와 이제 자기 항목으로 기록된다 — 순대로 읽히면 안 된다.",
       "foods": [
         {
           "said": "순대볶음",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "순대볶음",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },

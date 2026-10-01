@@ -128,6 +128,14 @@ export const FOOD_SEEDS: FoodSeed[] = [
     counter: "그릇",
   },
   {
+    // Its own row, so "잡채밥" is not the 잡채 side dish with rice guessed
+    // on top.
+    foodCode: "D101-033000000-0001",
+    query: "잡채밥",
+    name: "잡채밥",
+    counter: "그릇",
+  },
+  {
     foodCode: "D101-018000000-0001",
     query: "비빔밥",
     name: "비빔밥",
@@ -404,6 +412,14 @@ export const FOOD_SEEDS: FoodSeed[] = [
     counter: "인분",
   },
   {
+    // The row states 200 g and does not say whether that is one 장 or a
+    // plate, so it is counted in 인분 and "감자전 한 장" asks.
+    foodCode: "D109-408000000-0001",
+    query: "감자전",
+    name: "감자전",
+    counter: "인분",
+  },
+  {
     foodCode: "D115-665000000-0001",
     query: "깍두기",
     name: "깍두기",
@@ -427,6 +443,15 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D107-337000000-0001",
     query: "순대",
     name: "순대",
+    counter: "인분",
+  },
+  {
+    // The seasoned dish. 백순대 is a separate row (D310-483240000-0001) at a
+    // different figure and no stated portion, so it is not aliased here and
+    // stays unknown.
+    foodCode: "D310-483000000-0004",
+    query: "순대볶음",
+    name: "순대볶음",
     counter: "인분",
   },
   {
