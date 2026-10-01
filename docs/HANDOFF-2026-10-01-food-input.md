@@ -1,8 +1,27 @@
-# HANDOFF — 음식 입력 해석 (2026-10-01 Release Candidate)
+# HANDOFF — 음식 입력 해석 (2026-10-01 food-input production checkpoint)
 
-> 상태: **Release Candidate 커밋 완료(`856d615` 코드 + 이 문서 커밋), push 전.** 다음 세션은 이 파일부터 읽는다. 과정이 아니라 지금 사실과 다음 할 일만 적는다.
+> 상태: **food-input production checkpoint.** RC(`856d615` 코드 + `5a066fb` 문서)가 production에 배포됐고, **8A 후보 필터가 production에서 켜져 있다(`FOOD_CANDIDATE_FILTER=on`).** 다음 세션은 이 파일부터 읽는다. 과정이 아니라 지금 사실과 다음 할 일만 적는다.
 >
-> **다음 세션 순서: push 전 최종 확인 → `main` push(= Vercel production 배포) → production smoke test → 8A `FOOD_CANDIDATE_FILTER` env on 여부 결정.** 아래 "push 전 smoke test" 참고. `FOOD_CANDIDATE_FILTER`는 그때까지 off(미설정) 유지.
+> **다음 할 일: 음식 커버리지 확장(첫 batch는 사용자 승인 후).** 파서 규칙 추가 금지, same-food 판단 문제는 범위 밖 — 아래 "남은 문제" 참고.
+
+## food-input production checkpoint (2026-10-01)
+- **배포**: `main` push `86d11df..5a066fb` → Vercel production 배포 성공. 필터 off 상태의 production smoke(아래 "push 전 smoke test" 2~6, 9) 전부 통과: 김밥 한 줄 322 · 라면+커피 한 기록 · 비빔밥 밥 반 남김 → 반 그릇 320 · 양 질문 중 "김밥 먹었어" → 새 문장 · 떡볶이+튀김 반만 → 확인 → 300 → 1,688−259+130+300=1,859 · add 응답 `candidateFilter` `{"status":"off"}`.
+- **8A 활성화**: 2026-10-01 21:56 KST(12:56 UTC). Vercel **Production** env에 `FOOD_CANDIDATE_FILTER=on` 추가 후 `vercel redeploy --target production`(코드 변경 없음). `TYPESAFE_API_KEY`는 production에 이미 있었다. `FOOD_CANDIDATE_TIMEOUT_MS`는 미설정(기본 1500). 다른 env는 건드리지 않았다.
+- **8A on production smoke** (빈 기록, https://how-much-calories-left.vercel.app, 응답 전부 200):
+
+| 문장 | command | `candidateFilter` | 결과 |
+|---|---|---|---|
+| 팀원들이랑 회식에서 삼겹살 먹었어 | add | applied · asked 1 · dropped `["팀원들"]` | 질문 없이 삼겹살구이 1인분 934 |
+| 친구랑 김밥 먹었어 | add | no_questions | 김밥 1줄 322 |
+| 김밥 먹으려다가 그냥 굶었어 | clarify | (add 아님 → 필드 없음) | 기록 없음, "무슨 말씀인지…" |
+| 빵 터졌네 | ignore | (필드 없음) | 기록 없음, kcal 질문 없음 |
+| 회의 끝나고 밥 먹었어 | add | applied · asked 1 · dropped `[]` | kcal 질문 유지(파서 경계) |
+| 떡볶이 먹으려다 참고 샐러드 먹었어 | add | applied · asked 1 · dropped `[]` | "참고 샐러드" kcal 질문 유지(파서 경계) |
+
+  fallback 0. resolved 음식이 빠진 경우 0. 브라우저에서 잰 `/api/chat` 왕복은 378~657ms(첫 요청만 1,056ms, cold start). off 상태의 같은 측정값은 없다.
+- **rollback**: Vercel Production env에서 `FOOD_CANDIDATE_FILTER`를 제거(`vercel env rm FOOD_CANDIDATE_FILTER production`)하거나 `off`로 바꾼 뒤 **redeploy**. env만 바꿔서는 적용되지 않는다. 확인은 add 응답의 `candidateFilter`가 `{"status":"off"}`인지.
+- **known issues (이 checkpoint에서 그대로 둠)**: same-food add/modify/delete 흔들림 · 파서 경계 7건 · 김치 dataset(맨 김치 항목 없음) · 한 구절 두 음식 · 동사 없는 나열을 문장 guard가 막는 3건. 상세는 "남은 9건", "확인된 UX 문제".
+- production smoke는 실제 사용 브라우저의 localStorage에 기록을 남긴다. 테스트 전 `hmcl.v1.mealRecords`를 백업하고 끝나면 되돌린다(이번 두 차례 모두 되돌림).
 
 ## 제품 목표
 평소 말하듯 입력하면 최대한 알아서 기록한다. **틀린 값을 조용히 저장하거나, 먹은 음식을 조용히 빠뜨리지 않는다.** 정보가 정말 부족할 때만 짧게 묻는다.
@@ -139,18 +158,18 @@ production 코드·Jev 질문·`decideCommand`는 바꾸지 않았다. `scripts/
 production smoke test는 2~6, 9를 배포된 URL에서 반복한다. 8A를 켤 경우 Vercel env `FOOD_CANDIDATE_FILTER=on` 후 재배포, "팀원들이랑 회식에서 삼겹살 먹었어" → 팀원들 질문 없이 삼겹살 기록되는지, 끄려면 env 제거 후 재배포.
 
 ## 다음 결정
-- push: 위 smoke test 후 사용자 지시로.
-- 8A: production에서 `FOOD_CANDIDATE_FILTER=on`으로 켤지(Vercel env). 켜기 전까지 production 동작은 이전과 같다.
-- 같은 음식 맥락의 add/modify/delete 흔들림, 파서 경계 7건: RC 범위 밖. 규칙 추가 금지.
+- ~~push~~ · ~~8A on~~: 완료(위 "food-input production checkpoint").
+- 음식 커버리지 확장: 첫 batch 제안 후 사용자 승인. 조회 → 사람이 row 검토 → FOOD_CD pin → sync → bundled json 순서 유지.
+- 같은 음식 맥락의 add/modify/delete 흔들림, 파서 경계 7건: 범위 밖. 규칙 추가 금지.
 
-## RC에 들어간 변경 (2026-10-01, 커밋됨·push 전)
+## RC에 들어간 변경 (2026-10-01, production 배포됨)
 수정: `package.json`(eval:food-coverage 스크립트) · `src/ai/nutrition/{dataset,foodPhrases,quantity,types}.ts` · `src/application/addFood.ts` · `src/components/{TodayScreen,replyText}.tsx/ts` · 테스트 5개
 신규: `fixtures/food-input-coverage.json` · `fixtures/food-input-coverage.baseline.json` · `scripts/evalFoodCoverage.eval.ts` · `src/application/foodCoverage.ts` · `src/application/foodCoverage.test.ts` · 이 문서
 A 수정: `src/ai/nutrition/quantity.ts`(+test) · `src/app/api/resolve/route.ts` · `src/components/TodayScreen.tsx` · Phase 8: `scripts/evalFoodJudgment.eval.ts`, `package.json`(eval:food-judgment), `foodCoverage.ts`의 `isAbout` export
 Phase 1: `application/mixedModify.ts`(+test) · `commands.ts`(extraParts) · `pendingAdd.ts`(modifyParts, planModifyCommit) · `replyText.ts` · `TodayScreen.tsx`
 Phase 2: `ai/judgment/candidateJudge.ts`(+test) · `application/candidateFilter.ts`(+test) · `application/chatPipeline.ts` · `app/api/chat/route.ts`(runChat만 호출) · `schema.ts` · `env.ts`(envSchema export) · `.env.example` · `confidence.ts`(candidateEaten)
 RC: `README.md` · `docs/HANDOFF.md` 상단 · 주석 2곳
-push는 아직 하지 않는다. **`main` push = Vercel production 배포.**
+push 완료(`5a066fb`). **`main` push = Vercel production 배포.**
 
 ## 다음 세션 첫 명령
 ```
