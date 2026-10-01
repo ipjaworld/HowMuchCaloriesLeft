@@ -1,8 +1,8 @@
-# HANDOFF — 음식 입력 해석 (2026-10-01 food-input production checkpoint)
+# HANDOFF — 음식 입력 해석 (2026-10-01 117-food production checkpoint)
 
-> 상태: **food-input production checkpoint.** RC(`856d615` 코드 + `5a066fb` 문서)가 production에 배포됐고, **8A 후보 필터가 production에서 켜져 있다(`FOOD_CANDIDATE_FILTER=on`).** 다음 세션은 이 파일부터 읽는다. 과정이 아니라 지금 사실과 다음 할 일만 적는다.
+> 상태: **117-food production checkpoint.** production은 `de78322`(RC + 음식 8개 추가, dataset 117개)이고, **8A 후보 필터가 켜져 있다(`FOOD_CANDIDATE_FILTER=on`).** 다음 세션은 이 파일부터 읽는다. 과정이 아니라 지금 사실과 다음 할 일만 적는다.
 >
-> **다음 할 일: 음식 커버리지 확장(첫 batch는 사용자 승인 후).** 파서 규칙 추가 금지, same-food 판단 문제는 범위 밖 — 아래 "남은 문제" 참고.
+> **다음 할 일: 음식 커버리지 다음 batch(사용자 승인 후).** 파서 규칙 추가 금지, same-food·similar-food 판단 문제는 범위 밖 — 아래 "남은 문제" 참고.
 
 ## food-input production checkpoint (2026-10-01)
 - **배포**: `main` push `86d11df..5a066fb` → Vercel production 배포 성공. 필터 off 상태의 production smoke(아래 "push 전 smoke test" 2~6, 9) 전부 통과: 김밥 한 줄 322 · 라면+커피 한 기록 · 비빔밥 밥 반 남김 → 반 그릇 320 · 양 질문 중 "김밥 먹었어" → 새 문장 · 떡볶이+튀김 반만 → 확인 → 300 → 1,688−259+130+300=1,859 · add 응답 `candidateFilter` `{"status":"off"}`.
@@ -22,6 +22,38 @@
 - **rollback**: Vercel Production env에서 `FOOD_CANDIDATE_FILTER`를 제거(`vercel env rm FOOD_CANDIDATE_FILTER production`)하거나 `off`로 바꾼 뒤 **redeploy**. env만 바꿔서는 적용되지 않는다. 확인은 add 응답의 `candidateFilter`가 `{"status":"off"}`인지.
 - **known issues (이 checkpoint에서 그대로 둠)**: same-food add/modify/delete 흔들림 · 파서 경계 7건 · 김치 dataset(맨 김치 항목 없음) · 한 구절 두 음식 · 동사 없는 나열을 문장 guard가 막는 3건. 상세는 "남은 9건", "확인된 UX 문제".
 - production smoke는 실제 사용 브라우저의 localStorage에 기록을 남긴다. 테스트 전 `hmcl.v1.mealRecords`를 백업하고 끝나면 되돌린다(이번 두 차례 모두 되돌림).
+
+## 117-food production checkpoint (2026-10-01)
+- **dataset 109 → 117** (`de78322`, production 배포됨). 조회 → 사람이 행 검토 → `seeds.ts`에 FOOD_CD pin → `pnpm sync:mfds` 순서 그대로. 기존 109개 항목은 값 변화 없음.
+
+| 음식 | FOOD_CD | kcal/100g | serving | 1 serving |
+|---|---|---|---|---|
+| 참치김밥 | D101-007450000-0001 | 174 | 1줄 250g | 435 |
+| 치즈김밥 | D101-007490000-0001 | 177 | 1줄 270g | 478 |
+| 잡채 | D110-492000000-0001 | 146 | 1인분 200g | 292 |
+| 불고기덮밥 | D101-010240000-0001 | 182 | 1그릇 400g | 728 |
+| 해물파전 | D109-441110000-0001 | 171 | 1인분 150g | 257 |
+| 유부초밥 | D101-042410000-0001 | 194 | 1인분 200g | 388 |
+| 깍두기 | D115-665000000-0001 | 33 | 1인분 50g | 17 |
+| 감자탕 | D106-260000000-0001 | 71 | 1그릇 530g | 376 |
+
+- 감자탕 530g은 MFDS의 1인분이지 특정 식당의 한 그릇이 아니다. 다른 탕류처럼 추정(~)으로 표시된다. 맨 "파전"·"초밥"·"덮밥"은 이 항목들로 좁혀지지 않는다.
+- **검증**: test 905 · typecheck · lint · build. `eval:food-coverage` 163/191 · 159/179, silent wrong/drop/nothing_found 0/0/0, 불필요한 질문 30/21 (전과 동일), 필요한 질문 76 → 72. 새로 실패한 case 없음.
+- **말뭉치 기대값 변경 4건** (unknown → 자기 항목 resolved): `trap-01` 감자탕 · `trap-13` 참치김밥 · `trap-14` 치즈김밥 · `unkmix-03` 감자탕에 공기밥. baseline은 이 4건과 `blind-21`(맨 "밥" 후보 9 → 13개, 판정은 그대로 질문)만 달라졌다.
+- **production smoke** (`FOOD_CANDIDATE_FILTER=on`, 빈 기록, 응답 전부 200, 394~936ms):
+
+| 문장 | `candidateFilter` | 확인 질문 | 최종 기록 |
+|---|---|---|---|
+| 참치김밥 먹었어 | no_questions | 없음 | 참치김밥 1줄 ~435 |
+| 치즈김밥 먹었어 (참치김밥 기록 후) | no_questions | 있음(add 0.68) → 네 | 치즈김밥 1줄 ~478 |
+| 감자탕 먹었어 | no_questions | 없음 | 감자탕 1그릇 ~376 |
+| 불고기덮밥 먹었어 | no_questions | 없음 | 불고기덮밥 1그릇 ~728 |
+| 팀원들이랑 회식에서 불고기덮밥 먹었어 | applied · asked 1 · dropped `["팀원들"]` | 없음 | 불고기덮밥 1그릇 ~728 |
+
+  kcal·serving은 로컬과 동일. resolved 음식이 필터로 빠진 경우 0, silent wrong/drop 0. 테스트 기록은 되돌렸다.
+- **known issue — similar-food confirmation**: 이름이 비슷한 음식이 이미 기록돼 있으면 Jev의 add 확신이 떨어져 "…을 기록할까요?"가 한 번 나온다(참치김밥 → 치즈김밥 0.68~0.73, 감자 → 감자탕 0.83~0.84). "네" 후 기록은 정확하다. same-food 흔들림과 같은 계열이고, 이름이 겹치는 음식을 늘릴수록 늘어난다. 범위 밖으로 둠.
+- **rollback**: `git revert de78322` → `main` push(= production 재배포). dataset·seeds·말뭉치·baseline·테스트가 한 커밋에 있어 함께 돌아간다. 8A 필터와는 독립이다.
+- **다음 batch 보류 7개**(serving·음식 정의·matcher 영향 재검토): 감자튀김 · 감자전 · 순대볶음 · 두부김치 · 잡채밥 · 김치전 · 계란말이.
 
 ## 제품 목표
 평소 말하듯 입력하면 최대한 알아서 기록한다. **틀린 값을 조용히 저장하거나, 먹은 음식을 조용히 빠뜨리지 않는다.** 정보가 정말 부족할 때만 짧게 묻는다.
