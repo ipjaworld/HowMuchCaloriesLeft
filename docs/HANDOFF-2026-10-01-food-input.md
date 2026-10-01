@@ -2,7 +2,7 @@
 
 > 상태: **120-food production checkpoint.** production은 `8bce96c`(RC + 음식 11개 추가, dataset 120개)이고, **8A 후보 필터가 켜져 있다(`FOOD_CANDIDATE_FILTER=on`).** 다음 세션은 이 파일부터 읽는다. 과정이 아니라 지금 사실과 다음 할 일만 적는다.
 >
-> **로컬에는 244-food v1 coverage(고편차 정책 포함)가 커밋돼 있고 아직 push하지 않았다 — 아래 "244-food v1 coverage" 참고. 다음 할 일: 그 배포 여부 결정.** 파서 규칙 추가 금지, same-food·similar-food 판단 문제는 범위 밖 — 아래 "남은 문제" 참고.
+> **로컬에는 244-food v1 RC(고편차 정책 포함)가 커밋돼 있고 아직 push하지 않았다 — 아래 "244-food v1 coverage" 참고. 제품 결정 4건은 v1에서 채택됐고 최종 gate를 통과했다. 다음 할 일: production 배포 승인(push)을 받는 것뿐이다.** 파서 규칙 추가 금지, same-food·similar-food 판단 문제는 범위 밖 — 아래 "남은 문제" 참고.
 
 ## food-input production checkpoint (2026-10-01)
 - **배포**: `main` push `86d11df..5a066fb` → Vercel production 배포 성공. 필터 off 상태의 production smoke(아래 "push 전 smoke test" 2~6, 9) 전부 통과: 김밥 한 줄 322 · 라면+커피 한 기록 · 비빔밥 밥 반 남김 → 반 그릇 320 · 양 질문 중 "김밥 먹었어" → 새 문장 · 떡볶이+튀김 반만 → 확인 → 300 → 1,688−259+130+300=1,859 · add 응답 `candidateFilter` `{"status":"off"}`.
@@ -104,24 +104,32 @@ production은 아직 120-food(`8bce96c`)다. 아래는 로컬 `main`에만 있�
 - **아직 unknown**: 마라샹궈 · 포케 · 타코 · 술 · 케이크 · 아이스크림 · 시리얼 · 떡류 · 튀김류 · 치킨버거 등 버거 변형 · 컵라면·비빔면 · 브랜드 제품. 보류 그대로: 두부김치 · 감자튀김 · 김치전 · 계란말이. **콩자반은 들어갔지만 "콩자반 먹었어"는 못 읽는다**(파서가 끝의 "반"을 수량으로 읽음, "콩조림"은 됨).
 - **rollback**: 배포 전이므로 커밋을 되돌리면 된다. 배포 후에는 그 커밋을 `git revert` → push.
 
-### 현재 상태 (2026-10-02 세션 종료 시점)
-- production: **120-food** (`8bce96c`), `FOOD_CANDIDATE_FILTER=on`. 이번 세션에서 244-food는 배포하지 않았다.
-- local `main`: origin/main보다 앞선 커밋에 `1ac18f9`(120-food checkpoint 문서) · `8fb8441`(244-food 작업)과 이 문서 갱신 커밋이 있다. working tree clean. **push 금지 상태.**
-- 검증(244-food, `8fb8441` 기준): dataset 120 → 244 · test 953 · typecheck/lint/build 통과 · `eval:food-coverage` 162/191 · silent wrong/drop/nothing_found 0/0/0 · 불필요한 질문 31 · 8A on `eval:food-judgment` 178/191 · 나빠진 case 0 · fallback 0 · 브라우저 smoke 저장 15건 모두 정확.
+### 현재 상태 (2026-10-02 — 244-food v1 RC, production 배포 승인 대기)
+- production: **120-food** (`8bce96c`), `FOOD_CANDIDATE_FILTER=on`. 244-food는 아직 배포하지 않았다.
+- local `main`: origin/main보다 앞선 커밋에 `1ac18f9`(120-food checkpoint 문서) · `8fb8441`(244-food 작업) · `b7290a1`(244-food checkpoint 문서)과 이 문서 갱신 커밋이 있다. working tree clean. `8fb8441` 이후 코드 변경 없음(문서만). **push 금지 상태 — 사용자 승인 대기.**
+- **최종 gate 통과 (2026-10-02 재실행)**: dataset 244 · test 953 · typecheck/lint/build 통과 · `eval:food-coverage` 162/191 · 158/179 · silent wrong/drop/nothing_found 0/0/0 · 필요한 질문 59 · 불필요한 질문 31/22 · multi-food 33/37.
+- `eval:food-judgment`는 재실행하지 않았다(코드가 `8fb8441` 그대로). `8fb8441`에서 잰 결과: 8A off 167/191 → on 178/191 · 불필요 22 → 10 · wrong/drop 0 · 나빠진 case 0 · fallback 0. 브라우저 smoke(로컬) 저장 15건 모두 정확.
 
-### 배포 전 결정사항 (4건 — 사용자 결정 대기)
-1. **마라탕**: 현재 576 kcal / 873g. 873g은 마라탕 간편조리세트 행(D306-278000000-0001)의 중량을 빌린 값이라, 이번 high-variance 대표값 중 **근거가 가장 약하다**(2인분 세트일 수 있다). 그대로 채택할지 재검토.
-2. **샤브샤브(258) · 아귀찜(168) · 청국장찌개(94) · 동태찌개(88) 등**: MFDS 기준 대표값이 사용자가 체감하는 1인분보다 낮아 보일 수 있다. 데이터 오류인지, MFDS의 1인분이 작은 것인지 구분해서 제품적으로 그대로 쓸지 판단.
-3. **브랜드 음식**: "교촌 치킨" 같은 브랜드+음식명을 지금은 일반 치킨 대표값(903)으로 기록하고 편차 안내를 붙인다. 이대로 둘지, 브랜드 표현이면 unknown으로 둘지 결정.
-4. **기존 음식의 high-variance 전환**: 부대찌개 · 닭갈비 · 닭가슴살 샐러드 · 채소 샐러드에 variance 안내가 새로 붙는다(값은 그대로). 의도한 UX인지 확인.
+### 제품 결정 4건 — v1에서 채택 (2026-10-02)
+네 건 모두 현재 상태(`8fb8441`)를 그대로 채택했다. 코드·seed·serving reference 변경 없음, sync 재실행 없음.
+
+1. **마라탕**: 576 kcal / 873g 그대로 채택. 873g은 마라탕 간편조리세트 행(D306-278000000-0001)의 중량을 빌린 값이라 high-variance 대표값 중 근거가 가장 약하지만, high-variance 대표값으로 유지한다. 추가 근거 탐색은 v1 이후.
+2. **찌개 200g**: v1에서는 현재 MFDS serving 그대로 유지한다. 청국장찌개(94) · 동태찌개(88)는 이미 production에 있는 김치찌개(90) · 된장찌개(92) · 순두부찌개(70)와 같은 200g 기준이므로 이 둘만 따로 고치지 않는다. 100g당 값은 오류가 아니고 MFDS의 1인분이 작은 것이다. 샤브샤브(258) · 아귀찜(168)도 그대로(고편차 안내 있음). 찌개 serving 정책 개선은 v1 이후 별도 이슈.
+3. **브랜드 음식**: "교촌 치킨"처럼 브랜드 + dataset의 일반 음식명이면 지금처럼 일반 대표값(치킨 903)으로 기록하고 high-variance 안내를 붙인다. 브랜드 목록·전용 파서 규칙은 v1에서 추가하지 않는다.
+4. **샐러드 high-variance**: 닭가슴살 샐러드 · 채소 샐러드 · 참치 샐러드의 flag를 유지한다(부대찌개 · 닭갈비도 그대로). 안내는 기록할 때마다 붙는다. 반복 안내 UX는 실제 사용 후 별도 개선.
+
+### v1 이후 이슈
+- **찌개 serving 재검토**: MFDS 200g 1인분이 식당 뚝배기보다 작다(찌개 5종 전체에 해당).
+- **high-variance 안내 빈도 개선**: 지금은 같은 음식도 기록할 때마다 안내한다.
+- **same/similar-food confirmation**: 같은·비슷한 음식이 이미 기록돼 있을 때 Jev의 add/modify/delete 흔들림과 확인 질문.
+- **브랜드 세분화 여부**: 브랜드별 값을 둘지, 일반 대표값으로 계속 갈지.
 
 ### 다음 세션 순서
 1. 이 문서 읽기
 2. `git status` / `git log` 확인 (위 "현재 상태"와 같은지)
-3. 위 4개 제품 결정 검토
-4. 필요하면 해당 값만 수정 (seed·serving reference를 바꾸면 `pnpm sync:mfds` 필요 — 단독으로 약 10분, 다른 MFDS 조회와 동시에 돌리지 말 것)
-5. 전체 gate: `pnpm test && pnpm typecheck && pnpm lint && pnpm build` · `pnpm eval:food-coverage` · (코드가 바뀌었으면) `pnpm eval:food-judgment`
-6. production 배포 여부 결정 — push는 사용자 승인 후에만. 배포하면 production smoke 전에 `mealRecords` 백업, 끝나면 복구.
+3. production 배포 승인 확인 — push는 사용자 승인 후에만. `main` push = production 배포.
+4. 배포하면 production smoke 전에 `mealRecords` 백업, 끝나면 복구.
+5. 그 사이 코드가 바뀌었다면 전체 gate부터 다시: `pnpm test && pnpm typecheck && pnpm lint && pnpm build` · `pnpm eval:food-coverage` · `pnpm eval:food-judgment`. seed·serving reference를 바꾸면 `pnpm sync:mfds` 필요(단독으로 약 10분, 다른 MFDS 조회와 동시에 돌리지 말 것).
 
 ## 제품 목표
 평소 말하듯 입력하면 최대한 알아서 기록한다. **틀린 값을 조용히 저장하거나, 먹은 음식을 조용히 빠뜨리지 않는다.** 정보가 정말 부족할 때만 짧게 묻는다.
