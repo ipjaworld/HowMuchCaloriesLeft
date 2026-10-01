@@ -1,6 +1,6 @@
-# HANDOFF — 음식 입력 해석 (2026-10-01 117-food production checkpoint)
+# HANDOFF — 음식 입력 해석 (2026-10-01 120-food production checkpoint)
 
-> 상태: **117-food production checkpoint.** production은 `de78322`(RC + 음식 8개 추가, dataset 117개)이고, **8A 후보 필터가 켜져 있다(`FOOD_CANDIDATE_FILTER=on`).** 다음 세션은 이 파일부터 읽는다. 과정이 아니라 지금 사실과 다음 할 일만 적는다.
+> 상태: **120-food production checkpoint.** production은 `8bce96c`(RC + 음식 11개 추가, dataset 120개)이고, **8A 후보 필터가 켜져 있다(`FOOD_CANDIDATE_FILTER=on`).** 다음 세션은 이 파일부터 읽는다. 과정이 아니라 지금 사실과 다음 할 일만 적는다.
 >
 > **다음 할 일: 음식 커버리지 다음 batch(사용자 승인 후).** 파서 규칙 추가 금지, same-food·similar-food 판단 문제는 범위 밖 — 아래 "남은 문제" 참고.
 
@@ -53,7 +53,38 @@
   kcal·serving은 로컬과 동일. resolved 음식이 필터로 빠진 경우 0, silent wrong/drop 0. 테스트 기록은 되돌렸다.
 - **known issue — similar-food confirmation**: 이름이 비슷한 음식이 이미 기록돼 있으면 Jev의 add 확신이 떨어져 "…을 기록할까요?"가 한 번 나온다(참치김밥 → 치즈김밥 0.68~0.73, 감자 → 감자탕 0.83~0.84). "네" 후 기록은 정확하다. same-food 흔들림과 같은 계열이고, 이름이 겹치는 음식을 늘릴수록 늘어난다. 범위 밖으로 둠.
 - **rollback**: `git revert de78322` → `main` push(= production 재배포). dataset·seeds·말뭉치·baseline·테스트가 한 커밋에 있어 함께 돌아간다. 8A 필터와는 독립이다.
-- **다음 batch 보류 7개**(serving·음식 정의·matcher 영향 재검토): 감자튀김 · 감자전 · 순대볶음 · 두부김치 · 잡채밥 · 김치전 · 계란말이.
+- 이때 보류한 7개 중 잡채밥·순대볶음·감자전은 아래 120-food checkpoint에서 들어갔다.
+
+## 120-food production checkpoint (2026-10-01)
+- **dataset 117 → 120** (`8bce96c`, production 배포됨). 절차는 같다(조회 → 행 검토 → FOOD_CD pin → sync). 기존 117개 항목은 값 변화 없음.
+
+| 음식 | FOOD_CD | kcal/100g | serving | 1 serving |
+|---|---|---|---|---|
+| 잡채밥 | D101-033000000-0001 | 150 | 1그릇 550g | 825 |
+| 순대볶음 | D310-483000000-0004 | 146 | 1인분 400g | 584 |
+| 감자전 | D109-408000000-0001 | 133 | 1인분 200g | 266 |
+
+- 감자전 200g이 한 장인지 한 접시인지는 행에 없다. 단위는 인분이고 "감자전 한 장"은 "장 단위 무게는 몰라서, g이나 인분으로 알려주세요"라고 묻는다. 백순대는 별도 행(196 kcal/100g, 1인분 없음)이라 alias로 넣지 않았고 unknown으로 남는다.
+- **검증**: test 913 · typecheck · lint · build. `eval:food-coverage` 163/191 · 159/179, silent wrong/drop/nothing_found 0/0/0, 불필요한 질문 30/21 (전과 동일), 필요한 질문 72 → 70. 새로 실패한 case 없음.
+- **말뭉치 기대값 변경 2건** (unknown → 자기 항목 resolved): `trap-03` 감자전 · `trap-11` 순대볶음. baseline은 이 2건과 `blind-21`(맨 "밥" 후보에 잡채밥 추가, 판정은 그대로 질문)만 달라졌다.
+- **matcher 변화**: 맨 "전"이 unknown → 해물파전|감자전 중 묻는 질문으로 바뀌었다(좁히지 않음). "잡채"·"순대"·"감자"·"감자탕"은 그대로 자기 항목. "김치"·"튀김"·"파전"은 변화 없음.
+- **production smoke** (`FOOD_CANDIDATE_FILTER=on` 유지, 빈 기록에서 순서대로, 응답 전부 200, 358~995ms):
+
+| 문장 | `candidateFilter` | 확인 질문 | 결과 |
+|---|---|---|---|
+| 잡채 먹었어 | no_questions | 없음 | 잡채 1인분 ~292 |
+| 잡채밥 먹었어 (잡채 기록 후) | no_questions | 있음(add 0.77) → 네 | 잡채밥 1그릇 ~825 |
+| 순대 먹었어 | no_questions | 없음 | 순대 1인분 ~411 |
+| 순대볶음 먹었어 (순대 기록 후) | no_questions | 있음(add 0.83) → 네 | 순대볶음 1인분 ~584 |
+| 백순대 먹었어 | applied · asked 1 · dropped `[]` | 없음 | unknown, kcal을 물음 |
+| 감자 먹었어 | no_questions | 없음 | 감자 1개 ~105 |
+| 감자전 먹었어 (감자 기록 후) | no_questions | 없음(add 0.96) | 감자전 1인분 ~266 |
+| 전 먹었어 | applied · asked 1 · dropped `[]` | 있음(add 0.63) → 네 | "어떤 전인가요?" 해물파전/감자전, 자동 확정 없음 |
+
+  저장된 기록 6건의 음식·양·kcal 모두 정확. resolved 음식이 필터로 빠진 경우 0, silent wrong/drop 0. 테스트 기록은 되돌렸다.
+- **known issue — similar-food confirmation**: 이번 batch에서 잡채 → 잡채밥(0.70~0.77), 순대 → 순대볶음(0.83)에서 확인이 나왔고, 감자 → 감자전(0.96~0.97)은 나오지 않았다. "네" 후 기록은 정확하다. 범위 밖.
+- **rollback**: `git revert 8bce96c` → `main` push(= production 재배포). 117-food 상태로 돌아간다. 8A 필터와는 독립이다.
+- **보류 중**: 두부김치(돼지고기 포함 여부를 행이 말하지 않음) · 감자튀김(1인분 150g이 MFDS 외식 행 80~130g보다 큼) · 김치전(맨 "김치" 모호성 3 → 4개로 악화) · 계란말이(1인분 없음, 매번 g을 물음).
 
 ## 제품 목표
 평소 말하듯 입력하면 최대한 알아서 기록한다. **틀린 값을 조용히 저장하거나, 먹은 음식을 조용히 빠뜨리지 않는다.** 정보가 정말 부족할 때만 짧게 묻는다.
