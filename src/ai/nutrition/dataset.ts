@@ -32,6 +32,7 @@ export const foodEntrySchema = z.object({
   aliases: z.array(z.string().min(1)).optional(),
   caloriesPer100g: z.number().nonnegative().finite(),
   servings: z.array(servingSchema).min(1).optional(),
+  variance: z.literal("high").optional(),
   source: z.string().min(1),
 });
 
@@ -270,7 +271,18 @@ function isParticleSplit(entry: FoodEntry, variants: string[]): boolean {
 export type NameSearch =
   | { kind: "none" }
   | { kind: "one"; entry: FoodEntry; score: number }
-  | { kind: "several"; entries: FoodEntry[]; score: number };
+  | {
+      kind: "several";
+      entries: FoodEntry[];
+      score: number;
+      /**
+       * True when every candidate was reached only as the *kind* of food the
+       * word names — 빵 for 식빵 and 단팥빵, 회 for 연어회 and 육회. Such a
+       * match may be asked about but must never be settled on one food, even
+       * when the counter the user said fits only one of them.
+       */
+      generic?: true;
+    };
 
 /**
  * Looks a spoken name up. Returns `several` rather than picking a winner when
@@ -316,5 +328,6 @@ export function findByName(entries: FoodEntry[], spoken: string): NameSearch {
     kind: "several",
     entries: tied.map((row) => row.entry),
     score: best.score,
+    ...(tied.every((row) => row.generic) ? { generic: true as const } : {}),
   };
 }

@@ -27,6 +27,7 @@ export const foodItemSchema = z.object({
   caloriesEstimated: z.boolean(),
   portionNote: z.string().min(1).max(200).optional(),
   calorieSource: z.enum(CALORIE_SOURCES).optional(),
+  calorieVariance: z.literal("high").optional(),
 });
 
 export const mealRecordSchema = z.object({

@@ -201,7 +201,8 @@ export function describeCommand(
 /** Joins names the way a sentence would: "쌀밥과 갈비탕". */
 function listNames(names: string[]): string {
   if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")}과 ${names.at(-1) ?? ""}`;
+  const before = names.at(-2) ?? "";
+  return `${names.slice(0, -1).join(", ")}${hasFinalConsonant(before) ? "과" : "와"} ${names.at(-1) ?? ""}`;
 }
 
 /**
@@ -214,6 +215,8 @@ function listNames(names: string[]): string {
 export function describeAdded(
   summary: DailySummary,
   skipped: string[] = [],
+  /** Foods recorded at a representative figure: 마라탕, 치킨, 피자. */
+  highVariance: string[] = [],
 ): Reply {
   const lines = ["기록했어요."];
 
@@ -236,8 +239,22 @@ export function describeAdded(
     lines.push(`${unknownSubject(skipped)} 빼고 기록했어요.`);
   }
 
+  // Said once, after the totals, and never as a question: the food is already
+  // recorded at the dataset's figure. Naming it tells the user which line the
+  // "~" in the list is about.
+  const varying = [...new Set(highVariance)];
+  if (varying.length > 0) {
+    const names = listNames(varying);
+    lines.push(
+      `${names}${topicParticle(varying.at(-1) ?? names)} 재료와 양에 따라 칼로리 차이가 클 수 있어요. ${HIGH_VARIANCE_HINT}`,
+    );
+  }
+
   return { kind: "statement", text: lines.join(" ") };
 }
+
+/** How to change a representative figure, in the app's own words. */
+export const HIGH_VARIANCE_HINT = "다르면 칼로리를 고쳐 말해주세요.";
 
 /**
  * The subject of a sentence about foods the dataset lacks, with its particle.

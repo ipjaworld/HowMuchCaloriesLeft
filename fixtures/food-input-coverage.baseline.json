@@ -76,7 +76,7 @@
       "id": "clean-11",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 닭가슴살 샐러드|채소 샐러드 ← \"샐러드\""
+        "ambiguous 닭가슴살 샐러드|채소 샐러드|감자 샐러드|참치 샐러드|단호박 샐러드 ← \"샐러드\""
       ]
     },
     {
@@ -220,7 +220,7 @@
       "verdict": "correct_ask",
       "actual": [
         "resolved 김치찌개 (1그릇) ← \"김치찌개\"",
-        "ambiguous 쌀밥|현미밥|잡곡밥 ← \"밥\""
+        "ambiguous 쌀밥|현미밥|잡곡밥|보리밥 ← \"밥\""
       ]
     },
     {
@@ -293,9 +293,9 @@
     },
     {
       "id": "trap-05",
-      "verdict": "correct_unknown",
+      "verdict": "correct_ask",
       "actual": [
-        "unknown ← \"사과주스\""
+        "unmeasurable 사과주스 [missing_serving] ← \"사과주스\""
       ]
     },
     {
@@ -419,9 +419,9 @@
     },
     {
       "id": "trap-23",
-      "verdict": "correct_unknown",
+      "verdict": "correct_ask",
       "actual": [
-        "unknown ← \"포도주스\""
+        "unmeasurable 포도주스 [missing_serving] ← \"포도주스\""
       ]
     },
     {
@@ -510,9 +510,9 @@
     },
     {
       "id": "homo-pos-02",
-      "verdict": "correct_unknown",
+      "verdict": "correct_ask",
       "actual": [
-        "unknown ← \"죽\""
+        "ambiguous 전복죽|호박죽|팥죽|닭죽 ← \"죽\""
       ]
     },
     {
@@ -531,9 +531,9 @@
     },
     {
       "id": "homo-pos-05",
-      "verdict": "correct_unknown",
+      "verdict": "correct_ask",
       "actual": [
-        "unknown ← \"빵\""
+        "ambiguous 식빵|소보로빵|모닝빵|단팥빵 ← \"빵\""
       ]
     },
     {
@@ -636,7 +636,7 @@
       "id": "qty-04",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 쌀밥|현미밥|잡곡밥 ← \"밥\""
+        "ambiguous 쌀밥|현미밥|잡곡밥|보리밥 ← \"밥\""
       ]
     },
     {
@@ -662,23 +662,23 @@
     },
     {
       "id": "unk-01",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"마라탕\""
+        "resolved 마라탕 (1그릇) ← \"마라탕\""
       ]
     },
     {
       "id": "unk-02",
-      "verdict": "correct_unknown",
+      "verdict": "correct_ask",
       "actual": [
-        "unknown ← \"치킨\""
+        "unmeasurable 치킨 [unsupported_unit] ← \"치킨\""
       ]
     },
     {
       "id": "unk-03",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"우동\""
+        "resolved 우동 (1그릇) ← \"우동\""
       ]
     },
     {
@@ -718,24 +718,24 @@
     },
     {
       "id": "unk-09",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"교촌 치킨\""
+        "resolved 치킨 (1인분) ← \"교촌 치킨\""
       ]
     },
     {
       "id": "unkmix-01",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"마라탕\"",
+        "resolved 마라탕 (1그릇) ← \"마라탕\"",
         "resolved 떡볶이 (1인분) ← \"떡볶이\""
       ]
     },
     {
       "id": "unkmix-02",
-      "verdict": "correct_unknown",
+      "verdict": "correct_ask",
       "actual": [
-        "unknown ← \"치킨\"",
+        "resolved 치킨 (1인분) ← \"치킨\"",
         "unmeasurable 콜라 [missing_serving] ← \"콜라\""
       ]
     },
@@ -749,9 +749,9 @@
     },
     {
       "id": "unkmix-04",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"우동\"",
+        "resolved 우동 (1그릇) ← \"우동\"",
         "resolved 김밥 (1줄) ← \"김밥\""
       ]
     },
@@ -818,7 +818,7 @@
       "id": "narr-22",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 토마토 스파게티|크림 스파게티 ← \"파스타\""
+        "ambiguous 토마토 스파게티|크림 스파게티|오일 스파게티 ← \"파스타\""
       ]
     },
     {
@@ -893,7 +893,7 @@
       "id": "pol-10",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 닭가슴살 샐러드|채소 샐러드 ← \"샐러드\""
+        "ambiguous 닭가슴살 샐러드|채소 샐러드|감자 샐러드|참치 샐러드|단호박 샐러드 ← \"샐러드\""
       ]
     },
     {
@@ -966,16 +966,16 @@
     },
     {
       "id": "qty-13",
-      "verdict": "correct_unknown",
+      "verdict": "correct_ask",
       "actual": [
-        "unknown ← \"치킨\""
+        "unmeasurable 치킨 [unsupported_unit] ← \"치킨\""
       ]
     },
     {
       "id": "unk-10",
-      "verdict": "correct_unknown",
+      "verdict": "wrong_ask",
       "actual": [
-        "unknown ← \"소고기\""
+        "ambiguous 소고기 우둔살|소고기전골|소고기볶음밥|소고기김밥|소고기국밥 ← \"소고기\""
       ]
     },
     {
@@ -987,16 +987,16 @@
     },
     {
       "id": "unk-12",
-      "verdict": "correct_unknown",
+      "verdict": "correct_ask",
       "actual": [
-        "unknown ← \"망고\""
+        "unmeasurable 망고 [missing_serving] ← \"망고\""
       ]
     },
     {
       "id": "unkmix-07",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"마라탕\"",
+        "resolved 마라탕 (1그릇) ← \"마라탕\"",
         "resolved 떡볶이 (1인분) ← \"떡볶이\""
       ]
     },
@@ -1010,9 +1010,9 @@
     },
     {
       "id": "unkmix-09",
-      "verdict": "correct_unknown",
+      "verdict": "correct_ask",
       "actual": [
-        "unknown ← \"망고\"",
+        "unmeasurable 망고 [missing_serving] ← \"망고\"",
         "unmeasurable 떠먹는 요거트 [missing_serving] ← \"요거트\""
       ]
     },
@@ -1076,9 +1076,9 @@
     },
     {
       "id": "blind-07",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"남은 치킨\""
+        "resolved 치킨 (1인분) ← \"남은 치킨\""
       ]
     },
     {
@@ -1137,7 +1137,7 @@
       "id": "blind-15",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 닭가슴살 샐러드|채소 샐러드 ← \"샐러드만\""
+        "ambiguous 닭가슴살 샐러드|채소 샐러드|감자 샐러드|참치 샐러드|단호박 샐러드 ← \"샐러드만\""
       ]
     },
     {
@@ -1181,7 +1181,7 @@
       "id": "blind-21",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 쌀밥|현미밥|잡곡밥|김밥|참치김밥|치즈김밥|유부초밥|불고기덮밥|잡채밥|비빔밥|볶음밥|김치볶음밥|제육덮밥|순대국밥 ← \"밥\"",
+        "ambiguous 쌀밥|현미밥|잡곡밥|김밥|참치김밥|치즈김밥|유부초밥|불고기덮밥|잡채밥|비빔밥|볶음밥|김치볶음밥|제육덮밥|순대국밥|육회비빔밥|콩나물밥|회덮밥|새우볶음밥|계란볶음밥|소고기볶음밥|참치볶음밥|낙지덮밥|오징어덮밥|장어덮밥|참치덮밥|닭고기덮밥|초밥|김치김밥|소고기김밥|돈가스김밥|야채김밥|콩나물국밥|소고기국밥|돼지국밥|굴국밥|돌솥비빔밥|짬뽕밥|잡탕밥|보리밥 ← \"밥\"",
         "resolved 아메리카노 (1잔) ← \"커피\""
       ]
     },
@@ -1218,15 +1218,15 @@
       "verdict": "spurious_ask",
       "actual": [
         "unknown ← \"동생이\"",
-        "unknown ← \"남긴 피자\""
+        "resolved 피자 (1인분) ← \"남긴 피자\""
       ]
     },
     {
       "id": "blind-27",
-      "verdict": "partial_multi_food",
+      "verdict": "correct_resolved",
       "actual": [
         "resolved 라면 (1그릇) ← \"라면\"",
-        "ambiguous 김치볶음밥|김치찌개|순두부찌개 ← \"김치\""
+        "resolved 배추김치 (1인분) ← \"김치\""
       ]
     },
     {
@@ -1238,7 +1238,7 @@
     },
     {
       "id": "review-01",
-      "verdict": "correct_unknown",
+      "verdict": "false_negative",
       "actual": [
         "unknown ← \"치킨 배달시켜서 동생이랑\""
       ]

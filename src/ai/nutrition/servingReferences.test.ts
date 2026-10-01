@@ -53,6 +53,26 @@ describe("the shipped reference table", () => {
     }
     // 아메리카노: borrowed from the café-latte rows.
     expect(kindOf("D320-748080000-0001", "잔")).toBe("typical");
+    // 마라탕 · 훠궈 · 찜닭 · 라멘: a portion borrowed from another MFDS row.
+    expect(kindOf("D306-278000000-0002", "그릇")).toBe("typical");
+    expect(kindOf("D306-303180000-0001", "인분")).toBe("typical");
+    expect(kindOf("D307-318140000-0001", "인분")).toBe("typical");
+    expect(kindOf("D303-147340000-0001", "그릇")).toBe("typical");
+  });
+
+  it("borrows a portion only for a food the seeds mark high-variance", () => {
+    // A size taken from a neighbouring row is weak evidence. It is allowed
+    // only where the app also says the figure is a representative one.
+    const borrowed = SERVING_REFERENCES.filter((r) => r.printed.includes("빌려 씀") && r.measure === undefined);
+    expect(borrowed.length).toBeGreaterThan(0);
+    for (const reference of borrowed) {
+      const seed = FOOD_SEEDS.find((candidate) => candidate.foodCode === reference.foodId);
+      const entry = KOREAN_FOODS.find((candidate) => candidate.id === reference.foodId);
+      // The one exception is a side dish so low in energy that the borrowed
+      // size cannot move a day (배추김치, under 50 kcal/100 g).
+      const negligible = (entry?.caloriesPer100g ?? Infinity) < 50;
+      expect(seed?.variance === "high" || negligible, reference.foodId).toBe(true);
+    }
   });
 
   it("marks volume-based measures so the note says mL, not g", () => {

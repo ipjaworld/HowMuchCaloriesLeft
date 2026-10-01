@@ -772,11 +772,12 @@
       "category": "compound_trap",
       "input": "사과주스 마셨어",
       "consumed": true,
-      "why": "감사 실측: 생사과 한 개로 확정됨.",
+      "why": "감사 실측: 사과 한 개로 확정됐었다. 2026-10-02 사과주스가 데이터셋에 들어왔다(1회 제공량 없음) — 사과로 읽히면 안 되고, 양을 물어야 한다.",
       "foods": [
         {
           "said": "사과주스",
-          "status": "unknown"
+          "status": "unmeasurable",
+          "entry": "사과주스"
         }
       ]
     },
@@ -1021,11 +1022,12 @@
       "category": "compound_trap",
       "input": "포도주스 마셨어",
       "consumed": true,
-      "why": "감사 실측: 포도로 잡혀 g을 묻는다.",
+      "why": "감사 실측: 포도로 확정됐었다. 2026-10-02 포도주스가 데이터셋에 들어왔다(1회 제공량 없음) — 포도로 읽히면 안 되고, 양을 물어야 한다.",
       "foods": [
         {
           "said": "포도주스",
-          "status": "unknown"
+          "status": "unmeasurable",
+          "entry": "포도주스"
         }
       ]
     },
@@ -1230,11 +1232,17 @@
       "category": "homograph_positive",
       "input": "죽 한 그릇 먹었어",
       "consumed": true,
-      "why": "진짜 음식 죽. 데이터셋에 없으므로 unknown.",
+      "why": "진짜 음식 죽. 2026-10-02부터 죽이 네 가지 있으므로 어떤 죽인지 되묻는다 — 하나로 좁히지 않는다.",
       "foods": [
         {
           "said": "죽",
-          "status": "unknown"
+          "status": "ambiguous",
+          "candidates": [
+            "전복죽",
+            "호박죽",
+            "팥죽",
+            "닭죽"
+          ]
         }
       ]
     },
@@ -1243,7 +1251,7 @@
       "category": "homograph_positive",
       "input": "회 먹었어",
       "consumed": true,
-      "why": "진짜 음식 회. 어떤 생선인지 모르므로 연어로 좁히면 안 된다 — unknown.",
+      "why": "진짜 음식 회. 2026-10-02부터 육회와 연어회가 있지만, 한 글자 일반명은 하나로 확정하지 않는다 — 양을 셀 수 있는 후보가 육회 하나뿐이라고 조용히 육회로 기록하지 않고 unknown으로 묻는다.",
       "foods": [
         {
           "said": "회",
@@ -1269,11 +1277,17 @@
       "category": "homograph_positive",
       "input": "빵 하나 먹었어",
       "consumed": true,
-      "why": "진짜 음식 빵. 그냥 '빵'은 식빵으로 좁힐 근거가 없고, 데이터셋의 빵 항목은 식빵 하나뿐이라 되물을 후보도 없다 — unknown (2026-09-30 결정).",
+      "why": "진짜 음식 빵. 그냥 \"빵\"은 식빵으로 좁힐 근거가 없다. 2026-10-02부터 빵 항목이 여럿이라 어떤 빵인지 되묻는다(여전히 하나로 좁히지 않는다).",
       "foods": [
         {
           "said": "빵",
-          "status": "unknown"
+          "status": "ambiguous",
+          "candidates": [
+            "식빵",
+            "소보로빵",
+            "모닝빵",
+            "단팥빵"
+          ]
         }
       ]
     },
@@ -1611,11 +1625,15 @@
       "category": "unknown",
       "input": "마라탕 먹었어",
       "consumed": true,
-      "why": "데이터셋에 없는 흔한 음식.",
+      "why": "2026-10-02부터 고편차 음식으로 기록한다: 식약처 품목대표 행의 값으로 바로 기록하고, 편차 안내를 덧붙인다.",
       "foods": [
         {
           "said": "마라탕",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "마라탕",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -1624,11 +1642,12 @@
       "category": "unknown",
       "input": "치킨 한 마리 먹었어",
       "consumed": true,
-      "why": "일부러 뺀 음식(300g ≠ 한 마리).",
+      "why": "치킨은 2026-10-02부터 아는 음식이다. 그래도 행의 300g은 한 마리가 아니므로 \"한 마리\"는 계산하지 않고 양을 묻는다.",
       "foods": [
         {
           "said": "치킨",
-          "status": "unknown"
+          "status": "unmeasurable",
+          "entry": "치킨"
         }
       ]
     },
@@ -1637,11 +1656,15 @@
       "category": "unknown",
       "input": "우동 먹었어",
       "consumed": true,
-      "why": "일부러 뺀 음식(MFDS 행 수치가 믿기 어렵다).",
+      "why": "2026-10-02부터 기록한다(식약처 우동_일식 D303 행).",
       "foods": [
         {
           "said": "우동",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "우동",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -1718,14 +1741,18 @@
       "category": "unknown",
       "input": "교촌 치킨 먹었어",
       "consumed": true,
-      "why": "브랜드 + 없는 음식.",
+      "why": "브랜드 치킨. 브랜드별 값은 없고, 2026-10-02부터 일반 치킨의 대표값으로 기록하며 편차 안내를 덧붙인다.",
       "tags": [
         "branded"
       ],
       "foods": [
         {
           "said": "교촌 치킨",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "치킨",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -1734,11 +1761,15 @@
       "category": "unknown_mixed",
       "input": "퇴근하고 마라탕이랑 떡볶이 먹었어",
       "consumed": true,
-      "why": "모르는 음식은 떨어뜨리지 말고 물어야 한다. 서사 '퇴근'은 묻지 않는다.",
+      "why": "마라탕은 2026-10-02부터 고편차 음식으로 기록된다. 두 음식 모두 기록.",
       "foods": [
         {
           "said": "마라탕",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "마라탕",
+          "amount": {
+            "value": 1
+          }
         },
         {
           "said": "떡볶이",
@@ -1755,11 +1786,15 @@
       "category": "unknown_mixed",
       "input": "치킨이랑 콜라 먹었어",
       "consumed": true,
-      "why": "모르는 음식 + 1인분 없는 음료.",
+      "why": "치킨은 2026-10-02부터 고편차 음식으로 기록된다. 콜라는 여전히 양을 묻는다.",
       "foods": [
         {
           "said": "치킨",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "치킨",
+          "amount": {
+            "value": 1
+          }
         },
         {
           "said": "콜라",
@@ -1798,11 +1833,15 @@
       "category": "unknown_mixed",
       "input": "우동이랑 김밥 먹었어",
       "consumed": true,
-      "why": "모르는 음식 + 아는 음식.",
+      "why": "우동은 2026-10-02부터 아는 음식이다. 두 음식 모두 기록.",
       "foods": [
         {
           "said": "우동",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "우동",
+          "amount": {
+            "value": 1
+          }
         },
         {
           "said": "김밥",
@@ -2453,11 +2492,12 @@
       "category": "quantity",
       "input": "치킨 반 마리 먹었어",
       "consumed": true,
-      "why": "수량이 있어도 데이터가 없으면 unknown.",
+      "why": "치킨은 아는 음식이지만 \"마리\" 단위 무게는 없다 — 반 마리를 추정하지 않고 양을 묻는다.",
       "foods": [
         {
           "said": "치킨",
-          "status": "unknown"
+          "status": "unmeasurable",
+          "entry": "치킨"
         }
       ],
       "tags": [
@@ -2501,11 +2541,12 @@
       "category": "unknown",
       "input": "망고 먹었어",
       "consumed": true,
-      "why": "'고'로 끝나는 음식이 서사로 버려지면 안 된다.",
+      "why": "2026-10-02부터 아는 과일이다(1개 무게 없음) — 양을 묻는다.",
       "foods": [
         {
           "said": "망고",
-          "status": "unknown"
+          "status": "unmeasurable",
+          "entry": "망고"
         }
       ],
       "tags": [
@@ -2517,11 +2558,15 @@
       "category": "unknown_mixed",
       "input": "마라탕이랑 떡볶이 먹었어",
       "consumed": true,
-      "why": "모르는 음식 + 이랑: 동행인처럼 버리면 안 된다.",
+      "why": "마라탕은 2026-10-02부터 고편차 음식으로 기록된다. 두 음식 모두 기록.",
       "foods": [
         {
           "said": "마라탕",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "마라탕",
+          "amount": {
+            "value": 1
+          }
         },
         {
           "said": "떡볶이",
@@ -2565,11 +2610,12 @@
       "category": "unknown_mixed",
       "input": "망고랑 요거트 먹었어",
       "consumed": true,
-      "why": "'고'로 끝나는 모르는 음식 + 1인분 없는 음식.",
+      "why": "\"고\"로 끝나는 과일(2026-10-02부터 아는 음식, 1개 무게 없음) + 1인분 없는 음식. 둘 다 양을 묻는다.",
       "foods": [
         {
           "said": "망고",
-          "status": "unknown"
+          "status": "unmeasurable",
+          "entry": "망고"
         },
         {
           "said": "요거트",
@@ -2760,7 +2806,11 @@
       "foods": [
         {
           "said": "치킨",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "치킨",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -3151,7 +3201,11 @@
       "foods": [
         {
           "said": "피자",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "피자",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -3175,7 +3229,11 @@
         },
         {
           "said": "김치",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "배추김치",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -3199,14 +3257,18 @@
       "category": "narrative",
       "input": "치킨 배달시켜서 동생이랑 먹었어",
       "consumed": true,
-      "why": "리뷰 실측: 치킨이 조용히 사라졌다. 치킨은 데이터에 없으니 물어야 한다.",
+      "why": "리뷰 실측: 치킨이 조용히 사라졌다. 치킨은 데이터에 없으니 물어야 한다. 2026-10-02부터 치킨은 아는 음식이므로, 파서가 구절 경계를 못 잡으면 놓친 것으로 센다.",
       "tags": [
         "b2_review"
       ],
       "foods": [
         {
           "said": "치킨",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "치킨",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },

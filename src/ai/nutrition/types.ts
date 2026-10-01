@@ -66,6 +66,14 @@ export type FoodEntry = {
   caloriesPer100g: number;
   /** Known portions. The first is the default when a count has no counter. */
   servings?: Serving[];
+  /**
+   * Set when the food is clear but what goes into it is not: a 마라탕 is
+   * whatever was put in the bowl, a 치킨 is however much of it was eaten.
+   * The entry is still a real MFDS row and is recorded at its figure without
+   * asking; this only makes the app say that the figure is a representative
+   * one. Absent means the row can be taken as it stands.
+   */
+  variance?: "high";
   /** Provenance, so a figure can always be traced back. */
   source: string;
 };

@@ -66,6 +66,15 @@ describe("the shipped dataset matches the seeds it was built from", () => {
     }
   });
 
+  it("marks exactly the foods the seeds call high-variance", () => {
+    // The flag changes what the app says after recording, so a seed edited
+    // without a re-sync must not leave it stale in either direction.
+    for (const seed of FOOD_SEEDS) {
+      const entry = KOREAN_FOODS.find((candidate) => candidate.id === seed.foodCode);
+      expect(entry?.variance, seed.name ?? seed.query).toBe(seed.variance);
+    }
+  });
+
   it("never carries a nutrition figure in the seed file itself", () => {
     // The seeds say which row to read and what people call it. Every number
     // comes from MFDS. This asserts the rule structurally.

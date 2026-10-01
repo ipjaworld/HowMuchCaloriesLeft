@@ -225,6 +225,16 @@ export function createLocalDatasetResolver(
       }
 
       if (candidates.length === 1 && candidates[0] !== undefined) {
+        // "빵 2조각" reaches 식빵 only because 식빵 is the one bread that
+        // publishes a 조각, and "회" reaches 육회 only because 연어회 states
+        // no portion: a word that names a whole kind of food, narrowed to
+        // one of them by what the dataset happens to carry. A lone generic
+        // match is no match (see `findByName`), and one left standing
+        // after the others fell away is the same thing — so it is unknown,
+        // and the app asks, rather than recording the pick the data made.
+        if (found.kind === "several" && found.generic === true) {
+          return { status: "unknown", phrase };
+        }
         return { status: "resolved", phrase, match: candidates[0] };
       }
 

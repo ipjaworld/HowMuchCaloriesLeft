@@ -84,6 +84,13 @@ const EXCHANGE_REVISION = "주달래 외, J Korean Diabetes 2011";
  */
 const MFDS_CAFE_CUP = "식약처 식품영양성분DB 카페 음료 1회 제공량(355mL)";
 
+/**
+ * A portion taken from a *different* MFDS row than the one the energy comes
+ * from: the same dish as a product, or the nearest dish that states one. The
+ * borrowed row is named in each reference's `printed` text.
+ */
+const MFDS_ROW_PORTION = "식약처 식품영양성분DB 다른 행의 1회 제공량";
+
 export type ServingReference = {
   /** The MFDS food code of the entry this applies to. */
   foodId: string;
@@ -163,6 +170,80 @@ export const SERVING_REFERENCES: ServingReference[] = [
     "카페라떼·카페모카 행의 1회 제공량을 빌려 씀",
     MFDS_CAFE_CUP,
     { kind: "typical", measure: "mL" },
+  ),
+  ...ref(
+    "D320-748130000-0001",
+    ["잔", "컵"],
+    355,
+    "카페라떼·카페모카 행의 1회 제공량을 빌려 씀",
+    MFDS_CAFE_CUP,
+    { kind: "typical", measure: "mL" },
+  ),
+
+  // ── 고편차 외식: 행에 1인분이 없는 음식 ─────────────────────────────
+  // These rows are 품목대표 and analysed, but state no portion — and nobody
+  // weighs a bowl of 마라탕. Each borrows the portion another MFDS row
+  // states for the same dish or its nearest neighbour, as a *typical* size.
+  // All of these foods are also marked `variance: "high"` in the seeds, so
+  // the app says the figure is a representative one. Still no calorie figure
+  // here: grams only.
+  ...ref(
+    "D306-278000000-0002",
+    ["그릇", "인분"],
+    873,
+    "마라탕 간편조리세트 행(D306-278000000-0001)의 식품 중량 873 g을 빌려 씀",
+    MFDS_ROW_PORTION,
+    { kind: "typical" },
+  ),
+  ...ref(
+    "D306-303180000-0001",
+    ["인분"],
+    600,
+    "샤브샤브_소고기 행(D106-287180000-0001)의 1인분 600 g을 빌려 씀",
+    MFDS_ROW_PORTION,
+    { kind: "typical" },
+  ),
+  ...ref(
+    "D307-318140000-0001",
+    ["인분"],
+    300,
+    "닭볶음탕 행(D111-514000000-0001)의 1인분 300 g을 빌려 씀 — 이 행의 1,500 g은 한 상 분량",
+    MFDS_ROW_PORTION,
+    { kind: "typical" },
+  ),
+  ...[
+    "D303-147340000-0001",
+    "D303-147110000-0001",
+    "D303-147210000-0001",
+    "D303-147330000-0001",
+  ].flatMap((foodId) =>
+    ref(
+      foodId,
+      ["그릇"],
+      700,
+      "우동_일식 행(D303-164400000-0001)의 1그릇 700 g을 빌려 씀",
+      MFDS_ROW_PORTION,
+      { kind: "typical" },
+    ),
+  ),
+  ...ref(
+    "P117-100050200-F054-001",
+    ["인분"],
+    200,
+    "탕수육_새우 행(D112-566120000-0001)의 1인분 200 g을 빌려 씀 — 이 행의 50 g은 급식 단위",
+    MFDS_ROW_PORTION,
+    { kind: "typical" },
+  ),
+  // 배추김치: a side dish at 38 kcal/100 g. The portion of the neighbouring
+  // 깍두기 row is borrowed so a bare "김치" does not ask for grams; at this
+  // energy the whole estimate is under 20 kcal.
+  ...ref(
+    "R121-006060000-0000",
+    ["인분"],
+    50,
+    "깍두기 행(D115-665000000-0001)의 1인분 50 g을 빌려 씀",
+    MFDS_ROW_PORTION,
+    { kind: "typical" },
   ),
 ];
 

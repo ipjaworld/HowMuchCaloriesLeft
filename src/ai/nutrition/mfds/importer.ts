@@ -144,6 +144,12 @@ export type SeedSpec = {
    * always come from the row.
    */
   counter?: string;
+  /**
+   * Marks a food whose figure is representative rather than exact, because
+   * what goes into it varies. A classification, not a number — the figure is
+   * still the row's.
+   */
+  variance?: "high";
 };
 
 /**
@@ -203,6 +209,7 @@ export function toFoodEntry(row: MfdsRow, seed: SeedSpec = {}): ImportResult {
         : {}),
       caloriesPer100g: energy,
       ...(servings.length > 0 ? { servings } : {}),
+      ...(seed.variance === undefined ? {} : { variance: seed.variance }),
       source: `식약처 식품영양성분DB ${row.FOOD_CD}${
         method === "" ? "" : ` (${method})`
       }${retrieved === "" ? "" : ` ${retrieved}`}${basisNote}`,

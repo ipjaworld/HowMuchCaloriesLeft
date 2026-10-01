@@ -82,8 +82,11 @@ export function toFoodItem(match: NutritionMatch): NewFoodItem {
     name: match.entry.name,
     amount: match.amount.text,
     calories: match.calories,
-    caloriesEstimated: match.estimated,
+    // A representative figure is an estimate even when the amount was said
+    // outright: "마라탕 1인분" is still whatever went into that bowl.
+    caloriesEstimated: match.estimated || match.entry.variance === "high",
     ...(match.portionNote === undefined ? {} : { portionNote: match.portionNote }),
+    ...(match.entry.variance === "high" ? { calorieVariance: "high" as const } : {}),
   };
 }
 

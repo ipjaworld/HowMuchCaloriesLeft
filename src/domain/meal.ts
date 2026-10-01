@@ -35,6 +35,13 @@ export type FoodItem = {
    * before this field existed was priced from.
    */
   calorieSource?: CalorieSource;
+  /**
+   * "high" when the dataset figure is a representative one for a food whose
+   * make-up varies a lot (마라탕, 치킨, 피자). The number is still the
+   * dataset's; this only records that it was said to be approximate. Absent
+   * on everything else and on records written before it existed.
+   */
+  calorieVariance?: "high";
 };
 
 export const CALORIE_SOURCES = ["dataset", "user"] as const;

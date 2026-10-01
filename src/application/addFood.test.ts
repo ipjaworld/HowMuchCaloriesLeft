@@ -115,6 +115,7 @@ describe("ambiguous — the record waits for a choice", () => {
     expect(question?.type).toBe("choose_food");
     if (question?.type !== "choose_food") return;
     expect(question.candidates.map((c) => c.name).sort()).toEqual([
+      "보리밥",
       "쌀밥",
       "잡곡밥",
       "현미밥",
@@ -189,14 +190,14 @@ describe("unmeasurable — the record waits for an amount", () => {
 describe("unknown — ask the user for the figure, never supply one", () => {
   it("asks for calories instead of writing nothing", async () => {
     const { add } = fakeRepository();
-    const pending = await start("마라탕 먹었어");
+    const pending = await start("마라샹궈 먹었어");
 
     expect(pending.parts[0]?.status).toBe("unknown");
     expect(isSettled(pending.parts)).toBe(false);
     expect(nextQuestion(pending)).toEqual({
       type: "provide_calories",
       partIndex: 0,
-      label: "마라탕",
+      label: "마라샹궈",
       othersResolved: false,
     });
     expect(add).toHaveBeenCalledTimes(0);
@@ -204,14 +205,14 @@ describe("unknown — ask the user for the figure, never supply one", () => {
 
   it("stores the user's answer as said, under the food's name", async () => {
     const { repository, records } = fakeRepository();
-    const pending = await start("마라탕 먹었어");
+    const pending = await start("마라샹궈 먹었어");
 
     const answered = answerCalories(pending, 0, 700);
     expect(isComplete(answered)).toBe(true);
     await commit(repository, answered);
 
     expect(records[0]?.items[0]).toMatchObject({
-      name: "마라탕",
+      name: "마라샹궈",
       calories: 700,
       caloriesEstimated: false,
       calorieSource: "user",
@@ -302,7 +303,7 @@ describe("several foods in one sentence", () => {
 
   it("asks about an unknown food before writing the known one", async () => {
     const { repository, add, records } = fakeRepository();
-    const pending = await start("갈비탕 하나랑 마라탕 먹었어");
+    const pending = await start("갈비탕 하나랑 마라샹궈 먹었어");
 
     const question = nextQuestion(pending);
     expect(question).toMatchObject({ type: "provide_calories", partIndex: 1, othersResolved: true });
@@ -311,13 +312,13 @@ describe("several foods in one sentence", () => {
     await commit(repository, answerCalories(pending, 1, 700));
     expect(records[0]?.items.map((item) => [item.name, item.calories])).toEqual([
       ["갈비탕", expect.any(Number)],
-      ["마라탕", 700],
+      ["마라샹궈", 700],
     ]);
   });
 
   it("keeps the known food when the unknown one is left out", async () => {
     const { repository, records } = fakeRepository();
-    const pending = await start("갈비탕 하나랑 마라탕 먹었어");
+    const pending = await start("갈비탕 하나랑 마라샹궈 먹었어");
 
     const skipped = skipUnknown(pending, 1);
     expect(isComplete(skipped)).toBe(true);
@@ -473,7 +474,7 @@ describe("a correction reuses the add pipeline", () => {
 
     // A replacement is a real question about the new food, even though its
     // phrase contains the target's name.
-    const sentence = "갈비탕 아니고 마라탕";
+    const sentence = "갈비탕 아니고 마라샹궈";
     const other = await resolveAddParts(sentence, koreanFoodResolver);
     expect(isUnreadCorrectionOf(other, "갈비탕", namesASubstitution(sentence))).toBe(false);
   });
@@ -506,6 +507,52 @@ describe("a published household measure", () => {
     expect(item?.name).toBe("삶은 달걀");
     expect(item?.caloriesEstimated).toBe(true);
     expect(item?.portionNote).toContain("50g");
+  });
+});
+
+describe("a high-variance food", () => {
+  it.each(["치킨 먹었어", "피자 먹었어", "마라탕 먹었어", "샤브샤브 먹었어"])(
+    "records %s at the dataset figure without a question, flagged as varying",
+    async (sentence) => {
+      const { repository, records } = fakeRepository();
+      const pending = await start(sentence);
+
+      // No amount question and no calorie question: the food is settled.
+      expect(isSettled(pending.parts)).toBe(true);
+      await commit(repository, pending);
+
+      const item = records[0]?.items[0];
+      expect(item?.calories).toBeGreaterThan(0);
+      expect(item?.calorieVariance).toBe("high");
+      expect(item?.caloriesEstimated).toBe(true);
+      expect(item?.calorieSource).toBeUndefined();
+    },
+  );
+
+  it("stays an estimate even when the amount is said outright", async () => {
+    const { repository, records } = fakeRepository();
+    await commit(repository, await start("치킨 1인분 먹었어"));
+    expect(records[0]?.items[0]?.caloriesEstimated).toBe(true);
+  });
+
+  it("does not turn 한 마리 into the row's portion", async () => {
+    const pending = await start("치킨 한 마리 먹었어");
+    expect(isSettled(pending.parts)).toBe(false);
+  });
+
+  it("does not flag an ordinary food", async () => {
+    const { repository, records } = fakeRepository();
+    await commit(repository, await start("김밥 한 줄 먹었어"));
+    expect(records[0]?.items[0]?.calorieVariance).toBeUndefined();
+  });
+
+  it("keeps the user's own figure over a representative one", async () => {
+    const { repository, records } = fakeRepository();
+    await commit(repository, await start("마라탕 900kcal 먹었어"));
+    const item = records[0]?.items[0];
+    expect(item?.calories).toBe(900);
+    expect(item?.calorieSource).toBe("user");
+    expect(item?.calorieVariance).toBeUndefined();
   });
 });
 

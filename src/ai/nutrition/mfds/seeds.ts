@@ -53,9 +53,10 @@ import type { SeedSpec } from "./importer";
  * 1,200 kcal, against 60 kcal/100 g for its D303 twin.
  *
  * Deliberately absent: alcohol (the energy check has no alcohol column, so
- * every 소주/맥주 row fails it and is dropped), and fried chicken (the row's
- * 300 g portion is not a 마리, and "치킨 한 마리" must not quietly become
- * 300 g).
+ * every 소주/맥주 row fails it and is dropped). Fried chicken and 우동 were
+ * absent until the v1 expansion at the bottom of this file, which explains
+ * how each came in — 치킨 in 인분 only, so "치킨 한 마리" still asks rather
+ * than quietly becoming 300 g.
  */
 
 export type FoodSeed = SeedSpec & {
@@ -225,6 +226,7 @@ export const FOOD_SEEDS: FoodSeed[] = [
     query: "부대찌개",
     name: "부대찌개",
     counter: "그릇",
+    variance: "high",
   },
   {
     foodCode: "D105-223000000-0001",
@@ -379,6 +381,7 @@ export const FOOD_SEEDS: FoodSeed[] = [
     name: "닭갈비",
     aliases: ["닭볶음", "닭볶음(닭갈비)"],
     counter: "인분",
+    variance: "high",
   },
   {
     foodCode: "D312-550080000-0001",
@@ -854,6 +857,7 @@ export const FOOD_SEEDS: FoodSeed[] = [
     name: "닭가슴살 샐러드",
     aliases: ["샐러드_닭가슴살"],
     counter: "그릇",
+    variance: "high",
   },
   {
     foodCode: "D114-640320000-0001",
@@ -863,6 +867,7 @@ export const FOOD_SEEDS: FoodSeed[] = [
     // quietly be priced as this one. A bare "샐러드" asks which.
     aliases: ["야채 샐러드", "그린 샐러드", "샐러드_채소"],
     counter: "그릇",
+    variance: "high",
   },
   {
     // A tub of powder, which is what "프로틴 한 스쿱" is measured from. Not
@@ -924,5 +929,905 @@ export const FOOD_SEEDS: FoodSeed[] = [
     query: "소고기, 한우(1등급), 우둔, 생것",
     name: "소고기 우둔살",
     aliases: ["우둔살", "우둔", "소고기, 한우(1등급), 우둔, 생것"],
+  },
+
+  // ════════════════════════════════════════════════════════════════════
+  // v1 커버리지 확장 (2026-10-01)
+  //
+  // The policy changed here. Until now a food whose portion or make-up was
+  // not settled was left out; from here on, a food whose *identity* is clear
+  // is recorded at its MFDS row and — when what goes into it varies a lot —
+  // marked `variance: "high"`, which makes the app say so instead of asking.
+  // The flag is a classification, not a number: every figure is still the
+  // pinned row's.
+  //
+  // How rows were chosen, where a dish has several 품목대표 rows:
+  //   - a D1xx "분석" row with a stated portion first, as before;
+  //   - where two rows for the same dish disagree badly, the one whose
+  //     figure is plausible for the dish as served, with the reason noted;
+  //   - a generic name (피자, 초밥, 스테이크) is given to one row only when
+  //     that row is MFDS's own general or assorted one, and it is marked
+  //     high-variance. A generic word is never an alias of a specific dish.
+  // ════════════════════════════════════════════════════════════════════
+
+  // ── 고편차 외식 ───────────────────────────────────────────────────
+  {
+    // The only 품목대표 row. It states no portion; the 그릇 comes from
+    // `servingReferences.ts` as a typical size.
+    foodCode: "D306-278000000-0002",
+    query: "마라탕",
+    name: "마라탕",
+    variance: "high",
+  },
+  {
+    foodCode: "D106-287180000-0001",
+    query: "샤브샤브_소고기",
+    name: "샤브샤브",
+    aliases: ["샤브샤브_소고기"],
+    counter: "인분",
+    variance: "high",
+  },
+  {
+    // No stated portion; typical size borrowed in `servingReferences.ts`.
+    foodCode: "D306-303180000-0001",
+    query: "훠궈_소고기",
+    name: "훠궈",
+    aliases: ["훠궈_소고기"],
+    variance: "high",
+  },
+  {
+    // The row's 300 g is MFDS's portion, not a 마리. Counted in 인분, so
+    // "치킨 한 마리" asks instead of becoming 300 g.
+    foodCode: "D312-549000000-0001",
+    query: "닭튀김",
+    name: "치킨",
+    aliases: ["후라이드치킨", "프라이드치킨", "후라이드"],
+    counter: "인분",
+    variance: "high",
+  },
+  {
+    foodCode: "D312-549160000-0001",
+    query: "닭튀김_양념",
+    name: "양념치킨",
+    counter: "인분",
+    variance: "high",
+  },
+  {
+    // The only 피자 품목대표 row with a portion. 200 g is MFDS's portion —
+    // about two slices of a large pie — and a 조각 or 판 asks.
+    foodCode: "D102-120350000-0001",
+    query: "피자_콤비네이션피자",
+    name: "피자",
+    aliases: ["콤비네이션피자", "피자_콤비네이션피자"],
+    counter: "인분",
+    variance: "high",
+  },
+  {
+    // The row states 1,500 g: the whole dish as served for a table, not a
+    // portion. So no counter; one 인분 is borrowed as a typical size.
+    foodCode: "D307-318140000-0001",
+    query: "닭찜_안동찜닭",
+    name: "찜닭",
+    aliases: ["안동찜닭", "닭찜_안동찜닭"],
+    variance: "high",
+  },
+  {
+    foodCode: "D111-514000000-0001",
+    query: "닭볶음탕",
+    name: "닭볶음탕",
+    aliases: ["닭도리탕"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D306-264180000-0001",
+    query: "곱창전골_소고기",
+    name: "곱창전골",
+    aliases: ["곱창전골_소고기"],
+    counter: "인분",
+    variance: "high",
+  },
+  {
+    foodCode: "D108-359120000-0001",
+    query: "곱창구이_소고기",
+    name: "곱창",
+    aliases: ["소곱창", "곱창구이", "소곱창구이", "곱창구이_소고기"],
+    counter: "인분",
+    variance: "high",
+  },
+  {
+    foodCode: "D110-455160000-0001",
+    query: "곱창볶음_돼지고기",
+    name: "곱창볶음",
+    aliases: ["돼지곱창볶음", "야채곱창", "곱창볶음_돼지고기"],
+    counter: "인분",
+  },
+  {
+    // Of the two 갈비찜_소고기 rows, D107 states 85 kcal/100 g — too lean
+    // for braised short rib — so the D307 row (198) is the one pinned.
+    foodCode: "D307-306130000-0001",
+    query: "갈비찜_소고기",
+    name: "갈비찜",
+    aliases: ["소갈비찜", "갈비찜_소고기"],
+    counter: "인분",
+    variance: "high",
+  },
+  {
+    foodCode: "D107-324000000-0001",
+    query: "돼지갈비찜",
+    name: "돼지갈비찜",
+    counter: "인분",
+  },
+  {
+    foodCode: "D107-338000000-0001",
+    query: "아귀찜",
+    name: "아귀찜",
+    aliases: ["아구찜"],
+    counter: "인분",
+    variance: "high",
+  },
+  {
+    foodCode: "D307-348000000-0003",
+    query: "해물찜",
+    name: "해물찜",
+    counter: "인분",
+    variance: "high",
+  },
+
+  // ── 국 · 탕 · 찌개 · 전골 (추가) ──────────────────────────────────
+  {
+    foodCode: "D105-203000000-0001",
+    query: "곰탕",
+    name: "곰탕",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D105-213000000-0001",
+    query: "닭곰탕",
+    name: "닭곰탕",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D106-293000000-0001",
+    query: "알탕",
+    name: "알탕",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D306-300000000-0002",
+    query: "해물탕",
+    name: "해물탕",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D103-160000000-0001",
+    query: "수제비",
+    name: "수제비",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D106-297000000-0001",
+    query: "청국장찌개",
+    name: "청국장찌개",
+    aliases: ["청국장"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D106-273000000-0001",
+    query: "동태찌개",
+    name: "동태찌개",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D106-299000000-0001",
+    query: "콩비지찌개",
+    name: "콩비지찌개",
+    aliases: ["비지찌개"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D106-282000000-0001",
+    query: "버섯전골",
+    name: "버섯전골",
+    counter: "인분",
+  },
+  {
+    foodCode: "D306-276000000-0001",
+    query: "두부전골",
+    name: "두부전골",
+    counter: "인분",
+  },
+  {
+    foodCode: "D106-289000000-0001",
+    query: "소고기전골",
+    name: "소고기전골",
+    counter: "인분",
+  },
+
+  // ── 볶음 · 구이 · 조림 (추가) ─────────────────────────────────────
+  {
+    foodCode: "D110-488000000-0001",
+    query: "오징어볶음",
+    name: "오징어볶음",
+    counter: "인분",
+  },
+  {
+    foodCode: "D110-457000000-0001",
+    query: "낙지볶음",
+    name: "낙지볶음",
+    counter: "인분",
+  },
+  {
+    foodCode: "D310-493000000-0001",
+    query: "주꾸미볶음",
+    name: "주꾸미볶음",
+    aliases: ["쭈꾸미볶음"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D108-376000000-0001",
+    query: "떡갈비",
+    name: "떡갈비",
+    counter: "인분",
+  },
+  {
+    foodCode: "D127-762000000-0001",
+    query: "육회",
+    name: "육회",
+    counter: "인분",
+  },
+  {
+    foodCode: "D308-396160000-0001",
+    query: "장어구이_양념",
+    name: "장어구이",
+    aliases: ["양념장어구이", "장어구이_양념"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D111-517000000-0001",
+    query: "두부조림",
+    name: "두부조림",
+    counter: "인분",
+  },
+  {
+    foodCode: "D108-404000000-0001",
+    query: "함박스테이크",
+    name: "함박스테이크",
+    aliases: ["햄버그스테이크", "함박"],
+    counter: "인분",
+  },
+  {
+    // 등심 388 kcal and 안심 366 kcal a portion: close enough that the
+    // 등심 row stands for a bare "스테이크", marked as varying by cut.
+    foodCode: "D108-387140000-0001",
+    query: "스테이크_소등심",
+    name: "스테이크",
+    aliases: ["등심스테이크", "스테이크_소등심"],
+    counter: "인분",
+    variance: "high",
+  },
+  {
+    foodCode: "D108-387150000-0001",
+    query: "스테이크_소안심",
+    name: "안심스테이크",
+    aliases: ["스테이크_소안심"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D312-550140000-0001",
+    query: "돈가스_치즈",
+    name: "치즈돈가스",
+    aliases: ["치즈돈까스", "돈가스_치즈"],
+    counter: "인분",
+  },
+
+  // ── 밥 · 죽 (추가) ────────────────────────────────────────────────
+  {
+    foodCode: "D101-018430000-0001",
+    query: "비빔밥_육회",
+    name: "육회비빔밥",
+        counter: "그릇",
+  },
+  {
+    foodCode: "D101-047000000-0001",
+    query: "콩나물밥",
+    name: "콩나물밥",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D301-051000000-0001",
+    query: "회덮밥",
+    name: "회덮밥",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D101-017260000-0001",
+    query: "볶음밥_새우",
+    name: "새우볶음밥",
+    aliases: ["볶음밥_새우"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D101-017030000-0001",
+    query: "볶음밥_계란",
+    name: "계란볶음밥",
+    aliases: ["달걀볶음밥", "볶음밥_계란"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D101-017280000-0001",
+    query: "볶음밥_소고기",
+    name: "소고기볶음밥",
+    aliases: ["볶음밥_소고기"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D101-017450000-0001",
+    query: "볶음밥_참치",
+    name: "참치볶음밥",
+    aliases: ["볶음밥_참치"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D101-010080000-0001",
+    query: "덮밥_낙지",
+    name: "낙지덮밥",
+    aliases: ["덮밥_낙지"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D101-010390000-0001",
+    query: "덮밥_오징어",
+    name: "오징어덮밥",
+    aliases: ["덮밥_오징어"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D301-010440000-0001",
+    query: "덮밥_장어",
+    name: "장어덮밥",
+    aliases: ["덮밥_장어"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D301-010450000-0001",
+    query: "덮밥_참치",
+    name: "참치덮밥",
+    aliases: ["덮밥_참치"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D101-010110000-0001",
+    query: "덮밥_닭고기",
+    name: "닭고기덮밥",
+    aliases: ["덮밥_닭고기"],
+    counter: "그릇",
+  },
+  {
+    // MFDS's assorted row, so it can stand for a bare "초밥"; what is on the
+    // plate varies. 380 g is the row's portion, and "초밥 10개" asks.
+    foodCode: "D101-042200000-0001",
+    query: "초밥_모듬",
+    name: "초밥",
+    aliases: ["모둠초밥", "모듬초밥", "스시", "초밥_모듬"],
+    counter: "인분",
+    variance: "high",
+  },
+  {
+    foodCode: "D104-191000000-0001",
+    query: "전복죽",
+    name: "전복죽",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D104-197000000-0001",
+    query: "호박죽",
+    name: "호박죽",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D104-195000000-0001",
+    query: "팥죽",
+    name: "팥죽",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D104-181000000-0001",
+    query: "닭죽",
+    name: "닭죽",
+    counter: "그릇",
+  },
+
+  // ── 면 (추가) ─────────────────────────────────────────────────────
+  {
+    // The D303 row (60 kcal/100 g, 700 g). Its D103 twin states 158 kcal
+    // over 800 g — over 1,200 kcal a bowl — and was rejected earlier for
+    // that; this one is in line with the other noodle soups.
+    foodCode: "D303-164400000-0001",
+    query: "우동_일식",
+    name: "우동",
+    aliases: ["우동_일식"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D103-165000000-0001",
+    query: "우동볶음",
+    name: "볶음우동",
+    aliases: ["우동볶음", "야끼우동"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D103-175000000-0001",
+    query: "콩국수",
+    name: "콩국수",
+    counter: "그릇",
+  },
+  {
+    // The four 라멘 rows run 72-98 kcal/100 g (소유, 시오, 미소, 돈코츠) and
+    // none states a bowl. 시오 (84) sits nearest the middle and stands for a
+    // bare "라멘"; the bowl is a typical size from `servingReferences.ts`.
+    foodCode: "D303-147340000-0001",
+    query: "라멘_시오라멘",
+    name: "라멘",
+    aliases: ["일본라멘", "시오라멘", "라멘_시오라멘"],
+    variance: "high",
+  },
+  {
+    foodCode: "D303-147110000-0001",
+    query: "라멘_돈코츠라멘",
+    name: "돈코츠라멘",
+    aliases: ["돈코츠", "라멘_돈코츠라멘"],
+    variance: "high",
+  },
+  {
+    foodCode: "D303-147210000-0001",
+    query: "라멘_미소라멘",
+    name: "미소라멘",
+    aliases: ["라멘_미소라멘"],
+    variance: "high",
+  },
+  {
+    foodCode: "D303-147330000-0001",
+    query: "라멘_소유라멘",
+    name: "소유라멘",
+    aliases: ["쇼유라멘", "라멘_소유라멘"],
+    variance: "high",
+  },
+  {
+    foodCode: "D303-161370000-0001",
+    query: "스파게티_오일소스",
+    name: "오일 스파게티",
+    aliases: ["오일파스타", "오일 파스타", "알리오올리오", "알리오 올리오", "스파게티_오일소스"],
+    counter: "접시",
+  },
+
+  // ── 샐러드 · 빵 · 간식 (추가) ─────────────────────────────────────
+  {
+    foodCode: "D114-640020000-0001",
+    query: "샐러드_감자",
+    name: "감자 샐러드",
+    aliases: ["감자샐러드", "샐러드_감자"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D114-640310000-0001",
+    query: "샐러드_참치",
+    name: "참치 샐러드",
+    aliases: ["참치샐러드", "샐러드_참치"],
+    counter: "그릇",
+    variance: "high",
+  },
+  {
+    foodCode: "D114-640070000-0001",
+    query: "샐러드_단호박",
+    name: "단호박 샐러드",
+    aliases: ["단호박샐러드", "샐러드_단호박"],
+    counter: "그릇",
+  },
+  {
+    // A 가공식품 품목대표 row, analysed, with a 70 g label serving: one
+    // hot dog on a stick.
+    foodCode: "P101-416000400-0001",
+    query: "핫도그",
+    name: "핫도그",
+    counter: "개",
+  },
+  {
+    foodCode: "D302-134000000-0001",
+    query: "약과",
+    name: "약과",
+    counter: "개",
+  },
+  {
+    foodCode: "D102-097000000-0001",
+    query: "소보로빵",
+    name: "소보로빵",
+    aliases: ["소보로", "곰보빵"],
+    counter: "개",
+  },
+  {
+    foodCode: "D102-088000000-0001",
+    query: "모닝빵",
+    name: "모닝빵",
+    counter: "개",
+  },
+  {
+    foodCode: "P101-420000400-0309",
+    query: "단팥빵",
+    name: "단팥빵",
+    aliases: ["팥빵"],
+    counter: "개",
+  },
+  {
+    foodCode: "D102-106000000-0001",
+    query: "츄러스",
+    name: "츄러스",
+    aliases: ["추러스", "츄로스"],
+    counter: "개",
+  },
+
+  // ── 김밥 · 국밥 · 국 (추가) ───────────────────────────────────────
+  {
+    foodCode: "D101-007070000-0001",
+    query: "김밥_김치",
+    name: "김치김밥",
+    aliases: ["김밥_김치"],
+    counter: "줄",
+  },
+  {
+    foodCode: "D101-007280000-0001",
+    query: "김밥_소고기",
+    name: "소고기김밥",
+    aliases: ["김밥_소고기"],
+    counter: "줄",
+  },
+  {
+    foodCode: "D101-007120000-0001",
+    query: "김밥_돈가스",
+    name: "돈가스김밥",
+    aliases: ["돈까스김밥", "김밥_돈가스"],
+    counter: "줄",
+  },
+  {
+    foodCode: "D101-007480000-0001",
+    query: "김밥_채소",
+    name: "야채김밥",
+    aliases: ["채소김밥", "김밥_채소"],
+    counter: "줄",
+  },
+  {
+    foodCode: "D101-004500000-0001",
+    query: "국밥_콩나물",
+    name: "콩나물국밥",
+    aliases: ["국밥_콩나물"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D301-004280000-0001",
+    query: "국밥_소고기",
+    name: "소고기국밥",
+    aliases: ["국밥_소고기"],
+    counter: "그릇",
+  },
+  {
+    // The row states 1,200 g for the bowl, the largest of the 국밥 rows, so
+    // it is marked as varying rather than taken as every 돼지국밥.
+    foodCode: "D301-004140000-0001",
+    query: "국밥_돼지고기",
+    name: "돼지국밥",
+    aliases: ["국밥_돼지고기"],
+    counter: "그릇",
+    variance: "high",
+  },
+  {
+    foodCode: "D301-004060000-0001",
+    query: "국밥_굴",
+    name: "굴국밥",
+    aliases: ["국밥_굴"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D303-151000000-0001",
+    query: "만두국",
+    name: "만두국",
+    aliases: ["만둣국"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D103-146000000-0001",
+    query: "떡만두국",
+    name: "떡만두국",
+    aliases: ["떡만둣국"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D105-226000000-0001",
+    query: "북어국",
+    name: "북어국",
+    aliases: ["북엇국"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D101-018130000-0001",
+    query: "비빔밥_돌솥",
+    name: "돌솥비빔밥",
+    aliases: ["비빔밥_돌솥"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D106-266250000-0001",
+    query: "김치찌개_참치",
+    name: "참치김치찌개",
+    aliases: ["참치찌개", "김치찌개_참치"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D108-354120000-0001",
+    query: "갈비구이_소고기",
+    name: "소갈비구이",
+    aliases: ["소갈비", "갈비구이_소고기"],
+    counter: "인분",
+    variance: "high",
+  },
+
+  // ── 반찬 (추가) ───────────────────────────────────────────────────
+  {
+    foodCode: "D110-472000000-0001",
+    query: "멸치볶음",
+    name: "멸치볶음",
+    counter: "인분",
+  },
+  {
+    foodCode: "D111-536000000-0001",
+    query: "콩조림(콩자반)",
+    name: "콩자반",
+    aliases: ["콩조림", "콩조림(콩자반)"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D113-586000000-0001",
+    query: "시금치나물",
+    name: "시금치나물",
+    aliases: ["시금치무침"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D113-597000000-0001",
+    query: "콩나물무침",
+    name: "콩나물무침",
+    counter: "인분",
+  },
+
+  {
+    foodCode: "D110-486000000-0001",
+    query: "어묵볶음",
+    name: "어묵볶음",
+    counter: "인분",
+  },
+  {
+    foodCode: "D111-508000000-0001",
+    query: "감자조림",
+    name: "감자조림",
+    counter: "인분",
+  },
+
+  // ── 과일 · 견과 · 주스 (추가) ─────────────────────────────────────
+  // Raw rows with no portion, like the fruit above: the food is known and a
+  // bare name asks for grams instead of for the calories.
+  {
+    foodCode: "R108-028000001-0000",
+    query: "망고, 생것",
+    name: "망고",
+    aliases: ["망고, 생것"],
+  },
+  {
+    foodCode: "R108-092000001-0000",
+    query: "파인애플, 생것",
+    name: "파인애플",
+    aliases: ["파인애플, 생것"],
+  },
+  {
+    foodCode: "R108-034020001-0000",
+    query: "멜론, 머스크, 생것",
+    name: "멜론",
+    aliases: ["머스크멜론", "멜론, 머스크, 생것"],
+  },
+  {
+    foodCode: "R108-111000001-0000",
+    query: "체리, 생것",
+    name: "체리",
+    aliases: ["체리, 생것"],
+  },
+  {
+    foodCode: "R108-084000001-0000",
+    query: "자몽, 생것",
+    name: "자몽",
+    aliases: ["자몽, 생것"],
+  },
+  {
+    foodCode: "R108-001010001-0000",
+    query: "감, 단감, 생것",
+    name: "단감",
+    aliases: ["감, 단감, 생것"],
+  },
+  {
+    foodCode: "R108-082000001-0000",
+    query: "자두, 생것",
+    name: "자두",
+    aliases: ["자두, 생것"],
+  },
+  {
+    foodCode: "R105-007000058-0000",
+    query: "땅콩, 볶은것",
+    name: "땅콩",
+    aliases: ["볶은 땅콩", "땅콩, 볶은것"],
+  },
+  {
+    foodCode: "R121-034060000-0000",
+    query: "오렌지 주스",
+    name: "오렌지주스",
+    aliases: ["오렌지 주스"],
+  },
+  {
+    foodCode: "R121-034040000-0000",
+    query: "사과 주스",
+    name: "사과주스",
+    aliases: ["사과 주스"],
+  },
+  {
+    foodCode: "R121-034110000-0000",
+    query: "포도 주스",
+    name: "포도주스",
+    aliases: ["포도 주스"],
+  },
+  {
+    // No D420 café row of its own; the cup is the typical café size in
+    // `servingReferences.ts`, as for 아메리카노.
+    foodCode: "D320-748130000-0001",
+    query: "커피_카푸치노",
+    name: "카푸치노",
+    aliases: ["커피_카푸치노"],
+  },
+
+  // ── 중식 · 만두 · 기타 외식 (추가) ────────────────────────────────
+  {
+    // A 가공식품 품목대표 row; its 50 g label serving is a catering unit, not
+    // a plate, so no counter. One 인분 is borrowed in `servingReferences.ts`.
+    foodCode: "P117-100050200-F054-001",
+    query: "탕수육",
+    name: "탕수육",
+    variance: "high",
+  },
+  {
+    foodCode: "D110-470000000-0001",
+    query: "마파두부",
+    name: "마파두부",
+    counter: "인분",
+  },
+  {
+    foodCode: "D110-490000000-0001",
+    query: "유산슬",
+    name: "유산슬",
+    counter: "인분",
+  },
+  {
+    foodCode: "D114-642000000-0001",
+    query: "양장피",
+    name: "양장피",
+    counter: "인분",
+  },
+  {
+    foodCode: "D101-037000000-0001",
+    query: "짬뽕밥",
+    name: "짬뽕밥",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D301-034000000-0001",
+    query: "잡탕밥",
+    name: "잡탕밥",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D103-150190000-0001",
+    query: "만두_물만두",
+    name: "물만두",
+    aliases: ["만두_물만두"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D103-150060000-0001",
+    query: "만두_김치만두",
+    name: "김치만두",
+    aliases: ["만두_김치만두"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D103-167000000-0001",
+    query: "월남쌈",
+    name: "월남쌈",
+    counter: "인분",
+  },
+  {
+    foodCode: "D308-406000000-0001",
+    query: "훈제오리",
+    name: "훈제오리",
+    counter: "인분",
+  },
+  {
+    foodCode: "D110-461000000-0001",
+    query: "닭발볶음",
+    name: "닭발",
+    aliases: ["닭발볶음", "매운닭발"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D105-237000000-0001",
+    query: "어묵국(어묵탕)",
+    name: "어묵탕",
+    aliases: ["어묵국", "오뎅탕", "어묵국(어묵탕)"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D109-426000000-0001",
+    query: "부추전",
+    name: "부추전",
+    counter: "인분",
+  },
+  {
+    foodCode: "D309-445000000-0001",
+    query: "호박전",
+    name: "호박전",
+    counter: "인분",
+  },
+  {
+    foodCode: "D309-437070000-0001",
+    query: "완자전_소고기(동그랑땡/육원전)",
+    name: "동그랑땡",
+    aliases: ["완자전", "육원전", "완자전_소고기(동그랑땡/육원전)"],
+    counter: "인분",
+  },
+  {
+    foodCode: "D101-016000000-0001",
+    query: "보리밥",
+    name: "보리밥",
+    counter: "공기",
+  },
+  {
+    // The plain cabbage kimchi the dataset lacked: a bare "김치" used to
+    // match only the dishes that start with it. A raw row with no portion;
+    // one 인분 is borrowed from the 깍두기 row in `servingReferences.ts`.
+    foodCode: "R121-006060000-0000",
+    query: "김치, 배추 김치",
+    name: "배추김치",
+    aliases: ["김치", "김치, 배추 김치"],
+  },
+  {
+    // Three analysed 도넛 rows state 346, 424 and 465 kcal/100 g; the middle
+    // one is pinned and marked as varying.
+    foodCode: "P101-401000400-1752",
+    query: "도넛",
+    name: "도넛",
+    aliases: ["도너츠", "도나쓰"],
+    counter: "개",
+    variance: "high",
+  },
+  {
+    foodCode: "D102-087000000-0001",
+    query: "머핀",
+    name: "머핀",
+    counter: "개",
+  },
+  {
+    foodCode: "D102-095000000-0001",
+    query: "베이글",
+    name: "베이글",
+    counter: "개",
+  },
+  {
+    foodCode: "D102-109000000-0001",
+    query: "카스텔라",
+    name: "카스텔라",
+    aliases: ["카스테라"],
+    counter: "조각",
   },
 ];

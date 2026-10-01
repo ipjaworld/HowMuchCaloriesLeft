@@ -80,7 +80,8 @@ describe("human units — the serving reference layer", () => {
   });
 
   it("a bare 빵 is not narrowed to 식빵 — nothing says it was the sliced loaf", async () => {
-    expect((await resolveOne("빵 2조각 먹었어")).status).toBe("unknown");
+    // With several breads in the dataset it asks which; it never picks one.
+    expect((await resolveOne("빵 2조각 먹었어")).status).not.toBe("resolved");
   });
 
   it("우유 한 컵 and a bare 바나나 each count one unit", async () => {
@@ -206,8 +207,8 @@ describe("a name inside a longer word is not that food", () => {
    * after it; otherwise the answer is unknown.
    */
   it.each([
-    "감자튀김", "딸기케이크", "사과주스", "수박바", "불닭볶음면",
-    "치킨버거", "컵라면", "돈가스김밥", "로제떡볶이", "커피우유", "두부김치",
+    "감자튀김", "딸기케이크", "수박바", "불닭볶음면",
+    "치킨버거", "컵라면", "스팸김밥", "로제떡볶이", "커피우유", "두부김치",
     "김치전", "깍두기볶음밥", "뼈다귀감자탕", "백순대", "순대곱창볶음", "감자전골",
   ])("%s → unknown", async (food) => {
     expect((await resolveOne(`${food} 먹었어`)).status).toBe("unknown");
@@ -240,7 +241,7 @@ describe("a name inside a longer word is not that food", () => {
     expect((await resolveOne("감자전 한 장 먹었어")).status).not.toBe("resolved");
   });
 
-  it.each(["파전", "초밥", "덮밥", "전", "밥"])(
+  it.each(["파전", "덮밥", "전", "밥", "튀김", "빵", "회", "죽", "갈비"])(
     "a generic dish name is not narrowed to the one variant in the dataset: %s",
     async (word) => {
       expect((await resolveOne(`${word} 먹었어`)).status).not.toBe("resolved");
@@ -275,7 +276,7 @@ describe("a name inside a longer word is not that food", () => {
     expect((await resolved("사과 하나 먹었어")).entry.name).toBe("사과");
   });
 
-  it.each(["빵", "회", "김", "떡"])(
+  it.each(["김", "떡"])(
     "a single syllable is not narrowed to the one food it is part of: %s",
     async (word) => {
       expect((await resolveOne(`${word} 먹었어`)).status).toBe("unknown");
@@ -290,8 +291,8 @@ describe("a name inside a longer word is not that food", () => {
 describe("real ambiguity is still asked about", () => {
   it.each([
     ["냉면 한 그릇", ["물냉면", "비빔냉면"]],
-    ["만두 1인분", ["고기만두", "군만두"]],
-    ["스파게티 한 접시", ["크림 스파게티", "토마토 스파게티"]],
+    ["만두 1인분", ["고기만두", "군만두", "김치만두", "물만두"]],
+    ["스파게티 한 접시", ["오일 스파게티", "크림 스파게티", "토마토 스파게티"]],
     ["샌드위치 하나", ["닭가슴살 샌드위치", "참치 샌드위치", "햄에그 샌드위치"]],
   ])("%s", async (phrase, expected) => {
     const result = await resolveOne(`${phrase} 먹었어`);
@@ -302,7 +303,7 @@ describe("real ambiguity is still asked about", () => {
 });
 
 describe("what is still not covered stays unknown", () => {
-  it.each(["마라탕", "치킨", "소주 한 병", "우동", "타코"])("%s", async (phrase) => {
+  it.each(["마라샹궈", "소주 한 병", "타코", "포케", "엽떡"])("%s", async (phrase) => {
     const result = await resolveOne(`${phrase} 먹었어`);
     expect(result.status).toBe("unknown");
     expect(result).not.toHaveProperty("match");
@@ -334,7 +335,8 @@ describe("diet and fitness foods — the everyday wording reaches the row", () =
   });
 
   it("a salad that is not in the dataset is not priced as one that is", async () => {
-    expect((await resolveOne("참치 샐러드 먹었어")).status).toBe("unknown");
+    expect((await resolveOne("연어 샐러드 먹었어")).status).toBe("unknown");
+    expect((await resolved("참치 샐러드 먹었어")).entry.name).toBe("참치 샐러드");
   });
 
   it("a protein shake is never priced as powder", async () => {
@@ -347,5 +349,46 @@ describe("diet and fitness foods — the everyday wording reaches the row", () =
   it("plain 요거트 still means the spoon yoghurt", async () => {
     const match = await resolved("요거트 100g 먹었어");
     expect(match.entry.name).toBe("떠먹는 요거트");
+  });
+});
+
+describe("v1 coverage expansion (2026-10-02)", () => {
+  it.each([
+    ["마라탕", "마라탕"],
+    ["치킨", "치킨"],
+    ["교촌 치킨", "치킨"],
+    ["피자", "피자"],
+    ["샤브샤브", "샤브샤브"],
+    ["우동", "우동"],
+    ["라멘", "라멘"],
+    ["초밥", "초밥"],
+    ["탕수육", "탕수육"],
+    ["김치", "배추김치"],
+    ["돈가스김밥", "돈가스김밥"],
+    ["참치 샐러드", "참치 샐러드"],
+  ])("%s is recorded as %s without a question", async (food, name) => {
+    expect((await resolved(`${food} 먹었어`)).entry.name).toBe(name);
+  });
+
+  it.each(["치킨 한 마리", "피자 한 판", "피자 두 조각", "초밥 10개"])(
+    "%s asks rather than pricing a unit the row never sized",
+    async (phrase) => {
+      expect((await resolveOne(`${phrase} 먹었어`)).status).toBe("unmeasurable");
+    },
+  );
+
+  it.each(["회 1인분", "빵 2조각", "회", "튀김", "치킨버거", "불고기피자", "연어초밥", "김치우동", "치킨 샐러드"])(
+    "%s is not settled on the one food the data happens to carry",
+    async (phrase) => {
+      expect((await resolveOne(`${phrase} 먹었어`)).status).not.toBe("resolved");
+    },
+  );
+
+  it("marks the varying foods and only those", () => {
+    const high = KOREAN_FOODS.filter((entry) => entry.variance === "high").map((entry) => entry.name);
+    expect(high).toEqual(expect.arrayContaining(["마라탕", "치킨", "피자", "샤브샤브", "초밥", "탕수육"]));
+    expect(high).not.toContain("김밥");
+    expect(high).not.toContain("쌀밥");
+    expect(high.length).toBe(27);
   });
 });

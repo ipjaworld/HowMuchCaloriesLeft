@@ -251,7 +251,11 @@ export function TodayScreen() {
       // rule nobody asked for, and the list already reads fine without it.
     });
 
-    setReply(describeAdded(await reloadDay(), skipped));
+    const highVariance = items
+      .filter((item) => item.calorieVariance === "high")
+      .map((item) => item.name);
+
+    setReply(describeAdded(await reloadDay(), skipped, highVariance));
   }
 
   /**

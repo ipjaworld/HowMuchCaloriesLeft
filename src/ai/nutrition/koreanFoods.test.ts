@@ -119,7 +119,7 @@ describe("a food we know but cannot weigh is not a food we do not know", () => {
 
 describe("a food that is not in the dataset stays unknown", () => {
   it("returns unknown for a food that is simply not there", async () => {
-    const result = await resolveOne("마라탕 먹었어");
+    const result = await resolveOne("마라샹궈 먹었어");
     expect(result.status).toBe("unknown");
   });
 
@@ -153,7 +153,7 @@ describe("representative scenarios", () => {
     // identically on the name, but none publishes a 공기 portion, so the
     // counter rules them out.
     const names = result.candidates.map((c) => c.entry.name).sort();
-    expect(names).toEqual(["쌀밥", "잡곡밥", "현미밥"]);
+    expect(names).toEqual(["보리밥", "쌀밥", "잡곡밥", "현미밥"]);
   });
 
   it("커피 한잔 → resolved, as an estimated café cup", async () => {
@@ -172,8 +172,8 @@ describe("representative scenarios", () => {
     expect(result.match.estimated).toBe(true);
   });
 
-  it("마라탕 → unknown", async () => {
-    const result = await resolveOne("마라탕 먹었어");
+  it("마라샹궈 → unknown", async () => {
+    const result = await resolveOne("마라샹궈 먹었어");
     expect(result.status).toBe("unknown");
   });
 

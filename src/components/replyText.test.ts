@@ -208,6 +208,25 @@ describe("the add pipeline's sentences", () => {
     expect(reply.text).toContain("마라탕은 빼고 기록했어요.");
   });
 
+  it("says a representative figure is one, after the totals and without asking", () => {
+    const reply = describeAdded(summary(), [], ["치킨"]);
+    expect(reply.kind).toBe("statement");
+    expect(reply.text).toBe(
+      "기록했어요. 오늘 1,580 kcal 먹었어요. 520 kcal 남았어요. " +
+        "치킨은 재료와 양에 따라 칼로리 차이가 클 수 있어요. 다르면 칼로리를 고쳐 말해주세요.",
+    );
+    expect(reply.text).not.toContain("?");
+  });
+
+  it("names each varying food once", () => {
+    const reply = describeAdded(summary(), [], ["피자", "마라탕", "피자"]);
+    expect(reply.text).toContain("피자와 마라탕은 재료와 양에 따라");
+  });
+
+  it("says nothing about variance for an ordinary food", () => {
+    expect(describeAdded(summary(), [], []).text).not.toContain("차이가 클 수");
+  });
+
   it("asks for calories, naming the food only when it reads as one", () => {
     const named = describeQuestion({
       type: "provide_calories",
