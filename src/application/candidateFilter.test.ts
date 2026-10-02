@@ -131,7 +131,7 @@ describe("runChat with the filter", () => {
   it("leaves the command exactly as the filter-off path when it drops nothing", async () => {
     // The report is for QA; the app acts on the command alone.
     const deps = { judge: fixedJudge(judgment("add_food")), resolver: koreanFoodResolver };
-    const message = "딸기케이크랑 김밥 먹었어";
+    const message = "마라샹궈랑 김밥 먹었어";
     const off = await runChat(input(message), undefined, { ...deps, candidateJudge: null });
     const on = await runChat(input(message), undefined, { ...deps, candidateJudge: tableJudge({}) });
     expect(on.command).toEqual(off.command);

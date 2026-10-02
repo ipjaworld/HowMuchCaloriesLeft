@@ -207,17 +207,32 @@ describe("a name inside a longer word is not that food", () => {
    * after it; otherwise the answer is unknown.
    */
   it.each([
-    "감자튀김", "딸기케이크", "수박바", "불닭볶음면",
-    "치킨버거", "컵라면", "스팸김밥", "로제떡볶이", "커피우유", "두부김치",
-    "김치전", "깍두기볶음밥", "뼈다귀감자탕", "백순대", "순대곱창볶음", "감자전골",
+    "수박바", "불닭볶음면",
+    "치킨버거", "스팸김밥", "로제떡볶이",
+    "깍두기볶음밥", "뼈다귀감자탕", "백순대", "순대곱창볶음", "감자전골",
+    // The same trap one round on: a new generic name inside a longer word.
+    "딸기아이스크림", "새우튀김", "초코케이크볼", "치즈스틱", "아이스크림케이크",
+    "만두전골", "주스바", "김자반", "연어덮밥", "고구마라떼",
   ])("%s → unknown", async (food) => {
     expect((await resolveOne(`${food} 먹었어`)).status).toBe("unknown");
   });
 
   // 감자탕 and 참치김밥 were in the list above until they got rows of their
-  // own (2026-10-01). What matters now is that each is its own entry and not
-  // the shorter name inside it.
+  // own (2026-10-01), and 감자튀김, 딸기케이크, 컵라면, 커피우유, 두부김치
+  // and 김치전 until the second round (2026-10-02). What matters now is that
+  // each is its own entry and not the shorter name inside it.
   it.each([
+    ["감자튀김", "감자튀김"],
+    ["딸기케이크", "딸기케이크"],
+    ["컵라면", "컵라면"],
+    ["커피우유", "커피우유"],
+    ["두부김치", "두부김치"],
+    ["김치전", "김치전"],
+    ["파전", "파전"],
+    ["짜장라면", "짜장라면"],
+    ["김치우동", "김치우동"],
+    ["불고기피자", "불고기피자"],
+    ["연어초밥", "연어초밥"],
     ["감자탕", "감자탕"],
     ["참치김밥", "참치김밥"],
     ["치즈김밥", "치즈김밥"],
@@ -241,7 +256,10 @@ describe("a name inside a longer word is not that food", () => {
     expect((await resolveOne("감자전 한 장 먹었어")).status).not.toBe("resolved");
   });
 
-  it.each(["파전", "덮밥", "전", "밥", "튀김", "빵", "회", "죽", "갈비"])(
+  it.each([
+    "덮밥", "전", "밥", "튀김", "빵", "죽", "갈비",
+    "떡", "차", "에이드", "생선", "새우", "버섯", "찜", "구이", "국", "샐러드", "음료", "탄산",
+  ])(
     "a generic dish name is not narrowed to the one variant in the dataset: %s",
     async (word) => {
       expect((await resolveOne(`${word} 먹었어`)).status).not.toBe("resolved");
@@ -276,12 +294,22 @@ describe("a name inside a longer word is not that food", () => {
     expect((await resolved("사과 하나 먹었어")).entry.name).toBe("사과");
   });
 
-  it.each(["김", "떡"])(
+  it.each(["떡", "묵", "차", "롤"])(
     "a single syllable is not narrowed to the one food it is part of: %s",
     async (word) => {
       expect((await resolveOne(`${word} 먹었어`)).status).toBe("unknown");
     },
   );
+
+  it.each([
+    ["김", "조미김"],
+    ["회", "모듬회"],
+  ])("a single syllable that is itself a food's name is that food: %s", async (word, name) => {
+    // 김 was unknown until the dataset had 조미김, and 회 until it had MFDS's
+    // assorted row. Neither is reached through a longer name it is part of —
+    // 김 is not 김밥 or 튀김, 회 is not 육회.
+    expect((await resolved(`${word} 먹었어`)).entry.name).toBe(name);
+  });
 
   it("a single syllable that heads several foods still asks", async () => {
     expect((await resolveOne("밥 한 공기 먹었어")).status).toBe("ambiguous");
@@ -291,9 +319,9 @@ describe("a name inside a longer word is not that food", () => {
 describe("real ambiguity is still asked about", () => {
   it.each([
     ["냉면 한 그릇", ["물냉면", "비빔냉면"]],
-    ["만두 1인분", ["고기만두", "군만두", "김치만두", "물만두"]],
-    ["스파게티 한 접시", ["오일 스파게티", "크림 스파게티", "토마토 스파게티"]],
-    ["샌드위치 하나", ["닭가슴살 샌드위치", "참치 샌드위치", "햄에그 샌드위치"]],
+    ["고등어 1인분", ["고등어구이", "고등어조림"]],
+    ["해장국 한 그릇", ["뼈해장국", "선지해장국", "콩나물국밥", "황태해장국"]],
+    ["샐러드 한 그릇", ["감자 샐러드", "닭가슴살 샐러드", "단호박 샐러드", "참치 샐러드", "채소 샐러드"]],
   ])("%s", async (phrase, expected) => {
     const result = await resolveOne(`${phrase} 먹었어`);
     expect(result.status).toBe("ambiguous");
@@ -377,7 +405,7 @@ describe("v1 coverage expansion (2026-10-02)", () => {
     },
   );
 
-  it.each(["회 1인분", "빵 2조각", "회", "튀김", "치킨버거", "불고기피자", "연어초밥", "김치우동", "치킨 샐러드"])(
+  it.each(["빵 2조각", "튀김", "치킨버거", "고구마피자", "참치초밥", "카레우동", "치킨 샐러드"])(
     "%s is not settled on the one food the data happens to carry",
     async (phrase) => {
       expect((await resolveOne(`${phrase} 먹었어`)).status).not.toBe("resolved");
@@ -389,6 +417,136 @@ describe("v1 coverage expansion (2026-10-02)", () => {
     expect(high).toEqual(expect.arrayContaining(["마라탕", "치킨", "피자", "샤브샤브", "초밥", "탕수육"]));
     expect(high).not.toContain("김밥");
     expect(high).not.toContain("쌀밥");
-    expect(high.length).toBe(27);
+    expect(high.length).toBe(HIGH_VARIANCE_COUNT);
+  });
+});
+
+/** 27 from the first round, the rest from the second. Counted, not derived. */
+const HIGH_VARIANCE_COUNT = 70;
+
+describe("v1 coverage expansion, second round (2026-10-02)", () => {
+  /**
+   * The everyday word that used to fall to unknown. Each is its own entry —
+   * MFDS's generic or assorted row, or one human-read row standing for a
+   * narrow category — and each says its figure is a representative one.
+   */
+  it.each([
+    ["케이크", "케이크"],
+    ["아이스크림", "아이스크림"],
+    ["시리얼", "시리얼"],
+    ["샌드위치", "샌드위치"],
+    ["만두", "만두"],
+    ["주스", "주스"],
+    ["파스타", "스파게티"],
+    ["스파게티", "스파게티"],
+    ["국밥", "국밥"],
+    ["치즈", "치즈"],
+    ["초콜릿", "초콜릿"],
+    ["쿠키", "쿠키"],
+    ["빙수", "팥빙수"],
+    ["매운탕", "매운탕"],
+    ["된장국", "된장국"],
+    ["주먹밥", "주먹밥"],
+    ["컵라면", "컵라면"],
+    ["비빔면", "비빔면"],
+    ["감자튀김", "감자튀김"],
+    ["계란말이", "계란말이"],
+    ["두부김치", "두부김치"],
+  ])("a bare %s is recorded as %s and said to vary", async (food, name) => {
+    const match = await resolved(`${food} 먹었어`);
+    expect(match.entry.name).toBe(name);
+    expect(match.entry.variance).toBe("high");
+  });
+
+  it("a generic entry is its own row, never another name for a specific one", () => {
+    // 케이크 must not be 치즈케이크 under an alias, nor 샌드위치 the ham one.
+    const nameOf = (word: string) => {
+      const found = findByName(KOREAN_FOODS, word);
+      return found.kind === "one" ? found.entry.name : found.kind;
+    };
+    for (const word of ["케이크", "샌드위치", "만두", "주스", "국밥", "아이스크림", "치즈", "쿠키"]) {
+      expect(nameOf(word), word).toBe(word);
+    }
+  });
+
+  it.each([
+    ["치즈케이크", "치즈케이크"],
+    ["초코케이크", "초콜릿케이크"],
+    ["딸기 케이크", "딸기케이크"],
+    ["고기만두", "고기만두"],
+    ["참치 샌드위치", "참치 샌드위치"],
+    ["오렌지주스", "오렌지주스"],
+    ["크림 파스타", "크림 스파게티"],
+    ["순대국밥", "순대국밥"],
+    ["치즈김밥", "치즈김밥"],
+    ["슬라이스치즈", "치즈"],
+    ["바닐라라떼", "바닐라라떼"],
+    ["구운계란", "삶은 달걀"],
+    ["김치전", "김치전"],
+    ["보쌈 200g", "수육"],
+    ["돼지갈비 300g", "돼지갈비"],
+  ])("a named kind is still itself beside the generic one: %s", async (food, name) => {
+    expect((await resolved(`${food} 먹었어`)).entry.name).toBe(name);
+  });
+
+  it.each([
+    ["생크림 케이크", "케이크"],
+    ["새우 샌드위치", "샌드위치"],
+    ["봉골레 파스타", "스파게티"],
+    ["내장 국밥", "국밥"],
+    ["참치마요 주먹밥", "주먹밥"],
+  ])("a kind the dataset lacks is recorded as the generic one: %s", async (food, name) => {
+    // The same reading as "교촌 치킨": the last word names the food, what
+    // comes before it is a kind the dataset cannot price separately, and the
+    // variance notice says so.
+    const match = await resolved(`${food} 먹었어`);
+    expect(match.entry.name).toBe(name);
+    expect(match.entry.variance).toBe("high");
+  });
+
+  it.each(["케이크 한 판", "아이스크림 한 통", "만두 5개", "피자 두 조각", "컵라면 큰 거", "주스 한 병"])(
+    "%s asks rather than pricing a unit the row never sized",
+    async (phrase) => {
+      expect((await resolveOne(`${phrase} 먹었어`)).status).not.toBe("resolved");
+    },
+  );
+
+  it.each(["포케", "타코", "마라샹궈", "크로플", "소금빵", "스콘", "브라우니", "리조또", "부리또", "프로틴바", "와퍼", "허니콤보", "엽떡"])(
+    "%s stays unknown — MFDS has it only as brand products",
+    async (phrase) => {
+      expect((await resolveOne(`${phrase} 먹었어`)).status).toBe("unknown");
+    },
+  );
+
+  it("does not record the one food of several that happens to state a portion", async () => {
+    // 음료 reaches eight drinks and only 이온음료 states a glass; 탄산 reaches
+    // four and only 탄산수 a bottle. Both ask, as they did before those rows.
+    for (const word of ["음료", "탄산"]) {
+      expect((await resolveOne(`${word} 마셨어`)).status, word).toBe("unmeasurable");
+    }
+  });
+
+  it("does not drop a food because the one beside it has a portion", async () => {
+    const result = await resolveOne("닭가슴살 김치 먹었어");
+    expect(result.status).toBe("unmeasurable");
+    if (result.status !== "unmeasurable") return;
+    expect(result.entries.map((entry) => entry.name).sort()).toEqual(["닭가슴살", "배추김치"]);
+  });
+
+  it("a food that is sold by weight asks for the weight, not the calories", async () => {
+    for (const food of ["보쌈", "목살", "돼지갈비", "차돌박이", "순두부", "견과류"]) {
+      expect((await resolveOne(`${food} 먹었어`)).status, food).toBe("unmeasurable");
+    }
+  });
+
+  it("gives the three juices pinned earlier a glass", async () => {
+    const match = await resolved("오렌지주스 한 잔 마셨어");
+    expect(match.estimated).toBe(true);
+    expect(match.portionNote).toContain("200mL");
+    expect(match.calories).toBe(Math.round(match.entry.caloriesPer100g * 2));
+  });
+
+  it("ships the size this round was planned for", () => {
+    expect(KOREAN_FOODS.length).toBe(426);
   });
 });

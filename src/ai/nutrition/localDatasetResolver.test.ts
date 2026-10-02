@@ -457,3 +457,60 @@ describe("a reference portion converts a human unit and says so", () => {
     expect(result.match).not.toHaveProperty("portionNote");
   });
 });
+
+describe("one food left standing because the others have no portion", () => {
+  /**
+   * TEST FIXTURE — invented round numbers, as above. Three drinks share the
+   * word 음료 and only one states a glass; two foods share a phrase and only
+   * one states a portion.
+   */
+  const FOODS: FoodEntry[] = [
+    { id: "d-cola", name: "탄산 음료", caloriesPer100g: 40, source: "test-fixture" },
+    { id: "d-soy", name: "단백질 음료", caloriesPer100g: 70, source: "test-fixture" },
+    {
+      id: "d-ion",
+      name: "이온음료",
+      caloriesPer100g: 30,
+      servings: [{ unit: "잔", grams: 200 }],
+      source: "test-fixture",
+    },
+    { id: "f-chicken", name: "닭가슴살", caloriesPer100g: 110, source: "test-fixture" },
+    {
+      id: "f-kimchi",
+      name: "김치",
+      caloriesPer100g: 40,
+      servings: [{ unit: "인분", grams: 50 }],
+      source: "test-fixture",
+    },
+  ];
+  const resolver = createLocalDatasetResolver(FOODS);
+  const resolve = async (sentence: string) => {
+    const phrase = parseFoodPhrases(sentence)[0];
+    if (phrase === undefined) throw new Error("no phrase");
+    return resolver.resolve(phrase);
+  };
+
+  it("does not record the one drink that happens to state a glass", async () => {
+    const result = await resolve("음료 마셨어");
+    expect(result.status).toBe("unmeasurable");
+    if (result.status !== "unmeasurable") return;
+    expect(result.entries.map((entry) => entry.name).sort()).toEqual(["단백질 음료", "이온음료", "탄산 음료"]);
+  });
+
+  it("does not drop the food beside it: 닭가슴살 김치 is not just the kimchi", async () => {
+    const result = await resolve("닭가슴살 김치 먹었어");
+    expect(result.status).toBe("unmeasurable");
+    if (result.status !== "unmeasurable") return;
+    expect(result.entries.map((entry) => entry.name).sort()).toEqual(["김치", "닭가슴살"]);
+  });
+
+  it("still asks which when two of them can be priced", async () => {
+    // Grams apply to every food, so all three drinks are candidates again.
+    expect((await resolve("음료 200g 마셨어")).status).toBe("ambiguous");
+  });
+
+  it("still records a food named outright", async () => {
+    const result = await resolve("이온음료 마셨어");
+    expect(result.status).toBe("resolved");
+  });
+});

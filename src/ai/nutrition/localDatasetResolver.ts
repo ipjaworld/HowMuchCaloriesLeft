@@ -211,10 +211,21 @@ export function createLocalDatasetResolver(
         .filter((match): match is NutritionMatch => match !== null)
         .map((match) => ({ ...match, score: found.score }));
 
+      // "음료" reaches seven drinks and only 이온음료 states a glass; "닭가슴살
+      // 김치" names two foods and only the kimchi has a portion. One food
+      // left standing because the others have no published portion is the
+      // dataset choosing, not the user — and for two foods in one phrase it
+      // would drop the other without a word. So it is treated exactly as if
+      // none could be priced: every food the phrase reached is kept, and the
+      // app asks how much. A counter the user actually said is different
+      // evidence, and has already narrowed `matched` itself above.
+      const onlyOnePriceable = matched.length > 1 && candidates.length === 1;
+      const genericLeftover = found.kind === "several" && found.generic === true;
+
       // Known foods, but no weight for the amount as said. Distinct from
       // `unknown`: naming grams — or a counter the food does publish —
       // resolves it, and the reply can say so.
-      if (candidates.length === 0) {
+      if (candidates.length === 0 || (onlyOnePriceable && !genericLeftover)) {
         const unit = phrase.quantity.unit;
         const hasPortions = matched.some(
           (entry) => (entry.servings?.length ?? 0) > 0,

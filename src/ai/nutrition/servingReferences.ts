@@ -91,6 +91,14 @@ const MFDS_CAFE_CUP = "식약처 식품영양성분DB 카페 음료 1회 제공�
  */
 const MFDS_ROW_PORTION = "식약처 식품영양성분DB 다른 행의 1회 제공량";
 
+/**
+ * MFDS's 과·채주스 품목대표 rows (P109-003030200-…, P109-302030100-…: 오렌지,
+ * 사과, 포도, 자몽, 당근 and the rest) all state a 200 mL serving. The raw
+ * juice rows the dataset pins state none, so a 잔 is borrowed from them as a
+ * *typical* size — the glass, never the energy.
+ */
+const MFDS_JUICE_CUP = "식약처 식품영양성분DB 과·채주스 1회 제공량(200mL)";
+
 export type ServingReference = {
   /** The MFDS food code of the entry this applies to. */
   foodId: string;
@@ -245,6 +253,96 @@ export const SERVING_REFERENCES: ServingReference[] = [
     MFDS_ROW_PORTION,
     { kind: "typical" },
   ),
+
+  // ── 주스 ────────────────────────────────────────────────────────────
+  // The three juices pinned earlier asked for millilitres on a bare name.
+  ...["R121-034060000-0000", "R121-034040000-0000", "R121-034110000-0000"].flatMap((foodId) =>
+    ref(
+      foodId,
+      ["잔", "컵"],
+      200,
+      "과·채주스 품목대표 행(P109-003030200)의 1회 제공량 200 mL를 빌려 씀",
+      MFDS_JUICE_CUP,
+      { kind: "typical", measure: "mL" },
+    ),
+  ),
+
+  // ── 군고구마 ────────────────────────────────────────────────────────
+  // The same printed measure as the steamed 고구마 above: the exchange list
+  // counts the sweet potato, not how it was cooked.
+  ...ref("R102-006000050-0000", ["개"], 140, "고구마 70 g (중 1/2개)", EXCHANGE_LISTS),
+
+  // ── 2차 확장 (2026-10-02): 다른 MFDS 행에서 빌린 1회 제공량 ────────────
+  // Same rule as above: grams (or mL) only, each from the row named in the
+  // text, each typical. A borrowed gram portion is allowed only on a food
+  // the seeds mark high-variance, or on a side dish under 50 kcal/100 g
+  // (the kimchi rows); the café cup and the juice glass are volumes.
+  // 마카롱
+  ...ref("D302-086000000-0001", ["개"], 30, "바닐라마카롱 행(P101-008000100-F003-001)의 1회 제공량 30 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 팥빙수
+  ...ref("D319-709053900-0001", ["그릇"], 300, "팥빙수 행(D419-716000000-0001)의 1회 제공량 300 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 계란찜
+  ...ref("D307-317040000-0001", ["인분"], 200, "달걀찜_우유 행(D107-317150000-0001)의 1회 제공량 200 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 밀면
+  ...ref("D303-154200000-0001", ["그릇"], 700, "냉면_물냉면 행(D103-144180000-0001)의 1회 제공량 700 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 짜장라면
+  ...ref("P108-004000400-0062", ["봉지"], 140, "볶음/비빔라면_매운맛 행(P108-009000400-0208)의 1회 제공량 140 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 차돌짬뽕
+  ...ref("D303-172460000-0001", ["그릇"], 900, "짬뽕_삼선 행(D303-172310000-0001)의 1회 제공량 900 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 까르보나라
+  ...ref("D303-161080000-0001", ["접시"], 400, "스파게티_크림소스 행(D303-161480000-0001)의 1회 제공량 400 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 로제 스파게티
+  ...ref("D303-161150000-0001", ["접시"], 400, "스파게티_크림소스 행(D303-161480000-0001)의 1회 제공량 400 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 팟타이
+  ...ref("D303-177000000-0002", ["접시", "그릇"], 300, "우동볶음 행(D103-165000000-0001)의 1회 제공량 300 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 분짜
+  ...ref("D303-156000000-0001", ["그릇"], 500, "국수_비빔국수 행(D103-142270000-0001)의 1회 제공량 500 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 주먹밥
+  ...ref("P123-026020200-F001-000", ["개"], 150, "주먹밥_멸치 행(D301-035190000-0001)의 1회 제공량 150 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 연어초밥
+  ...ref("D301-042360000-0001", ["인분"], 300, "초밥_광어 행(D301-042050000-0001)의 1회 제공량 300 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 닭강정
+  ...ref("P117-100080000-F013-000", ["인분"], 200, "닭튀김_양념 행(D312-549160000-0001)의 1회 제공량 200 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 깐풍기
+  ...ref("P117-100050200-F010-001", ["인분"], 200, "라조기 행(D312-553000000-0001)의 1회 제공량 200 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 고등어조림
+  ...ref("D111-509000000-0001", ["인분"], 250, "동태조림 행(D311-516000000-0001)의 1회 제공량 250 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 계란말이
+  ...ref("D109-416000000-0001", ["인분"], 82.4, "달걀말이 행(D709-416000000-0001)의 1회 제공량 82.4 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 진미채볶음
+  ...ref("D310-489000000-0001", ["인분"], 50, "오징어채조림 행(D111-530000000-0001)의 1회 제공량 50 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 열무김치
+  ...ref("R121-006090000-0000", ["인분"], 50, "깍두기 행(D115-665000000-0001)의 1회 제공량 50 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 총각김치
+  ...ref("R121-006140000-0000", ["인분"], 50, "깍두기 행(D115-665000000-0001)의 1회 제공량 50 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 파김치
+  ...ref("R121-006150000-0000", ["인분"], 50, "깍두기 행(D115-665000000-0001)의 1회 제공량 50 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 오이소박이
+  ...ref("R121-006110000-0000", ["인분"], 50, "깍두기 행(D115-665000000-0001)의 1회 제공량 50 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 치즈떡볶이
+  ...ref("D310-467330000-0001", ["인분"], 180, "떡볶이 행(D110-467000000-0001)의 1회 제공량 180 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 컵라면
+  ...ref("P108-003000300-F001-001", ["개"], 79, "육개장컵라면 행(P108-003000400-0216)의 1회 제공량 79 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 고구마 샐러드
+  ...ref("D314-640030000-0001", ["그릇"], 150, "샐러드_감자 행(D114-640020000-0001)의 1회 제공량 150 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 카라멜마키아토
+  ...ref("D320-748100000-0001", ["잔", "컵"], 355, "카페라떼·카페모카 행의 1회 제공량을 빌려 씀", MFDS_CAFE_CUP, { kind: "typical", measure: "mL" }),
+  // 바닐라라떼
+  ...ref("D320-723050000-0001", ["잔", "컵"], 355, "카페라떼·카페모카 행의 1회 제공량을 빌려 씀", MFDS_CAFE_CUP, { kind: "typical", measure: "mL" }),
+  // 녹차라떼
+  ...ref("D320-723010000-0001", ["잔", "컵"], 355, "카페라떼·카페모카 행의 1회 제공량을 빌려 씀", MFDS_CAFE_CUP, { kind: "typical", measure: "mL" }),
+  // 핫초코
+  ...ref("R121-042020200-0000", ["잔", "컵"], 355, "카페라떼·카페모카 행의 1회 제공량을 빌려 씀", MFDS_CAFE_CUP, { kind: "typical", measure: "mL" }),
+  // 밀크티
+  ...ref("D320-731060000-0001", ["잔", "컵"], 355, "카페라떼·카페모카 행의 1회 제공량을 빌려 씀", MFDS_CAFE_CUP, { kind: "typical", measure: "mL" }),
+  // 흑당밀크티
+  ...ref("D320-731190000-0001", ["잔", "컵"], 355, "카페라떼·카페모카 행의 1회 제공량을 빌려 씀", MFDS_CAFE_CUP, { kind: "typical", measure: "mL" }),
+  // 밀크쉐이크
+  ...ref("D319-708020000-0001", ["잔", "컵"], 355, "카페라떼·카페모카 행의 1회 제공량을 빌려 씀", MFDS_CAFE_CUP, { kind: "typical", measure: "mL" }),
+  // 토마토주스
+  ...ref("R106-186010024-0000", ["잔", "컵"], 200, "과·채주스 품목대표 행(P109-003030200)의 1회 제공량 200 mL를 빌려 씀", MFDS_JUICE_CUP, { kind: "typical", measure: "mL" }),
+  // 아이스크림
+  ...ref("P102-005010100-F001-009", ["개"], 80, "아이스크림바 행(P102-101010100-0053)의 1회 제공량 80 mL를 빌려 씀", MFDS_ROW_PORTION, { kind: "typical", measure: "mL" }),
 ];
 
 function toServing(reference: ServingReference): Serving {

@@ -658,7 +658,7 @@
       "category": "multi_food",
       "input": "커피랑 샌드위치 먹었어",
       "consumed": true,
-      "why": "하나는 확정, 하나는 되묻기.",
+      "why": "하나는 확정, 하나는 대표값. 2026-10-02 2차 확장부터 맨 \"샌드위치\"는 식약처 모듬 샌드위치 행으로 바로 기록하고 편차를 안내한다(전에는 세 가지 중 되물었다).",
       "foods": [
         {
           "said": "커피",
@@ -670,12 +670,11 @@
         },
         {
           "said": "샌드위치",
-          "status": "ambiguous",
-          "candidates": [
-            "햄에그 샌드위치",
-            "참치 샌드위치",
-            "닭가슴살 샌드위치"
-          ]
+          "status": "resolved",
+          "entry": "샌드위치",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -729,11 +728,15 @@
       "category": "compound_trap",
       "input": "감자튀김 먹었어",
       "consumed": true,
-      "why": "감사 실측: 감자로 확정됨.",
+      "why": "감사 실측: 감자로 확정됐었다. 2026-10-02 2차 확장에 감자튀김이 자기 행으로 들어왔다 — 감자가 아니라 감자튀김으로 기록된다(고편차 안내).",
       "foods": [
         {
           "said": "감자튀김",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "감자튀김",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -759,11 +762,15 @@
       "category": "compound_trap",
       "input": "딸기케이크 먹었어",
       "consumed": true,
-      "why": "감사 실측: 딸기 한 알로 확정됨.",
+      "why": "감사 실측: 딸기로 확정됐었다. 2026-10-02 2차 확장에 딸기케이크가 자기 행으로 들어왔다 — 딸기가 아니라 딸기케이크 한 조각으로 기록된다.",
       "foods": [
         {
           "said": "딸기케이크",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "딸기케이크",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -772,12 +779,15 @@
       "category": "compound_trap",
       "input": "사과주스 마셨어",
       "consumed": true,
-      "why": "감사 실측: 사과 한 개로 확정됐었다. 2026-10-02 사과주스가 데이터셋에 들어왔다(1회 제공량 없음) — 사과로 읽히면 안 되고, 양을 물어야 한다.",
+      "why": "감사 실측: 사과 한 개로 확정됐었다. 사과로 읽히면 안 된다. 2026-10-02 2차 확장부터 주스는 식약처 과·채주스 행의 1회 제공량(200 mL)을 한 잔으로 빌려 쓰므로, 맨 이름은 한 잔으로 기록된다(추정 표시).",
       "foods": [
         {
           "said": "사과주스",
-          "status": "unmeasurable",
-          "entry": "사과주스"
+          "status": "resolved",
+          "entry": "사과주스",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -871,11 +881,15 @@
       "category": "compound_trap",
       "input": "컵라면 먹었어",
       "consumed": true,
-      "why": "감사 실측: 550g 한 그릇 라면으로 확정됨.",
+      "why": "감사 실측: 550g 한 그릇 라면으로 확정됐었다. 2026-10-02 2차 확장에 컵라면이 자기 행으로 들어왔다 — 끓인 라면 한 그릇이 아니라 컵라면 한 개(건면 기준, 고편차 안내)로 기록된다.",
       "foods": [
         {
           "said": "컵라면",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "컵라면",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -918,11 +932,15 @@
       "category": "compound_trap",
       "input": "커피우유 마셨어",
       "consumed": true,
-      "why": "감사 실측: 우유|아메리카노 중 고르라고 묻는다.",
+      "why": "커피도 우유도 아니다. 2026-10-02 2차 확장에 자기 행이 들어와 한 팩으로 기록된다.",
       "foods": [
         {
           "said": "커피우유",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "커피우유",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -931,11 +949,15 @@
       "category": "compound_trap",
       "input": "딸기우유 마셨어",
       "consumed": true,
-      "why": "가공 우유 음료.",
+      "why": "딸기도 우유도 아니다. 2026-10-02 2차 확장에 자기 행이 들어와 한 팩으로 기록된다.",
       "foods": [
         {
           "said": "딸기우유",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "딸기우유",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -944,11 +966,15 @@
       "category": "compound_trap",
       "input": "바나나우유 마셨어",
       "consumed": true,
-      "why": "가공 우유 음료.",
+      "why": "바나나도 우유도 아니다. 2026-10-02 2차 확장에 자기 행이 들어와 한 팩으로 기록된다.",
       "foods": [
         {
           "said": "바나나우유",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "바나나우유",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -983,11 +1009,15 @@
       "category": "compound_trap",
       "input": "짜장라면 먹었어",
       "consumed": true,
-      "why": "짜장면도 라면도 아니다.",
+      "why": "짜장면도 라면도 아니다. 2026-10-02 2차 확장에 자기 행이 들어와 한 봉지(건면 기준, 고편차 안내)로 기록된다.",
       "foods": [
         {
           "said": "짜장라면",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "짜장라면",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -996,11 +1026,15 @@
       "category": "compound_trap",
       "input": "두부김치 먹었어",
       "consumed": true,
-      "why": "감사 실측: 두부로 잡혀 g을 묻는다.",
+      "why": "두부도 김치도 아니다. 2026-10-02 2차 확장에 자기 행이 들어왔다(돼지고기 포함 여부는 행이 말하지 않으므로 고편차 안내).",
       "foods": [
         {
           "said": "두부김치",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "두부김치",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -1022,12 +1056,15 @@
       "category": "compound_trap",
       "input": "포도주스 마셨어",
       "consumed": true,
-      "why": "감사 실측: 포도로 확정됐었다. 2026-10-02 포도주스가 데이터셋에 들어왔다(1회 제공량 없음) — 포도로 읽히면 안 되고, 양을 물어야 한다.",
+      "why": "포도로 읽히면 안 된다. 2026-10-02 2차 확장부터 한 잔(200 mL, 추정)으로 기록된다.",
       "foods": [
         {
           "said": "포도주스",
-          "status": "unmeasurable",
-          "entry": "포도주스"
+          "status": "resolved",
+          "entry": "포도주스",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -1232,7 +1269,7 @@
       "category": "homograph_positive",
       "input": "죽 한 그릇 먹었어",
       "consumed": true,
-      "why": "진짜 음식 죽. 2026-10-02부터 죽이 네 가지 있으므로 어떤 죽인지 되묻는다 — 하나로 좁히지 않는다.",
+      "why": "진짜 음식 죽. 죽이 여러 가지 있으므로 어떤 죽인지 되묻는다 — 하나로 좁히지 않는다(2026-10-02 2차 확장에 채소죽·소고기버섯죽·참치죽이 후보에 더해졌다).",
       "foods": [
         {
           "said": "죽",
@@ -1251,11 +1288,15 @@
       "category": "homograph_positive",
       "input": "회 먹었어",
       "consumed": true,
-      "why": "진짜 음식 회. 2026-10-02부터 육회와 연어회가 있지만, 한 글자 일반명은 하나로 확정하지 않는다 — 양을 셀 수 있는 후보가 육회 하나뿐이라고 조용히 육회로 기록하지 않고 unknown으로 묻는다.",
+      "why": "진짜 음식 회. 2026-10-02 2차 확장부터 식약처 모듬회 행이 있어 맨 \"회\"를 그 대표값으로 기록하고 편차를 안내한다. 육회나 연어회로 좁히는 것이 아니다 — 맨 \"회\"에 답하는 것은 모듬회 행뿐이다.",
       "foods": [
         {
           "said": "회",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "모듬회",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -1277,7 +1318,7 @@
       "category": "homograph_positive",
       "input": "빵 하나 먹었어",
       "consumed": true,
-      "why": "진짜 음식 빵. 그냥 \"빵\"은 식빵으로 좁힐 근거가 없다. 2026-10-02부터 빵 항목이 여럿이라 어떤 빵인지 되묻는다(여전히 하나로 좁히지 않는다).",
+      "why": "진짜 음식 빵. 그냥 \"빵\"은 식빵으로 좁힐 근거가 없다. 빵 항목이 여럿이라 어떤 빵인지 되묻는다(2026-10-02 2차 확장에 붕어빵·찐빵·크림빵 등이 후보에 더해졌다).",
       "foods": [
         {
           "said": "빵",
@@ -1314,11 +1355,16 @@
       "category": "homograph_positive",
       "input": "김 한 봉지 먹었어",
       "consumed": true,
-      "why": "진짜 음식 김. 데이터셋에 없으므로 unknown — 김밥·김치찌개로 가면 안 된다.",
+      "why": "진짜 음식 김. 2026-10-02 2차 확장부터 조미김 행(1봉지 5 g)으로 기록한다 — 김밥·김치찌개·튀김으로 가면 안 된다.",
       "foods": [
         {
           "said": "김",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "조미김",
+          "amount": {
+            "value": 1,
+            "unit": "봉지"
+          }
         }
       ]
     },
@@ -1858,11 +1904,15 @@
       "category": "unknown_mixed",
       "input": "딸기케이크랑 아메리카노 마셨어",
       "consumed": true,
-      "why": "아는 이름(딸기)을 품은 모르는 음식 + 아는 음료.",
+      "why": "2026-10-02 2차 확장부터 딸기케이크는 자기 행이 있다. 두 음식 모두 기록된다.",
       "foods": [
         {
           "said": "딸기케이크",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "딸기케이크",
+          "amount": {
+            "value": 1
+          }
         },
         {
           "said": "아메리카노",
@@ -2023,15 +2073,15 @@
       "category": "narrative",
       "input": "여자친구랑 데이트하고 파스타 먹었어",
       "consumed": true,
-      "why": "동행인 + 활동 + 되물어야 할 음식.",
+      "why": "동행인 + 활동. 2026-10-02 2차 확장부터 맨 \"파스타\"는 식약처 일반 스파게티 행의 대표값으로 기록하고 편차를 안내한다(전에는 소스별로 되물었다).",
       "foods": [
         {
           "said": "파스타",
-          "status": "ambiguous",
-          "candidates": [
-            "토마토 스파게티",
-            "크림 스파게티"
-          ]
+          "status": "resolved",
+          "entry": "스파게티",
+          "amount": {
+            "value": 1
+          }
         }
       ],
       "tags": [
@@ -2215,7 +2265,7 @@
       "category": "multi_food",
       "input": "커피 마시고 샌드위치 먹었어",
       "consumed": true,
-      "why": "'마시고' 절 + 되물어야 할 음식.",
+      "why": "2026-10-02 2차 확장부터 맨 \"샌드위치\"는 모듬 샌드위치 행으로 바로 기록한다(고편차 안내).",
       "foods": [
         {
           "said": "커피",
@@ -2227,12 +2277,11 @@
         },
         {
           "said": "샌드위치",
-          "status": "ambiguous",
-          "candidates": [
-            "햄에그 샌드위치",
-            "참치 샌드위치",
-            "닭가슴살 샌드위치"
-          ]
+          "status": "resolved",
+          "entry": "샌드위치",
+          "amount": {
+            "value": 1
+          }
         }
       ],
       "tags": [
@@ -2525,11 +2574,12 @@
       "category": "unknown",
       "input": "순두부 먹었어",
       "consumed": true,
-      "why": "순두부 → 순두부찌개로 좁히면 안 된다.",
+      "why": "순두부 → 순두부찌개로 좁히면 안 된다. 2026-10-02 2차 확장에 순두부(두부) 행이 들어왔다. 1회 제공량이 없으므로 양을 묻는다.",
       "foods": [
         {
           "said": "순두부",
-          "status": "unknown"
+          "status": "unmeasurable",
+          "entry": "순두부"
         }
       ],
       "tags": [
@@ -2632,14 +2682,18 @@
       "category": "homograph_negative",
       "input": "사과 받고 기분 풀려서 케이크 먹었어",
       "consumed": true,
-      "why": "사과(사죄)를 받은 것. 케이크는 데이터에 없다.",
+      "why": "사과(사죄)를 받은 것. 2026-10-02 2차 확장부터 케이크는 식약처 일반 케이크 행의 대표값으로 기록한다(고편차 안내).",
       "notEaten": [
         "사과"
       ],
       "foods": [
         {
           "said": "케이크",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "케이크",
+          "amount": {
+            "value": 1
+          }
         }
       ],
       "tags": [
@@ -2839,7 +2893,7 @@
       "category": "unknown_mixed",
       "input": "김치찌개랑 계란말이 먹었어",
       "consumed": true,
-      "why": "'계란'으로 시작하는 없는 음식.",
+      "why": "2026-10-02 2차 확장에 계란말이가 들어왔다(1인분은 다른 달걀말이 행에서 빌린 값, 고편차 안내).",
       "tags": [
         "b2_blind"
       ],
@@ -2854,7 +2908,11 @@
         },
         {
           "said": "계란말이",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "계란말이",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -2930,7 +2988,7 @@
       "category": "unknown_mixed",
       "input": "비빔밥 먹고 나서 아이스크림 먹었어",
       "consumed": true,
-      "why": "'먹고 나서'.",
+      "why": "\"먹고 나서\". 2026-10-02 2차 확장부터 아이스크림은 일반 아이스크림 행의 대표값으로 기록한다(고편차 안내).",
       "tags": [
         "b2_blind"
       ],
@@ -2945,7 +3003,11 @@
         },
         {
           "said": "아이스크림",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "아이스크림",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -3154,14 +3216,19 @@
       "category": "unknown",
       "input": "케이크 한 조각 먹었어",
       "consumed": true,
-      "why": "없는 음식 + 수량.",
+      "why": "2026-10-02 2차 확장부터 케이크는 일반 케이크 행으로 기록한다. 한 조각은 그 행의 1회 제공량이다.",
       "tags": [
         "b2_blind"
       ],
       "foods": [
         {
           "said": "케이크",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "케이크",
+          "amount": {
+            "value": 1,
+            "unit": "조각"
+          }
         }
       ]
     },
@@ -3170,7 +3237,7 @@
       "category": "unknown_mixed",
       "input": "우유에 시리얼 말아먹었어",
       "consumed": true,
-      "why": "'에' 연결 + 붙여 쓴 동사.",
+      "why": "\"에\" 연결 + 붙여 쓴 동사. 2026-10-02 2차 확장부터 시리얼은 아는 음식이다 — \"말아\" 때문에 못 읽으면 파서 경계 실패로 센다.",
       "tags": [
         "b2_blind"
       ],
@@ -3185,7 +3252,11 @@
         },
         {
           "said": "시리얼",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "시리얼",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
