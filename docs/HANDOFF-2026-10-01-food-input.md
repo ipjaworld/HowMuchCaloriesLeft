@@ -1,8 +1,8 @@
 # HANDOFF — 음식 입력 해석 (2026-10-02 244-food production checkpoint)
 
-> 상태: **244-food production checkpoint.** production은 `ed52a24`(244-food v1, 고편차 정책 포함)이고, **8A 후보 필터가 켜져 있다(`FOOD_CANDIDATE_FILTER=on`).** 다음 세션은 이 파일부터 읽는다. 과정이 아니라 지금 사실과 다음 할 일만 적는다.
+> 상태: **244-food production checkpoint.** production은 `c9aeb25`(244-food v1, 고편차 정책 + 안내 문구 수정 포함, dataset 244개)이고, **8A 후보 필터가 켜져 있다(`FOOD_CANDIDATE_FILTER=on`).** 다음 세션은 이 파일부터 읽는다. 과정이 아니라 지금 사실과 다음 할 일만 적는다.
 >
-> **로컬에는 고편차 안내 문구 수정(`b677f21`)이 커밋돼 있고 아직 push하지 않았다 — 아래 "244-food v1 coverage"의 "production smoke"와 "현재 상태" 참고. 다음 할 일: 그 push 승인을 받는 것뿐이다.** 파서 규칙 추가 금지, same-food·similar-food 판단 문제는 범위 밖 — 아래 "남은 문제" 참고.
+> **244-food v1 production checkpoint는 완료됐다. 고편차 안내 문구 수정(`b677f21`)도 배포돼 production smoke를 통과했다 — 아래 "244-food v1 coverage"와 "현재 상태" 참고. 대기 중인 배포는 없고, 로컬에는 이 문서 갱신 커밋만 앞서 있다(다음 release 때 같이 push).** 파서 규칙 추가 금지, same-food·similar-food 판단 문제는 범위 밖 — 아래 "남은 문제" 참고.
 
 ## food-input production checkpoint (2026-10-01)
 - **배포**: `main` push `86d11df..5a066fb` → Vercel production 배포 성공. 필터 off 상태의 production smoke(아래 "push 전 smoke test" 2~6, 9) 전부 통과: 김밥 한 줄 322 · 라면+커피 한 기록 · 비빔밥 밥 반 남김 → 반 그릇 320 · 양 질문 중 "김밥 먹었어" → 새 문장 · 떡볶이+튀김 반만 → 확인 → 300 → 1,688−259+130+300=1,859 · add 응답 `candidateFilter` `{"status":"off"}`.
@@ -87,9 +87,9 @@
 - **보류 중**: 두부김치(돼지고기 포함 여부를 행이 말하지 않음) · 감자튀김(1인분 150g이 MFDS 외식 행 80~130g보다 큼) · 김치전(맨 "김치" 모호성 3 → 4개로 악화) · 계란말이(1인분 없음, 매번 g을 물음).
 
 ## 244-food v1 coverage — **production 배포됨** (2026-10-02)
-`main` push `8bce96c..ed52a24` → Vercel production 배포 성공. env 변경 없음.
+`main` push `8bce96c..ed52a24`(244-food) → `ed52a24..c9aeb25`(안내 문구 수정) → 두 번 모두 Vercel production 배포 성공. env 변경 없음.
 
-- **정책 변경**: 음식 identity가 분명하면 식약처 행의 값으로 **바로 기록**하고, 재료·양에 따라 차이가 큰 음식은 `variance: "high"`로 표시해 기록 뒤에 안내한다("…은 재료와 양에 따라 칼로리 차이가 클 수 있어요. 다르면 칼로리를 고쳐 말해주세요." — production의 문구. 로컬 `b677f21`에서 바뀜, 아래 "production smoke" 참고). 질문하지 않고, 기록을 막지 않는다. 숫자는 여전히 pin한 행의 것이고 flag는 분류일 뿐이다.
+- **정책 변경**: 음식 identity가 분명하면 식약처 행의 값으로 **바로 기록**하고, 재료·양에 따라 차이가 큰 음식은 `variance: "high"`로 표시해 기록 뒤에 안내한다("…은 재료와 양에 따라 칼로리 차이가 클 수 있어요. 다르면 "마라탕 800kcal로 고쳐줘"처럼 말해주세요." — `b677f21`부터의 문구. 그 전에는 "다르면 칼로리를 고쳐 말해주세요."였다). 질문하지 않고, 기록을 막지 않는다. 숫자는 여전히 pin한 행의 것이고 flag는 분류일 뿐이다.
 - **데이터 모델(최소 변경)**: `FoodEntry.variance?: "high"`(seed → importer → dataset) · `FoodItem.calorieVariance?: "high"`(저장됨, 선택 필드) · 고편차 항목은 항상 `caloriesEstimated`(~). `describeAdded`가 안내를 덧붙인다. 사용자가 kcal을 말하면 그 값이 이기고 flag는 붙지 않는다.
 - **dataset 120 → 244** (+124). 기존 120개 값 변화 없음(부대찌개·닭갈비·닭가슴살 샐러드·채소 샐러드에 `variance`만 추가).
 - **고편차 27개**: 마라탕 576 · 샤브샤브 258 · 훠궈 558 · 치킨 903 · 양념치킨 552 · 피자 548 · 찜닭 273 · 곱창전골 528 · 곱창 276 · 갈비찜 495 · 아귀찜 168 · 해물찜 400 · 스테이크 388 · 초밥 608 · 라멘 588 · 돈코츠라멘 686 · 미소라멘 623 · 소유라멘 504 · 참치 샐러드 227 · 돼지국밥 912 · 소갈비구이 723 · 탕수육 520 · 도넛 297 (1 serving kcal) + 기존 부대찌개 · 닭갈비 · 닭가슴살 샐러드 · 채소 샐러드.
@@ -103,7 +103,7 @@
 - **새로 늘어난 질문/확인**: 샤브샤브(마라탕 기록 후, add 0.88 확인) · "피자 먹으려다가 그냥 굶었어"(피자 기록 후 delete 0.76 "취소할까요?") — same/similar-food 계열. 맨 "소고기"·"참치"·"갈비"·"장어"·"오징어"·"낙지"·"감"은 이제 여러 요리 중 고르라고 묻는다(전에는 unknown). 맨 "밥" 후보는 40개(화면에는 5개).
 - **아직 unknown**: 마라샹궈 · 포케 · 타코 · 술 · 케이크 · 아이스크림 · 시리얼 · 떡류 · 튀김류 · 치킨버거 등 버거 변형 · 컵라면·비빔면 · 브랜드 제품. 보류 그대로: 두부김치 · 감자튀김 · 김치전 · 계란말이. **콩자반은 들어갔지만 "콩자반 먹었어"는 못 읽는다**(파서가 끝의 "반"을 수량으로 읽음, "콩조림"은 됨).
 - **rollback**: `git revert 8fb8441` → `main` push(= production 재배포). 120-food 상태로 돌아간다. 8A 필터와는 독립이다.
-- **production smoke** (`FOOD_CANDIDATE_FILTER=on` 유지, 빈 기록에서 순서대로, `/api/chat` 17회 전부 200, 353~625ms):
+- **production smoke — `ed52a24`, 옛 안내 문구** (`FOOD_CANDIDATE_FILTER=on` 유지, 빈 기록에서 순서대로, `/api/chat` 17회 전부 200, 353~625ms):
 
 | 문장 | `candidateFilter` | 확인 질문 | 결과 |
 |---|---|---|---|
@@ -127,11 +127,20 @@
 
   resolved 음식이 필터로 빠진 경우 0, generic/trap이 특정 음식으로 확정된 경우 0, API error 0. 테스트 기록은 되돌렸다(`mealRecords` 백업 → 복구, 문자열 일치 확인).
 - **production smoke 이슈 — "마라탕은 800kcal였어"가 add로 오인됨**: 같은 음식이 이미 기록된 상태에서 Jev가 add 0.97로 판정해 확인 없이 두 번째 기록을 만들었다. 응답은 "기록했어요"라 보이는 실패지만, 당시 안내 문구("다르면 칼로리를 고쳐 말해주세요")가 바로 이 표현을 유도했다. 로컬 smoke에서는 같은 문장이 정정으로 읽혔었다(당시 기록이 더 적었다. 원인은 확인하지 않음). **same-food add/modify 흔들림 계열로 보고 244-food production은 유지한다(rollback 안 함).** intent·파서·same-food 구조는 고치지 않는다.
-- **UX 안내 보완 (`b677f21`, 로컬 커밋, 미배포)**: 안내 문구만 명시적 modify 표현으로 바꿨다 → `…은 재료와 양에 따라 칼로리 차이가 클 수 있어요. 다르면 "마라탕 800kcal로 고쳐줘"처럼 말해주세요.` 음식명은 방금 기록한 고편차 음식(여럿이면 첫 번째)이다. `replyText.ts`의 `highVarianceHint`(+test)만 바뀌었다. 검증: test 954 · typecheck · lint · build. 브라우저(로컬, 빈 기록, 필터 off): 마라탕 먹었어 → ~576 + 새 안내 · "마라탕 800kcal로 고쳐줘" → modify 1.00, "바꿨어요: … (576 → 800 kcal)" · 기록 1건만 남음.
+- **UX 안내 보완 (`b677f21`, production 배포됨)**: 안내 문구만 명시적 modify 표현으로 바꿨다 → `…은 재료와 양에 따라 칼로리 차이가 클 수 있어요. 다르면 "마라탕 800kcal로 고쳐줘"처럼 말해주세요.` 음식명은 방금 기록한 고편차 음식(여럿이면 첫 번째)이다. `replyText.ts`의 `highVarianceHint`(+test)만 바뀌었다. 검증: test 954 · typecheck · lint · build. 브라우저(로컬, 빈 기록, 필터 off): 마라탕 먹었어 → ~576 + 새 안내 · "마라탕 800kcal로 고쳐줘" → modify 1.00, "바꿨어요: … (576 → 800 kcal)" · 기록 1건만 남음.
+- **production smoke — `c9aeb25`, 새 안내 문구** (`FOOD_CANDIDATE_FILTER=on` 유지, 빈 기록, 응답 모두 200):
 
-### 현재 상태 (2026-10-02 — 244-food production, 안내 문구 수정은 push 승인 대기)
-- production: **244-food** (`ed52a24`), `FOOD_CANDIDATE_FILTER=on`. 안내 문구는 옛 문구("다르면 칼로리를 고쳐 말해주세요").
-- local `main`: origin/main보다 앞선 커밋에 `b677f21`(안내 문구 수정)과 이 문서 갱신 커밋이 있다. working tree clean. **push 금지 상태 — 사용자 승인 대기.**
+| 문장 | 판정 | 결과 |
+|---|---|---|
+| 마라탕 먹었어 | add 0.99 · `candidateFilter` no_questions · 확인 없음 | 마라탕 1그릇 ~576 + 새 안내(`다르면 "마라탕 800kcal로 고쳐줘"처럼 말해주세요.`) |
+| 마라탕 800kcal로 고쳐줘 | modify 1.00 · 확인 없음 | "바꿨어요: 마라탕 1그릇 → 마라탕 1그릇 (576 → 800 kcal)", 합계 576 → 800 |
+
+  저장된 기록은 마라탕 800 한 건, 중복 기록 없음. `mealRecords`는 원상복구했다(백업과 문자열 일치 확인).
+- **그대로 남은 것**: "마라탕은 800kcal였어"가 add로 읽히는 판단 자체는 고치지 않았다. 안내 문구로 우회했을 뿐이고, same-food 이슈로 v1 이후에 다룬다.
+
+### 현재 상태 (2026-10-02 — 244-food v1 production checkpoint 완료)
+- production: **244-food** (`c9aeb25`), dataset 244, `FOOD_CANDIDATE_FILTER=on`. 고편차 안내는 새 문구(`…로 고쳐줘`).
+- local `main`: origin/main(`c9aeb25`)보다 이 문서 갱신 커밋 하나만 앞서 있다(문서만, 코드 변경 없음). working tree clean. 이 커밋은 다음 코드 변경이나 다음 release 때 같이 push한다 — 문서만을 위해 push(= 재배포)하지 않는다.
 - **배포 전 최종 gate (`8fb8441` 코드)**: dataset 244 · test 953 · typecheck/lint/build 통과 · `eval:food-coverage` 162/191 · 158/179 · silent wrong/drop/nothing_found 0/0/0 · 필요한 질문 59 · 불필요한 질문 31/22 · multi-food 33/37. `eval:food-judgment`(`8fb8441`에서 1회): 8A off 167/191 → on 178/191 · 불필요 22 → 10 · wrong/drop 0 · 나빠진 case 0 · fallback 0.
 - `b677f21` 이후: test 954 · typecheck/lint/build 통과. `eval:food-coverage`·`eval:food-judgment`는 다시 돌리지 않았다(응답 문구만 바뀜).
 
@@ -152,8 +161,8 @@
 ### 다음 세션 순서
 1. 이 문서 읽기
 2. `git status` / `git log` 확인 (위 "현재 상태"와 같은지)
-3. 안내 문구 수정(`b677f21`)의 push 승인 확인 — push는 사용자 승인 후에만. `main` push = production 배포.
-4. 배포하면 production smoke: 마라탕 먹었어 → 새 안내 문구 → "마라탕 800kcal로 고쳐줘" → 576 → 800 정정, 기록 1건. smoke 전에 `mealRecords` 백업, 끝나면 복구.
+3. 대기 중인 배포는 없다. 다음 작업은 사용자가 정한다(후보는 위 "v1 이후 이슈").
+4. push는 사용자 승인 후에만. `main` push = production 배포. production smoke 전에 `mealRecords` 백업, 끝나면 복구.
 5. 그 사이 코드가 바뀌었다면 전체 gate부터 다시: `pnpm test && pnpm typecheck && pnpm lint && pnpm build` · `pnpm eval:food-coverage` · `pnpm eval:food-judgment`. seed·serving reference를 바꾸면 `pnpm sync:mfds` 필요(단독으로 약 10분, 다른 MFDS 조회와 동시에 돌리지 말 것).
 
 ## 제품 목표
