@@ -46,4 +46,16 @@ describe("MFDS client paging", () => {
     expect(rows.some((row) => row.FOOD_CD === wanted)).toBe(true);
     expect(fetchImpl).toHaveBeenCalledTimes(28);
   });
+
+  it("asks the server for one class only when told to, and not otherwise", async () => {
+    const fetchImpl = fakeFetch(10);
+    const client = createMfdsClient({ apiKey: "k", fetchImpl: fetchImpl as typeof fetch });
+    const classOf = (call: number) =>
+      new URL(String(fetchImpl.mock.calls[call]?.[0])).searchParams.get("DB_CLASS_NM");
+
+    await client.searchByName("케이크", { foodClass: "품목대표" });
+    await client.searchByName("케이크");
+    expect(classOf(0)).toBe("품목대표");
+    expect(classOf(1)).toBeNull();
+  });
 });

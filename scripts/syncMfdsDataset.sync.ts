@@ -75,9 +75,16 @@ async function main(): Promise<void> {
   const unresolved: string[] = [];
 
   for (const seed of FOOD_SEEDS) {
-    const rows = await client.searchByName(seed.query, {
-      stopWhen: (row) => row.FOOD_CD === seed.foodCode,
-    });
+    // Almost every seed pins a 품목대표 row, and asking for that class alone
+    // turns a search of thousands of rows into one of dozens — "케이크" is
+    // 6,122 rows, past the page cap, against 51. The few seeds that pin a
+    // product row are not in that answer, so they fall back to the full
+    // search. Either way the row is selected by its code, never by position.
+    const wanted = { stopWhen: (row: { FOOD_CD: string }) => row.FOOD_CD === seed.foodCode };
+    let rows = await client.searchByName(seed.query, { ...wanted, foodClass: "품목대표" });
+    if (!rows.some((row) => row.FOOD_CD === seed.foodCode)) {
+      rows = await client.searchByName(seed.query, wanted);
+    }
     const { row, matched } = selectRow(rows, { foodCode: seed.foodCode });
 
     if (row === null) {

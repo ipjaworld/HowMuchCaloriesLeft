@@ -114,6 +114,13 @@ export type SearchOptions = {
    * exceed ten minutes.
    */
   stopWhen?: (row: MfdsRow) => boolean;
+  /**
+   * Ask the API for one `DB_CLASS_NM` only. "케이크" matches 6,122 rows, of
+   * which 51 are 품목대표 — the rest are bakery and café products that sort
+   * ahead of the row a seed pins, past the page cap. The filter is applied
+   * by the server, so the rows returned are the same rows, just fewer.
+   */
+  foodClass?: string;
 };
 
 export type MfdsClient = {
@@ -126,13 +133,14 @@ export function createMfdsClient({
   endpoint = DEFAULT_ENDPOINT,
   fetchImpl = fetch,
 }: MfdsClientOptions): MfdsClient {
-  async function fetchPage(name: string, pageNo: number) {
+  async function fetchPage(name: string, pageNo: number, foodClass?: string) {
     const params = new URLSearchParams({
       serviceKey: apiKey,
       pageNo: String(pageNo),
       numOfRows: String(MAX_ROWS_PER_PAGE),
       type: "json",
       FOOD_NM_KR: name,
+      ...(foodClass === undefined ? {} : { DB_CLASS_NM: foodClass }),
     });
     const url = `${endpoint}/${OPERATION}?${params.toString()}`;
 
@@ -189,7 +197,7 @@ export function createMfdsClient({
       const collected: MfdsRow[] = [];
 
       for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
-        const { rows, totalCount } = await fetchPage(name, pageNo);
+        const { rows, totalCount } = await fetchPage(name, pageNo, options.foodClass);
         collected.push(...rows);
 
         if (rows.length === 0 || collected.length >= totalCount) break;
