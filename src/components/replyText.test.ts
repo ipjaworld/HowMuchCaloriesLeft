@@ -213,7 +213,8 @@ describe("the add pipeline's sentences", () => {
     expect(reply.kind).toBe("statement");
     expect(reply.text).toBe(
       "기록했어요. 오늘 1,580 kcal 먹었어요. 520 kcal 남았어요. " +
-        "치킨은 재료와 양에 따라 칼로리 차이가 클 수 있어요. 다르면 칼로리를 고쳐 말해주세요.",
+        "치킨은 재료와 양에 따라 칼로리 차이가 클 수 있어요. " +
+        '다르면 "치킨 800kcal로 고쳐줘"처럼 말해주세요.',
     );
     expect(reply.text).not.toContain("?");
   });
@@ -221,6 +222,15 @@ describe("the add pipeline's sentences", () => {
   it("names each varying food once", () => {
     const reply = describeAdded(summary(), [], ["피자", "마라탕", "피자"]);
     expect(reply.text).toContain("피자와 마라탕은 재료와 양에 따라");
+  });
+
+  it("shows the correction sentence with one of the foods just recorded", () => {
+    expect(describeAdded(summary(), [], ["마라탕"]).text).toContain(
+      '다르면 "마라탕 800kcal로 고쳐줘"처럼 말해주세요.',
+    );
+    expect(describeAdded(summary(), [], ["피자", "마라탕"]).text).toContain(
+      '다르면 "피자 800kcal로 고쳐줘"처럼 말해주세요.',
+    );
   });
 
   it("says nothing about variance for an ordinary food", () => {

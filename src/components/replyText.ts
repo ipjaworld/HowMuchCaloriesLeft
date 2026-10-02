@@ -246,15 +246,23 @@ export function describeAdded(
   if (varying.length > 0) {
     const names = listNames(varying);
     lines.push(
-      `${names}${topicParticle(varying.at(-1) ?? names)} 재료와 양에 따라 칼로리 차이가 클 수 있어요. ${HIGH_VARIANCE_HINT}`,
+      `${names}${topicParticle(varying.at(-1) ?? names)} 재료와 양에 따라 칼로리 차이가 클 수 있어요. ${highVarianceHint(varying[0] ?? names)}`,
     );
   }
 
   return { kind: "statement", text: lines.join(" ") };
 }
 
-/** How to change a representative figure, in the app's own words. */
-export const HIGH_VARIANCE_HINT = "다르면 칼로리를 고쳐 말해주세요.";
+/**
+ * How to change a representative figure, in the app's own words.
+ *
+ * It spells out a sentence to say, with the food just recorded in it, because
+ * the looser "…은 800kcal였어" was read as a second record of the same food
+ * rather than a correction. "…로 고쳐줘" is the form that is read as one.
+ */
+export function highVarianceHint(food: string): string {
+  return `다르면 "${food} 800kcal로 고쳐줘"처럼 말해주세요.`;
+}
 
 /**
  * The subject of a sentence about foods the dataset lacks, with its particle.
