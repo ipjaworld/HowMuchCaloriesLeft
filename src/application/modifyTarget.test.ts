@@ -4,7 +4,7 @@ import { KOREAN_FOODS, koreanFoodResolver } from "@/ai/nutrition/koreanFoods";
 import { summarizeDay } from "@/domain/calories";
 import type { FoodItem, MealRecord } from "@/domain/meal";
 import type { MealRecordRepository } from "@/domain/repository";
-import { describeQuestion } from "@/components/replyText";
+import { describeCommand, describeQuestion, NONE_OF_THESE } from "@/components/replyText";
 import { runChat } from "./chatPipeline";
 import { decideCommand, type Command } from "./commands";
 import { replaceFoodItem } from "./editFood";
@@ -347,5 +347,100 @@ describe("checkModifyTarget leaves the unnamed cases alone", () => {
   it("a deictic sentence names nothing: the pick stands", () => {
     const items = [entry("k", "케이크", 0), entry("c", "초콜릿케이크", 1)];
     expect(checkModifyTarget("방금 그거 반만 먹었어", items, "c")).toEqual({ kind: "ok" });
+  });
+});
+
+describe("identical-looking entries are different records (2026-10-03)", () => {
+  // 오전 케이크 1조각 266 · 오후 케이크 1조각 266 — "케이크 700kcal로 고쳐줘"
+  // must not change either one before the user says which.
+  const morning = entry("k-am", "케이크", 0, 266, "1조각");
+  const afternoon = entry("k-pm", "케이크", 300, 266, "1조각");
+  const sameMoment = { ...afternoon, id: "k-pm-2" };
+
+  it.each([
+    ["Jev, confident, on the newer", modify("k-pm", 0.99)],
+    ["Jev, confident, on the older", modify("k-am", 0.99)],
+    ["Jev null (fallback takes the newest)", modify(null, 0.9)],
+    ["Jev under the floor", modify("k-pm", 0.2)],
+    ["no reference confidence at all", modify("k-pm", null)],
+  ])("different times: asks, whatever picked (%s)", (_, judgment) => {
+    const command = decide(judgment, "케이크 700kcal로 고쳐줘", [morning, afternoon]);
+    expect(command).toMatchObject({ type: "clarify", reason: "unknown_target", intent: "modify_food" });
+    expect(idsOf(command).sort()).toEqual(["k-am", "k-pm"]);
+  });
+
+  it("same time too: still two records, still asks, each chip bound to its own id", () => {
+    const command = decide(modify("k-pm-2", 0.99), "케이크 700kcal로 고쳐줘", [afternoon, sameMoment]);
+    expect(idsOf(command).sort()).toEqual(["k-pm", "k-pm-2"]);
+    const reply = describeCommand(command, summarizeDay([], 2000));
+    if (reply.kind !== "question") throw new Error("expected a question");
+    const chips = reply.options.filter((option) => option.id !== NONE_OF_THESE);
+    expect(chips.map((option) => option.id)).toEqual(["k-pm", "k-pm-2"]);
+    expect(chips.map((option) => option.label)).toEqual(["케이크 1조각 · 14:00 · 1번째 기록", "케이크 1조각 · 14:00 · 2번째 기록"]);
+  });
+
+  it("the same stored id listed twice is one entry: no question", () => {
+    expect(decide(modify("k-am", 0.95), "케이크 700kcal로 고쳐줘", [morning, { ...morning }])).toMatchObject({
+      type: "modify_candidate",
+      targetId: "k-am",
+      needsConfirmation: false,
+    });
+  });
+
+  it("a unique entry is still corrected without a new question", () => {
+    expect(decide(modify("k-am", 0.95), "케이크 700kcal로 고쳐줘", [morning, entry("c", "초콜릿케이크", 10)])).toMatchObject({
+      type: "modify_candidate",
+      targetId: "k-am",
+      needsConfirmation: false,
+    });
+  });
+
+  it("the picked chip is final: that id, and only that id, changes", async () => {
+    const records = [
+      record("r1", 0, [food("k-am", "케이크", 266, "1조각")]),
+      record("r2", 300, [food("k-pm", "케이크", 266, "1조각")]),
+    ];
+    const { repository, records: stored } = store(records);
+    const items = toItems(stored);
+    const snapshot = JSON.stringify(stored);
+
+    // The question itself writes nothing; nor does 해당 없음 or 취소, which only
+    // clear the question on the screen.
+    const asked = decide(modify("k-pm", 0.99), "케이크 700kcal로 고쳐줘", items);
+    expect(asked.type).toBe("clarify");
+    expect(JSON.stringify(stored)).toBe(snapshot);
+
+    // The user picks the morning one; the sentence is re-sent with the pick.
+    const picked = decideCommand(
+      modify("k-pm", 0.99),
+      { message: "케이크 700kcal로 고쳐줘", now: at(600), dailyGoalCalories: 2000, recentItems: items },
+      { targetId: "k-am", intent: "modify_food" },
+    );
+    expect(picked).toMatchObject({ type: "modify_candidate", targetId: "k-am", needsConfirmation: false });
+    const { command } = await runChat(
+      { message: "케이크 700kcal로 고쳐줘", now: at(600), dailyGoalCalories: 2000, recentItems: items },
+      { targetId: "k-am", intent: "modify_food" },
+      { judge: judgeWith(modify("k-pm", 0.99)), resolver: koreanFoodResolver, candidateJudge: null },
+    );
+    if (command.type !== "modify_candidate") throw new Error("expected modify_candidate");
+    const start = planModifyStart(stored, command, at(601));
+    if (start.kind !== "pending") throw new Error(`expected pending, got ${start.kind}`);
+    expect(start.pending.target?.itemId).toBe("k-am");
+
+    const { replacement } = planModifyCommit(start.pending);
+    await replaceFoodItem(repository, stored, "k-am", replacement!);
+    const after = (await repository.getByDate("2026-10-02")).flatMap((r) => r.items);
+    expect(after.map((item) => [item.id, item.calories])).toEqual([
+      ["k-am", 700],
+      ["k-pm", 266],
+    ]);
+    expect(after.reduce((sum, item) => sum + item.calories, 0)).toBe(966);
+  });
+
+  it("a picked entry that has vanished is reported gone, never another twin", () => {
+    const records = [record("r2", 300, [food("k-pm", "케이크", 266, "1조각")])];
+    expect(
+      planModifyStart(records, { targetId: "k-am", sourceText: "케이크 700kcal로 고쳐줘", parts: [], needsConfirmation: false }, at(601)),
+    ).toEqual({ kind: "gone" });
   });
 });

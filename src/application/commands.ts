@@ -168,9 +168,10 @@ function usableTarget(judgment: Judgment, input: JudgmentInput): string | null {
  * they would remove, the answer is a question — whoever supplied the target,
  * the model or the rule.
  *
- * Matches that are indistinguishable (same food, same figure) are not
- * ambiguity in any way the user could act on: either choice removes the same
- * number from the same day, so asking would be friction for nothing.
+ * Matches are counted by stored id. Identical-looking entries (same food,
+ * same figure) are still different records — the morning one and the
+ * afternoon one — so removing either unasked is a guess (policy since
+ * 2026-10-03; it used to treat them as one). The same id listed twice is one.
  */
 /**
  * "2개 먹었다니까?" names no food, only a new amount. Said as a correction, it
@@ -191,8 +192,9 @@ function contestedDeleteTargets(input: JudgmentInput): RecentItem[] {
   const matches = findReferenceMatches(input.message, input.recentItems);
   if (matches.length <= 1) return [];
 
-  const distinct = new Set(matches.map((item) => `${item.name}|${item.calories}`));
-  return distinct.size > 1 ? matches : [];
+  const ids = new Set(matches.map((item) => item.id));
+  if (ids.size <= 1) return [];
+  return matches.filter((item, index) => matches.findIndex((other) => other.id === item.id) === index);
 }
 
 /**

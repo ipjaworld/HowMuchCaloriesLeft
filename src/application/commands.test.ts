@@ -410,9 +410,10 @@ describe("a delete never breaks a tie by itself", () => {
     expect(command).toEqual({ type: "delete_candidate", targetId: "i-gimbap" });
   });
 
-  it("does not ask between entries that are indistinguishable", () => {
-    // Same food, same figure: either choice removes the same number from the
-    // same day, so a question would be friction for nothing.
+  it("asks even between identical-looking entries — they are different records", () => {
+    // Policy changed 2026-10-03. It used to delete the pick: "either choice
+    // removes the same number". But the noon and the 1 p.m. 갈비탕 are two
+    // records, and the one left behind is not the user's choice.
     const twins: RecentItem[] = [
       { id: "a", name: "갈비탕", amount: "하나", calories: 362, consumedAt: "2026-09-20T12:00:00+09:00" },
       { id: "b", name: "갈비탕", amount: "하나", calories: 362, consumedAt: "2026-09-20T13:00:00+09:00" },
@@ -426,7 +427,18 @@ describe("a delete never breaks a tie by itself", () => {
       }),
       withItems("갈비탕 지워줘", twins),
     );
-    expect(command).toEqual({ type: "delete_candidate", targetId: "b" });
+    expect(command).toMatchObject({ type: "clarify", reason: "unknown_target", intent: "delete_food" });
+    if (command.type !== "clarify") throw new Error("expected clarify");
+    expect(command.candidates?.map((candidate) => candidate.id).sort()).toEqual(["a", "b"]);
+  });
+
+  it("the same stored entry listed twice is one entry, not a choice", () => {
+    const once: RecentItem = { id: "a", name: "갈비탕", amount: "하나", calories: 362, consumedAt: "2026-09-20T12:00:00+09:00" };
+    const command = decideCommand(
+      judgment({ intent: "delete_food", intentConfidence: 1, referenceTargetId: "a", referenceConfidence: 0.99 }),
+      withItems("갈비탕 지워줘", [once, { ...once }]),
+    );
+    expect(command).toEqual({ type: "delete_candidate", targetId: "a" });
   });
 
   it("leaves a modify free to take the most recent match", () => {
@@ -534,13 +546,16 @@ describe("a correction that could mean two entries asks which", () => {
     expect(command.type).toBe("modify_candidate");
   });
 
-  it("identical entries are not a choice worth asking about", () => {
+  it("identical-looking entries are still a choice (policy since 2026-10-03)", () => {
+    // Until 2026-10-03 these were "not worth asking about" and the pick was
+    // applied. They are two records — 8:00 and 9:00 — and only the user knows
+    // which one was two bananas.
     const twins: RecentItem[] = [
       { id: "b1", name: "바나나", amount: "1개", calories: 77, consumedAt: "2026-09-20T08:00:00+09:00" },
       { id: "b2", name: "바나나", amount: "1개", calories: 77, consumedAt: "2026-09-20T09:00:00+09:00" },
     ];
     const command = decideCommand(modify("b2"), { ...input("바나나 두 개였어"), recentItems: twins });
-    expect(command.type).toBe("modify_candidate");
+    expect(command).toMatchObject({ type: "clarify", reason: "unknown_target", intent: "modify_food" });
   });
 });
 

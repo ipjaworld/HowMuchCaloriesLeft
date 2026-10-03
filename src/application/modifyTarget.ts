@@ -123,11 +123,21 @@ function oldSide(message: string, items: RecentItem[]): { text: string; certain:
   return { text: message, certain: false };
 }
 
-const identity = (item: RecentItem) => `${item.name}|${item.amount ?? ""}|${item.calories}`;
+/**
+ * More than one stored entry. Counted by id, never by what the entries look
+ * like: two 케이크 1조각 266 kcal logged in the morning and the afternoon are
+ * two records, and changing either one unasked is a guess about which (until
+ * 2026-10-03 identical-looking entries were treated as one and the pick — the
+ * judge's, or the newest — was applied).
+ */
+function severalEntries(items: RecentItem[]): boolean {
+  return new Set(items.map((item) => item.id)).size > 1;
+}
 
-/** Several entries that differ in something a correction would change. */
-function distinguishable(items: RecentItem[]): boolean {
-  return new Set(items.map(identity)).size > 1;
+/** The same stored entry listed twice is one entry, not a choice. */
+function uniqueById(items: RecentItem[]): RecentItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => (seen.has(item.id) ? false : (seen.add(item.id), true)));
 }
 
 const byRecency = (items: RecentItem[]) =>
@@ -144,9 +154,10 @@ export type TargetCheck =
 /**
  * Checks a modify target against what the sentence names.
  *
- *   - one name, one entry (or identical twins), and the pick is it: ok;
- *   - one name, several different entries of it: ask among them — the
- *     newest is not a reason to pick one;
+ *   - one name, one entry, and the pick is it: ok;
+ *   - one name, several entries of it — even identical-looking ones, which
+ *     are still different records: ask among them. Neither the newest nor a
+ *     confident pick is a reason to choose one;
  *   - several names: ask among them;
  *   - one name, but a different entry was picked: when the old side is known
  *     from the grammar, or the picked entry is a longer name containing the
@@ -161,19 +172,20 @@ export function checkModifyTarget(
   items: RecentItem[],
   targetId: string | null,
 ): TargetCheck {
+  items = uniqueById(items);
   const target = items.find((item) => item.id === targetId) ?? null;
   const side = oldSide(message, items);
   const names = mentionedNames(side.text, items);
 
   if (names.length > 1) {
     const named = byRecency(items.filter((item) => names.includes(item.name)));
-    return distinguishable(named) ? { kind: "ask", candidates: named } : { kind: "ok" };
+    return severalEntries(named) ? { kind: "ask", candidates: named } : { kind: "ok" };
   }
 
   if (names.length === 1) {
     const name = names[0] as string;
     const sameName = byRecency(items.filter((item) => item.name === name));
-    if (distinguishable(sameName)) return { kind: "ask", candidates: sameName };
+    if (severalEntries(sameName)) return { kind: "ask", candidates: sameName };
     if (target !== null && target.name === name) return { kind: "ok" };
 
     const named = sameName[0];
@@ -195,7 +207,7 @@ export function checkModifyTarget(
   if (similar.length === 0) return { kind: "ok" };
 
   const similarNames = new Set(similar.map((item) => item.name));
-  if (similarNames.size > 1 || distinguishable(similar)) {
+  if (similarNames.size > 1 || severalEntries(similar)) {
     return { kind: "ask", candidates: similar };
   }
   if (target !== null && similar.some((item) => item.id === target.id)) return { kind: "ok" };

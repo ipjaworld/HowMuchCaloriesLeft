@@ -93,11 +93,8 @@ export const CANCEL_PENDING = "cancel_pending";
 /** The chip under "어떤 기록을…?" that says the entry is not among those shown. */
 export const NONE_OF_THESE = "none_of_these";
 
-/**
- * "케이크 1조각 · 15:10". The time is added only when another candidate would
- * otherwise read the same, which is the case it exists for.
- */
-function candidateLabel(
+/** "케이크 1조각", plus the time when another candidate has the same name and amount. */
+function baseLabel(
   candidate: { id: string; name: string; amount?: string; consumedAt?: string },
   all: { id: string; name: string; amount?: string }[],
 ): string {
@@ -107,6 +104,25 @@ function candidateLabel(
   );
   const time = candidate.consumedAt === undefined ? null : clockTimeOf(candidate.consumedAt);
   return twin && time !== null ? `${base} · ${time}` : base;
+}
+
+/**
+ * Chip labels for "어떤 기록…?", one per stored entry. "케이크 1조각 · 15:10"
+ * tells same-looking entries apart by when they were logged. When even that
+ * is the same, the entries are numbered in the order they were logged — the
+ * only other fact there is. Nothing is made up, and each chip keeps its id.
+ */
+function candidateLabels(
+  candidates: { id: string; name: string; amount?: string; consumedAt?: string }[],
+): string[] {
+  const labels = candidates.map((candidate) => baseLabel(candidate, candidates));
+  return labels.map((label, index) => {
+    const same = labels.flatMap((other, at) => (other === label ? [at] : []));
+    if (same.length < 2) return label;
+    // Candidates arrive newest first; entries logged at the same moment keep
+    // the day's order, so the earlier-logged one comes first among them.
+    return `${label} · ${same.indexOf(index) + 1}번째 기록`;
+  });
 }
 
 /** Said after "해당 없음": nothing changed, and how to point at the entry. */
@@ -139,9 +155,10 @@ function describeClarify(command: Extract<Command, { type: "clarify" }>): Reply 
   ];
 
   const candidates = command.candidates ?? [];
-  const candidateOptions: ClarifyOption[] = candidates.map((candidate) => ({
+  const labels = candidateLabels(candidates);
+  const candidateOptions: ClarifyOption[] = candidates.map((candidate, index) => ({
     id: candidate.id,
-    label: candidateLabel(candidate, candidates),
+    label: labels[index] ?? candidate.name,
   }));
 
   switch (command.reason) {
