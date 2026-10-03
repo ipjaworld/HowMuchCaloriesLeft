@@ -207,3 +207,20 @@ describe("a cooking method is carried at the edge of a name's word, not anywhere
     expect(parts.at(-1)).toMatchObject({ status: "resolved", item: { name } });
   });
 });
+
+describe("a figure said with the food keeps the food's name and amount", () => {
+  // Local browser, 2026-10-03: "설탕을 넣어서 커피 한 잔 60kcal" was stored as
+  // "직접 입력" — the amount made the name fail its check.
+  it.each([
+    ["설탕을 넣어서 커피 한 잔 60kcal 마셨어", "설탕을 넣어서 커피", "한 잔", 60],
+    ["구운 계란 두 개 150kcal 먹었어", "구운 계란", "두 개", 150],
+    ["김밥 한 줄 400kcal 먹었어", "김밥", "한 줄", 400],
+    ["샌드위치 450kcal 먹었어", "샌드위치", undefined, 450],
+  ])("%s → %s %s %i", async (sentence, name, amount, calories) => {
+    const parts = await resolveAddParts(sentence, koreanFoodResolver);
+    expect(parts).toHaveLength(1);
+    const item = parts[0]?.status === "resolved" ? parts[0].item : undefined;
+    expect(item).toMatchObject({ name, calories, calorieSource: "user" });
+    expect(item?.amount).toBe(amount);
+  });
+});

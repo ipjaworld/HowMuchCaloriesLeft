@@ -1,5 +1,5 @@
 import { describedFoodWords } from "./modifierPolicy";
-import { normalizeSpacing, parseAmountOnly } from "./quantity";
+import { normalizeSpacing, parseAmountOnly, parseTrailingQuantity } from "./quantity";
 
 /**
  * Calories the user said out loud: "샌드위치 450kcal", "대충 600칼로리 먹었어".
@@ -26,6 +26,8 @@ export type StatedCalories = {
   calories: number;
   /** The food the figure is for, when the words around it name one. */
   label: string | null;
+  /** The amount said with it ("한 잔" in "커피 한 잔 60kcal"), kept on the record. */
+  amount?: string;
 };
 
 function toNumber(digits: string): number {
@@ -48,13 +50,22 @@ export function findStatedCalories(segment: string): StatedCalories | null {
   if (!Number.isFinite(calories)) return null;
 
   const before = text.slice(0, last.index);
+  // "설탕을 넣어서 커피 한 잔 60kcal": the amount is not part of the name. Read
+  // apart, the name survives and the amount is kept beside it (2026-10-03 —
+  // it used to fail the name check and be stored as "직접 입력").
+  const said = normalizeSpacing(before);
+  const trailing = parseTrailingQuantity(said);
+  const amount = trailing === null || trailing.quantity.assumed ? undefined : trailing.quantity.text;
+  const name = trailing === null ? said : said.slice(0, trailing.start);
   // Text after the figure names a food only in "450kcal짜리 샌드위치". In
   // "720칼로리였어" it is the rest of the verb.
   const after = text.slice(last.index + last[0].length).match(/^[ ]?짜리[ ]?(.*)$/);
 
+  const label = cleanFoodLabel(name) ?? cleanFoodLabel(before) ?? (after === null ? null : cleanFoodLabel(after[1] ?? ""));
   return {
     calories,
-    label: cleanFoodLabel(before) ?? (after === null ? null : cleanFoodLabel(after[1] ?? "")),
+    label,
+    ...(amount !== undefined && label !== null && cleanFoodLabel(name) !== null ? { amount } : {}),
   };
 }
 

@@ -118,8 +118,9 @@ export function userStatedItem(label: string | null, calories: number): NewFoodI
   };
 }
 
-function userStatedPart(label: string | null, calories: number): AddPart {
-  const item = userStatedItem(label, calories);
+function userStatedPart(label: string | null, calories: number, amount?: string): AddPart {
+  const stated = userStatedItem(label, calories);
+  const item = amount === undefined ? stated : { ...stated, amount };
   return { status: "resolved", phraseName: item.name, item };
 }
 
@@ -152,7 +153,11 @@ function wholeSentenceFigure(segments: string[]): AddPart | null {
   );
   const named = labels.every((label) => label !== null);
 
-  return userStatedPart(named ? labels.join(", ") : null, figure.calories);
+  return userStatedPart(
+    named ? labels.join(", ") : null,
+    figure.calories,
+    segments.length === 1 ? figure.amount : undefined,
+  );
 }
 
 /**
@@ -175,7 +180,7 @@ export async function resolveAddParts(
   const resolved = await Promise.all(
     segments.map(async ({ text: segment, amountUnresolved }): Promise<AddPart | null> => {
       const stated = findStatedCalories(segment);
-      if (stated !== null) return userStatedPart(stated.label, stated.calories);
+      if (stated !== null) return userStatedPart(stated.label, stated.calories, stated.amount);
 
       const phrase = toFoodPhrase(segment);
       if (phrase === null) return null;
