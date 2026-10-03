@@ -479,9 +479,10 @@ export const FOOD_SEEDS: FoodSeed[] = [
     // No per-egg weight anywhere in MFDS, so no counter. The count comes from
     // `servingReferences.ts` (1개 = 50 g, published), marked estimated.
     //
-    // 구운계란 and 훈제란 are the same egg cooked in its shell. MFDS has them
-    // only as product rows — 60 구운란 rows, every one a 50 g egg, median
-    // 148 kcal/100 g against this row's 145 — so they are read as this row.
+    // 구운계란 and 훈제란 are not aliases (2026-10-03): a baked or smoked egg
+    // is not a boiled one, however close the figures (60 구운란 product rows,
+    // median 148 kcal/100 g against this row's 145). MFDS has them only as
+    // product rows, so they stay unknown and ask for the calories.
     foodCode: "D327-758010000-0001",
     query: "달걀_삶은것",
     name: "삶은 달걀",
@@ -490,10 +491,6 @@ export const FOOD_SEEDS: FoodSeed[] = [
       "삶은달걀",
       "계란",
       "달걀",
-      "구운계란",
-      "구운 달걀",
-      "구운란",
-      "훈제란",
       "달걀_삶은것",
     ],
   },
@@ -1858,6 +1855,19 @@ export const FOOD_SEEDS: FoodSeed[] = [
   // What a generic name is never allowed to be is an alias of a specific
   // dish: 케이크 is its own row here, not another word for 치즈케이크.
   //
+  // Aliases, as reviewed 2026-10-03 (`aliasPolicy.test.ts` holds each case):
+  //   - an alias says the same food another way — a spelling, a fuller name,
+  //     MFDS's own row name (호빵 · 코코아 · 보쌈 · 김구이);
+  //   - a bare word that names a category, an ingredient, or a dish that is
+  //     commonly cooked another way is not an alias of one kind (빙수, 게장,
+  //     무국, 숙주, 등갈비, 골뱅이, 코다리, 버블티, 볶음면, 구운계란). The
+  //     matcher then asks which, or for the calories. Two are held as they
+  //     were — 김 and 계란 — because removing them changes more than the
+  //     alias; each says why where it is defined;
+  //   - `variance: "high"` says a figure varies; it never licenses recording
+  //     one food under another's name, and "the dataset has no other kind"
+  //     is not a reason either.
+  //
   // Rows the audit read and left out, and why:
   //   - a food MFDS carries only as brand and chain products (포케, 타코,
   //     마라샹궈, 크로플, 소금빵, 스콘, 브라우니, 리조또, 부리또, 치킨버거,
@@ -2057,7 +2067,7 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D319-709053900-0001",
     query: "빙수_팥_우유얼음",
     name: "팥빙수",
-    aliases: ["빙수"],
+    // Not 빙수: that is the category (망고 · 인절미 · 눈꽃), and 팥 is a kind.
     variance: "high",
   },
   {
@@ -2212,7 +2222,8 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D305-219240000-0001",
     query: "무국_소고기",
     name: "소고기무국",
-    aliases: ["무국", "뭇국", "소고기뭇국"],
+    // Not 무국: 소고기 is an ingredient the bare word does not say.
+    aliases: ["소고기뭇국"],
     counter: "그릇",
   },
   {
@@ -2249,7 +2260,8 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D307-327000000-0001",
     query: "돼지등갈비찜",
     name: "등갈비찜",
-    aliases: ["돼지등갈비찜", "등갈비"],
+    // Not 등갈비: 등갈비구이 is as common as the braise.
+    aliases: ["돼지등갈비찜"],
     counter: "인분",
     variance: "high",
   },
@@ -2257,7 +2269,8 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D107-345000000-0001",
     query: "코다리찜",
     name: "코다리찜",
-    aliases: ["코다리조림", "코다리"],
+    // Not 코다리: the fish, not the dish (구이 is as common).
+    aliases: ["코다리조림"],
     counter: "인분",
   },
   {
@@ -2326,7 +2339,9 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "P108-009000400-0208",
     query: "볶음/비빔라면_매운맛",
     name: "비빔면",
-    aliases: ["볶음면", "볶음라면", "비빔라면"],
+    // The row covers both kinds, but a record named 비빔면 for "볶음면" would
+    // name the other kind; 볶음면 is left to ask.
+    aliases: ["비빔라면"],
     counter: "봉지",
     variance: "high",
   },
@@ -2459,11 +2474,13 @@ export const FOOD_SEEDS: FoodSeed[] = [
   },
   {
     // MFDS's assorted-sashimi row — a calculated (산출) one, 150 g a portion.
-    // It is what lets a bare 회 be recorded, the way 초밥_모듬 does for 초밥.
+    // It is what lets a bare 회 be recorded, the way 초밥_모듬 does for 초밥 —
+    // and, like 초밥, under the bare name: a record of "모듬회" would say an
+    // assorted platter was eaten when the user only said 회.
     foodCode: "D427-763000000-0001",
     query: "모듬회",
-    name: "모듬회",
-    aliases: ["회", "모둠회"],
+    name: "회",
+    aliases: ["모듬회", "모둠회"],
     counter: "인분",
     variance: "high",
   },
@@ -2598,7 +2615,7 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D116-693010000-0001",
     query: "꽃게장_간장",
     name: "간장게장",
-    aliases: ["꽃게장", "게장"],
+    // Not 게장 or 꽃게장: 양념게장 is as much a 게장, so the bare word asks.
     counter: "인분",
   },
   {
@@ -2652,7 +2669,7 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D114-607200000-0001",
     query: "골뱅이무침_소면",
     name: "골뱅이무침",
-    aliases: ["골뱅이소면", "골뱅이"],
+    // Not 골뱅이 (the shellfish, not this dish) or 골뱅이소면 (adds noodles).
     counter: "인분",
   },
   {
@@ -2716,7 +2733,8 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D113-584000000-0001",
     query: "숙주나물",
     name: "숙주나물",
-    aliases: ["숙주무침", "숙주"],
+    // Not 숙주: 숙주볶음 is as common as the blanched 나물.
+    aliases: ["숙주무침"],
     counter: "인분",
   },
   {
@@ -2753,13 +2771,16 @@ export const FOOD_SEEDS: FoodSeed[] = [
     counter: "인분",
   },
   {
-    // The row states 5 g, a lunch-box packet. A bare 김 is taken as this: the
-    // seasoned sheet is what is eaten as 김, and the whole packet is about 24
-    // kcal.
+    // The row states 5 g, a lunch-box packet. 김구이 is MFDS's own name for
+    // this row (김구이_조미김). 구운김 is not an alias: plain roasted 김 is
+    // unseasoned. Bare 김 is held as an alias (2026-10-03): by the alias rule
+    // 조미 is a kind it does not say, but without the alias the matcher's
+    // one-syllable head rule asks "감자튀김 / 조미김?" — a worse question —
+    // and changing that rule is outside this review. See the handoff.
     foodCode: "D108-361180000-0001",
     query: "김구이_조미김",
     name: "조미김",
-    aliases: ["김", "김구이", "구운김", "도시락김"],
+    aliases: ["김", "김구이", "도시락김"],
     counter: "봉지",
   },
   {
@@ -2978,7 +2999,8 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "D320-731060000-0001",
     query: "밀크티_블랙",
     name: "밀크티",
-    aliases: ["버블티", "블랙밀크티"],
+    // Not 버블티: the pearls are a different drink, not a variance of this one.
+    aliases: ["블랙밀크티"],
     variance: "high",
   },
   {
@@ -3160,5 +3182,125 @@ export const FOOD_SEEDS: FoodSeed[] = [
     foodCode: "R108-098097301-0000",
     query: "포도, 샤인머스캣, 생것, 껍질 포함",
     name: "샤인머스캣",
+  },
+  // ════════════════════════════════════════════════════════════════════
+  // v1 커버리지 확장 3차 (2026-10-03)
+  //
+  // From the rows the 2026-10-02 audit had already read
+  // (docs/MFDS-AUDIT-2026-10-02.md); no new search except to find where a
+  // borrowed portion comes from. Two rules decided what went in:
+  //   - the which-one question now has "다른 음식이에요", so a second kind
+  //     of a word no longer traps the user — but only where the choices are
+  //     kinds *of that word*: 튀김 → 감자/고구마튀김, 에이드 → 레몬/자몽,
+  //     차 → 유자차/녹차, 빙수 → 팥/인절미빙수. Where the bare word is an
+  //     ingredient and the choices are dishes made from it, the food waits:
+  //     빈대떡 (떡 → 호떡/빈대떡), 새우구이 · 새우튀김 (새우 → 볶음밥/…),
+  //     버섯볶음 (버섯 → 전골/볶음), 오리불고기 (오리 → 구이/불고기),
+  //     미역줄기볶음 (미역 → 미역국/…), 메추리알 (메추리 → 장조림/…),
+  //     당근주스 (당근 → 당근케이크/…);
+  //   - no brand-only rows: 숙주볶음, 등갈비구이 and 코다리구이 exist only as
+  //     products, so the words the alias review freed stay asking.
+  // ════════════════════════════════════════════════════════════════════
+  {
+    // A second 튀김. The analysed row states no portion; the 1인분 166.5 g is
+    // the same food's calculated row (D412-539000000-0001), borrowed.
+    foodCode: "D312-539000000-0001",
+    query: "고구마튀김",
+    name: "고구마튀김",
+    variance: "high",
+  },
+  {
+    foodCode: "P109-010080100-F006-001",
+    query: "자몽에이드",
+    name: "자몽에이드",
+    counter: "잔",
+  },
+  {
+    // Brewed green tea, 2 kcal/100 g. The cup is the café cup the other
+    // café drinks borrow.
+    foodCode: "R115-007000000-0000",
+    query: "녹차",
+    name: "녹차",
+  },
+  {
+    // A second 빙수, so the bare word asks which. The bowl is the one 팥빙수
+    // borrows, from the calculated 팥빙수 row.
+    foodCode: "D319-709043900-0001",
+    query: "빙수_인절미_우유얼음",
+    name: "인절미빙수",
+    variance: "high",
+  },
+  {
+    // Before this, "훈제 닭가슴살" was read as plain 닭가슴살. No portion: it
+    // asks for grams, as a pack size varies.
+    foodCode: "R109-008000417-0000",
+    query: "닭가슴살, 조미훈제",
+    name: "훈제 닭가슴살",
+    aliases: ["훈제닭가슴살"],
+  },
+  {
+    foodCode: "D105-227000000-0001",
+    query: "사골국",
+    name: "사골국",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D105-208000000-0001",
+    query: "내장탕",
+    name: "내장탕",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D303-148050000-0001",
+    query: "라면_김치",
+    name: "김치라면",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D103-148090000-0001",
+    query: "라면_달걀",
+    name: "계란라면",
+    aliases: ["달걀라면"],
+    counter: "그릇",
+  },
+  {
+    foodCode: "D303-174500000-0001",
+    query: "칼국수_해물",
+    name: "해물칼국수",
+    counter: "그릇",
+  },
+  {
+    foodCode: "D115-668000000-0001",
+    query: "동치미",
+    name: "동치미",
+    counter: "인분",
+  },
+  {
+    foodCode: "R108-006000005-0000",
+    query: "감, 떫은감, 곶감, 반건시",
+    name: "곶감",
+  },
+  {
+    foodCode: "P101-004000400-F004-000",
+    query: "찹쌀도넛/완제품",
+    name: "찹쌀도넛",
+    counter: "개",
+  },
+  {
+    foodCode: "P101-014000400-F030-001",
+    query: "슈크림빵",
+    name: "슈크림빵",
+    counter: "개",
+  },
+  {
+    foodCode: "P109-003030200-F006-001",
+    query: "딸기주스",
+    name: "딸기주스",
+    counter: "잔",
+  },
+  {
+    foodCode: "R121-038100000-0000",
+    query: "치즈, 크림",
+    name: "크림치즈",
   },
 ];

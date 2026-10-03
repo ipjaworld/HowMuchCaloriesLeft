@@ -51,30 +51,33 @@ function pendingFor(
 }
 
 describe("a correction that also reports another food", () => {
-  const message = "떡볶이랑 튀김 먹었는데 떡볶이는 반만";
+  // The extra food is one the dataset does not have. This used to be 튀김,
+  // which since 2026-10-03 asks "감자튀김 / 고구마튀김?" instead — that path
+  // is covered in choiceEscape.test.ts.
+  const message = "떡볶이랑 김말이 먹었는데 떡볶이는 반만";
 
-  it("keeps 튀김 beside the correction instead of dropping it", async () => {
+  it("keeps 김말이 beside the correction instead of dropping it", async () => {
     const target = await logged("떡볶이");
     const { parts, extraParts } = await resolveModifyParts(message, target, koreanFoodResolver);
 
     expect(parts.map(describePart)).toEqual(['resolved 떡볶이 (반) ← "떡볶이"']);
-    expect(extraParts.map(describePart)).toEqual(['unknown ← "튀김"']);
+    expect(extraParts.map(describePart)).toEqual(['unknown ← "김말이"']);
   });
 
-  it("names both foods in the confirmation, then asks for 튀김's calories", async () => {
+  it("names both foods in the confirmation, then asks for 김말이's calories", async () => {
     const target = await logged("떡볶이");
     const { parts, extraParts } = await resolveModifyParts(message, target, koreanFoodResolver);
     const pending = pendingFor(message, target, parts, extraParts);
 
     const confirm = nextQuestion(pending);
-    expect(confirm).toMatchObject({ type: "confirm_add", mode: "modify", names: ["떡볶이"], addNames: ["튀김"] });
+    expect(confirm).toMatchObject({ type: "confirm_add", mode: "modify", names: ["떡볶이"], addNames: ["김말이"] });
     if (confirm === null) throw new Error("expected a question");
-    expect(describeQuestion(confirm).text).toBe("떡볶이를 고치고 튀김을 새로 기록할까요?");
+    expect(describeQuestion(confirm).text).toBe("떡볶이를 고치고 김말이를 새로 기록할까요?");
 
-    expect(nextQuestion(confirmAdd(pending))).toMatchObject({ type: "provide_calories", partIndex: 1, label: "튀김" });
+    expect(nextQuestion(confirmAdd(pending))).toMatchObject({ type: "provide_calories", partIndex: 1, label: "김말이" });
   });
 
-  it("writes 떡볶이 반 over the entry and adds 튀김 once its calories are given", async () => {
+  it("writes 떡볶이 반 over the entry and adds 김말이 once its calories are given", async () => {
     const target = await logged("떡볶이");
     const { parts, extraParts } = await resolveModifyParts(message, target, koreanFoodResolver);
     const answered = answerCalories(confirmAdd(pendingFor(message, target, parts, extraParts)), 1, 300);
@@ -82,10 +85,10 @@ describe("a correction that also reports another food", () => {
     expect(nextQuestion(answered)).toBeNull();
     const plan = planModifyCommit(answered);
     expect(plan.replacement).toMatchObject({ name: "떡볶이", amount: "반" });
-    expect(plan.additions).toMatchObject([{ name: "튀김", calories: 300 }]);
+    expect(plan.additions).toMatchObject([{ name: "김말이", calories: 300 }]);
   });
 
-  it("still writes the correction, and says so, when 튀김 is left out", async () => {
+  it("still writes the correction, and says so, when 김말이 is left out", async () => {
     const target = await logged("떡볶이");
     const { parts, extraParts } = await resolveModifyParts(message, target, koreanFoodResolver);
     const skipped = skipUnknown(confirmAdd(pendingFor(message, target, parts, extraParts)), 1);
@@ -93,7 +96,7 @@ describe("a correction that also reports another food", () => {
     const plan = planModifyCommit(skipped);
     expect(plan.replacement).toMatchObject({ name: "떡볶이" });
     expect(plan.additions).toEqual([]);
-    expect(plan.skipped).toEqual(["튀김"]);
+    expect(plan.skipped).toEqual(["김말이"]);
   });
 
   it("reports the addition alongside the change", () => {
@@ -102,9 +105,9 @@ describe("a correction that also reports another food", () => {
       { name: "떡볶이", amount: "1인분", calories: 480 },
       { name: "떡볶이", amount: "반", calories: 240 },
       summary as Parameters<typeof describeModified>[2],
-      [{ name: "튀김" }],
+      [{ name: "김말이" }],
     );
-    expect(reply.text).toContain("튀김도 기록했어요.");
+    expect(reply.text).toContain("김말이도 기록했어요.");
   });
 });
 

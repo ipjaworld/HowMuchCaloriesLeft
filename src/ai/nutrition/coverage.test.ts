@@ -294,7 +294,9 @@ describe("a name inside a longer word is not that food", () => {
     expect((await resolved("사과 하나 먹었어")).entry.name).toBe("사과");
   });
 
-  it.each(["떡", "묵", "차", "롤"])(
+  // 차 left this list on 2026-10-03: with 유자차 and 녹차 it heads two kinds
+  // of tea and asks which — see "a single syllable that heads several foods".
+  it.each(["떡", "묵", "롤"])(
     "a single syllable is not narrowed to the one food it is part of: %s",
     async (word) => {
       expect((await resolveOne(`${word} 먹었어`)).status).toBe("unknown");
@@ -303,16 +305,18 @@ describe("a name inside a longer word is not that food", () => {
 
   it.each([
     ["김", "조미김"],
-    ["회", "모듬회"],
+    ["회", "회"],
   ])("a single syllable that is itself a food's name is that food: %s", async (word, name) => {
     // 김 was unknown until the dataset had 조미김, and 회 until it had MFDS's
-    // assorted row. Neither is reached through a longer name it is part of —
-    // 김 is not 김밥 or 튀김, 회 is not 육회.
+    // assorted row (named 회 since the 2026-10-03 alias review). Neither is
+    // reached through a longer name it is part of — 김 is not 김밥 or 튀김,
+    // 회 is not 육회.
     expect((await resolved(`${word} 먹었어`)).entry.name).toBe(name);
   });
 
   it("a single syllable that heads several foods still asks", async () => {
     expect((await resolveOne("밥 한 공기 먹었어")).status).toBe("ambiguous");
+    expect((await resolveOne("차 마셨어")).status).toBe("ambiguous");
   });
 });
 
@@ -422,7 +426,8 @@ describe("v1 coverage expansion (2026-10-02)", () => {
 });
 
 /** 27 from the first round, the rest from the second. Counted, not derived. */
-const HIGH_VARIANCE_COUNT = 70;
+// 70 after the second round; +2 in the third (고구마튀김, 인절미빙수).
+const HIGH_VARIANCE_COUNT = 72;
 
 describe("v1 coverage expansion, second round (2026-10-02)", () => {
   /**
@@ -443,7 +448,6 @@ describe("v1 coverage expansion, second round (2026-10-02)", () => {
     ["치즈", "치즈"],
     ["초콜릿", "초콜릿"],
     ["쿠키", "쿠키"],
-    ["빙수", "팥빙수"],
     ["매운탕", "매운탕"],
     ["된장국", "된장국"],
     ["주먹밥", "주먹밥"],
@@ -481,7 +485,6 @@ describe("v1 coverage expansion, second round (2026-10-02)", () => {
     ["치즈김밥", "치즈김밥"],
     ["슬라이스치즈", "치즈"],
     ["바닐라라떼", "바닐라라떼"],
-    ["구운계란", "삶은 달걀"],
     ["김치전", "김치전"],
     ["보쌈 200g", "수육"],
     ["돼지갈비 300g", "돼지갈비"],
@@ -546,7 +549,8 @@ describe("v1 coverage expansion, second round (2026-10-02)", () => {
     expect(match.calories).toBe(Math.round(match.entry.caloriesPer100g * 2));
   });
 
-  it("ships the size this round was planned for", () => {
-    expect(KOREAN_FOODS.length).toBe(426);
+  it("ships the size this round was planned for, plus the third round", () => {
+    // 426 after the second round; +16 in the third (2026-10-03), capped at 450.
+    expect(KOREAN_FOODS.length).toBe(442);
   });
 });

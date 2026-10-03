@@ -158,13 +158,13 @@ describe("runChat with the filter", () => {
       calories: logged.item.calories,
       consumedAt: "2026-10-01T11:40:00+09:00",
     };
-    const result = await runChat(input("떡볶이랑 튀김 먹었는데 떡볶이는 반만", [target]), undefined, {
+    const result = await runChat(input("떡볶이랑 김말이 먹었는데 떡볶이는 반만", [target]), undefined, {
       judge: fixedJudge(judgment("modify_food", { referenceTargetId: "rec-1", referenceConfidence: 0.95 })),
       resolver: koreanFoodResolver,
       candidateJudge: null,
     });
     expect(result.command).toMatchObject({ type: "modify_candidate", targetId: "rec-1", needsConfirmation: true });
     if (result.command.type !== "modify_candidate") return;
-    expect(result.command.extraParts?.map(describePart)).toEqual(['unknown ← "튀김"']);
+    expect(result.command.extraParts?.map(describePart)).toEqual(['unknown ← "김말이"']);
   });
 });

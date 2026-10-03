@@ -99,3 +99,19 @@ describe("a correction whose replacement is not among the choices", () => {
     expect(done.target?.itemId).toBe("rec-ramen");
   });
 });
+
+describe("떡볶이랑 튀김, 떡볶이는 반만 — the production smoke sentence", () => {
+  it("asks which 튀김, and '다른 음식이에요' still ends in one 튀김 at the stated figure", async () => {
+    const pending = await pendingFor("떡볶이랑 튀김 먹었는데 떡볶이는 반만 먹었어");
+    const choose = nextQuestion(pending);
+    expect(choose).toMatchObject({ type: "choose_food", phraseName: "튀김" });
+    if (choose?.type !== "choose_food") throw new Error("expected a food choice");
+    expect(choose.candidates.map((candidate) => candidate.name).sort()).toEqual(["감자튀김", "고구마튀김"]);
+
+    const done = answerCalories(answerNoneOfChoices(pending, choose.partIndex), choose.partIndex, 300);
+    const items = itemsOf(done.parts);
+    expect(items.map((item) => item.name)).toEqual(["떡볶이", "튀김"]);
+    expect(items.filter((item) => item.name === "튀김")).toHaveLength(1);
+    expect(items.find((item) => item.name === "튀김")?.calories).toBe(300);
+  });
+});

@@ -341,6 +341,13 @@ export const SERVING_REFERENCES: ServingReference[] = [
   ...ref("D319-708020000-0001", ["잔", "컵"], 355, "카페라떼·카페모카 행의 1회 제공량을 빌려 씀", MFDS_CAFE_CUP, { kind: "typical", measure: "mL" }),
   // 토마토주스
   ...ref("R106-186010024-0000", ["잔", "컵"], 200, "과·채주스 품목대표 행(P109-003030200)의 1회 제공량 200 mL를 빌려 씀", MFDS_JUICE_CUP, { kind: "typical", measure: "mL" }),
+  // ── 3차 확장 (2026-10-03) ──────────────────────────────────────────
+  // 고구마튀김: the same food's calculated row
+  ...ref("D312-539000000-0001", ["인분"], 166.5, "고구마튀김 산출 행(D412-539000000-0001)의 1회 제공량 166.5 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 인절미빙수: the bowl 팥빙수 borrows
+  ...ref("D319-709043900-0001", ["그릇"], 300, "팥빙수 행(D419-716000000-0001)의 1회 제공량 300 g을 빌려 씀", MFDS_ROW_PORTION, { kind: "typical" }),
+  // 녹차
+  ...ref("R115-007000000-0000", ["잔", "컵"], 355, "카페라떼·카페모카 행의 1회 제공량을 빌려 씀", MFDS_CAFE_CUP, { kind: "typical", measure: "mL" }),
   // 아이스크림
   ...ref("P102-005010100-F001-009", ["개"], 80, "아이스크림바 행(P102-101010100-0053)의 1회 제공량 80 mL를 빌려 씀", MFDS_ROW_PORTION, { kind: "typical", measure: "mL" }),
 ];

@@ -519,7 +519,7 @@
       "id": "homo-pos-03",
       "verdict": "correct_resolved",
       "actual": [
-        "resolved 모듬회 (1인분) ← \"회\""
+        "resolved 회 (1인분) ← \"회\""
       ]
     },
     {
@@ -533,7 +533,7 @@
       "id": "homo-pos-05",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 식빵|소보로빵|모닝빵|단팥빵|붕어빵|찐빵|크림빵|소시지빵|피자빵|마늘빵|계란빵 ← \"빵\""
+        "ambiguous 식빵|소보로빵|모닝빵|단팥빵|붕어빵|찐빵|크림빵|소시지빵|피자빵|마늘빵|계란빵|슈크림빵 ← \"빵\""
       ]
     },
     {
@@ -611,10 +611,10 @@
     },
     {
       "id": "qty-01",
-      "verdict": "correct_unknown",
+      "verdict": "correct_ask",
       "actual": [
         "resolved 떡볶이 (반) ← \"떡볶이는\"",
-        "unknown ← \"튀김\""
+        "ambiguous 감자튀김|고구마튀김 ← \"튀김\""
       ]
     },
     {
