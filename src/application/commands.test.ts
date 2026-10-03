@@ -653,6 +653,25 @@ describe("a bare amount the judge could not place", () => {
     }
   });
 
+  it("a bare number is not an amount of the last entry (it was a figure for something else)", () => {
+    // Local browser, 2026-10-03: after "칼로리를 함께 말씀해주세요" (no question
+    // waiting), "60" was proposed as "아메리카노 60잔 852kcal".
+    const items: RecentItem[] = [
+      { id: "ame", name: "아메리카노", amount: "한 잔", calories: 14, consumedAt: "2026-09-20T12:00:00+09:00" },
+    ];
+    for (const read of [
+      judgment({ intent: "modify_food", intentConfidence: 0.32 }),
+      judgment({ intent: "modify_food", intentConfidence: 0.99, referenceTargetId: null, referenceConfidence: 0.2 }),
+    ]) {
+      const command = decideCommand(read, { ...input("60"), recentItems: items });
+      expect(command.type).not.toBe("modify_candidate");
+    }
+    // An amount said as one still corrects the newest entry, confirmed first.
+    expect(
+      decideCommand(judgment({ intent: "modify_food", intentConfidence: 0.32 }), { ...input("2잔이었어"), recentItems: items }),
+    ).toMatchObject({ type: "modify_candidate", targetId: "ame", needsConfirmation: true });
+  });
+
   it("a vague sentence with no amount still asks for more", () => {
     expect(
       decideCommand(judgment({ intent: "modify_food", intentConfidence: 0.32 }), input("그거 아니었어")),

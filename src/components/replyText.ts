@@ -354,8 +354,11 @@ export function describeNothingAdded(parts: AddPart[]): Reply {
   return {
     kind: "statement",
     // Says how to get past it, because the way past is the user's to take:
-    // a figure they know is stored as said.
-    text: `${unknownSubject(unknown)} 아직 정보가 없어요. "샌드위치 450kcal"처럼 칼로리를 함께 말씀해주시면 그대로 적을게요.`,
+    // a figure they know is stored as said. Nothing is waiting for an answer
+    // here, so it says that nothing was recorded and that the food has to be
+    // said again with its figure — a bare number sent next is a new sentence,
+    // not an answer (2026-10-03).
+    text: `${unknownSubject(unknown)} 아직 정보가 없어요. 그래서 기록하지 않았어요. 칼로리를 아시면 "샌드위치 450kcal"처럼 음식 이름과 함께 다시 말씀해주세요.`,
   };
 }
 

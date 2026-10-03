@@ -264,6 +264,15 @@ describe("the add pipeline's sentences", () => {
     expect(unnamed.kind === "question" && unnamed.options[0]?.id).toBe("skip");
   });
 
+  it("says nothing was recorded and that the food must be said again with its figure", () => {
+    // No question is waiting after this notice: it must not read as if a
+    // number sent next would be taken as the answer.
+    const reply = describeNothingAdded([{ status: "unknown", phraseName: "설탕을 넣어서 커피" }]);
+    expect(reply.kind).toBe("statement");
+    expect(reply.text).toContain("기록하지 않았어요");
+    expect(reply.text).toContain("음식 이름과 함께 다시 말씀해주세요");
+  });
+
   it("never glues a particle onto a scrap of sentence", () => {
     const reply = describeNothingAdded([
       { status: "unknown", phraseName: "음... 이건 데이터베이스과 없을거 같고" },

@@ -181,7 +181,13 @@ function usableTarget(judgment: Judgment, input: JudgmentInput): string | null {
  */
 function amountOnlyTarget(input: JudgmentInput): string | null {
   const { next } = splitCorrection(input.message, null);
-  if (parseAmountOnly(next) === null) return null;
+  const amount = parseAmountOnly(next);
+  if (amount === null) return null;
+  // A bare number says no counter and no unit: "60" after "칼로리를 함께
+  // 말씀해주세요" was a figure for a food that was never recorded, not 60 of
+  // whatever was logged last (2026-10-03, local browser: it proposed "아메리카노
+  // 60잔 852kcal"). Only an amount said as one — 2개, 반, 200ml — corrects.
+  if (amount.unit === null && /^\d+(?:[.,]\d+)?$/.test(next.trim())) return null;
   const newest = input.recentItems
     .slice()
     .sort((a, b) => b.consumedAt.localeCompare(a.consumedAt))[0];
