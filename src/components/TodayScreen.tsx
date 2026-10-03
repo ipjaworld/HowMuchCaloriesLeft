@@ -20,6 +20,7 @@ import { planModifyStart } from "@/application/modifyFlow";
 import {
   answerCalories,
   answerChoice,
+  answerNoneOfChoices,
   answerQuantity,
   confirmAdd,
   isCancelMessage,
@@ -61,7 +62,9 @@ import {
   describeQuestion,
   describeTargetGone,
   describeUnreadableAmount,
+  CANCEL_PENDING,
   NONE_OF_THESE,
+  OTHER_FOOD,
   UNDO_DELETE,
   type ClarifyOption,
   type Reply,
@@ -702,7 +705,16 @@ export function TodayScreen() {
       }
 
       if (question?.type === "choose_food") {
-        void advance(answerChoice(pendingAdd, question.partIndex, option.id));
+        if (option.id === CANCEL_PENDING) {
+          setPendingAdd(null);
+          setReply(describeCancelled(pendingAdd.target === undefined ? "add" : "modify"));
+          return;
+        }
+        void advance(
+          option.id === OTHER_FOOD
+            ? answerNoneOfChoices(pendingAdd, question.partIndex)
+            : answerChoice(pendingAdd, question.partIndex, option.id),
+        );
         return;
       }
 

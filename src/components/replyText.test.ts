@@ -4,7 +4,9 @@ import type { DailySummary } from "@/domain/calories";
 import {
   describeAlreadyLogged,
   describeNoneOfThese,
+  CANCEL_PENDING,
   NONE_OF_THESE,
+  OTHER_FOOD,
   describeCommand,
   describeDeleted,
   describeModified,
@@ -308,6 +310,9 @@ describe("the add pipeline's sentences", () => {
       options: [
         { id: "a", label: "쌀밥" },
         { id: "b", label: "현미밥" },
+        // The way out of a choice that has not got the food in it.
+        { id: OTHER_FOOD, label: "다른 음식이에요" },
+        { id: CANCEL_PENDING, label: "취소" },
       ],
     });
   });
@@ -339,7 +344,7 @@ describe("correction wording is not borrowed from the add pipeline", () => {
     });
     expect(reply.text).toBe("무엇으로 바꿀까요?");
     if (reply.kind !== "question") throw new Error("expected a question");
-    expect(reply.options.map((o) => o.label)).toEqual(["갈비탕", "김치찌개"]);
+    expect(reply.options.map((o) => o.label)).toEqual(["갈비탕", "김치찌개", "다른 음식이에요", "취소"]);
   });
 
   it("confirms a correction as a correction", () => {

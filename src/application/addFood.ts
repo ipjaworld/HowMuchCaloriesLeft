@@ -59,7 +59,16 @@ export type AddPart =
        */
       knownUnits?: string[];
     }
-  | { status: "unknown"; phraseName: string }
+  | {
+      status: "unknown";
+      phraseName: string;
+      /**
+       * The amount the user already said, when the food turned out not to be
+       * any the dataset offered ("다른 음식이에요" after "튀김 2개"). Kept on
+       * the record their stated calories create, so nothing they said is lost.
+       */
+      amount?: string;
+    }
   /**
    * An unknown food the user chose to leave out when asked for its calories.
    * Kept rather than dropped so the reply can still say what was left out.

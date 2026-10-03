@@ -84,6 +84,12 @@ function nameOf(command: Extract<Command, { type: "clarify" }>): string | null {
 
 const TIMES = ["", "한", "두", "세", "네"];
 
+/** The chip under "어떤 ○○인가요?" that says the food is none of those offered. */
+export const OTHER_FOOD = "other_food";
+
+/** The chip that drops an unfinished sentence; nothing has been stored yet. */
+export const CANCEL_PENDING = "cancel_pending";
+
 /** The chip under "어떤 기록을…?" that says the entry is not among those shown. */
 export const NONE_OF_THESE = "none_of_these";
 
@@ -395,10 +401,17 @@ export function describeQuestion(question: PendingQuestion): Reply {
         question.mode === "modify"
           ? "무엇으로 바꿀까요?"
           : `어떤 ${question.phraseName}인가요?`,
-      options: question.candidates.map((candidate) => ({
-        id: candidate.entryId,
-        label: candidate.name,
-      })),
+      // The offered foods are only the ones the dataset has. The way out —
+      // naming the calories instead, or dropping the sentence — is always
+      // there, so nobody has to pick a wrong food to move on.
+      options: [
+        ...question.candidates.map((candidate) => ({
+          id: candidate.entryId,
+          label: candidate.name,
+        })),
+        { id: OTHER_FOOD, label: "다른 음식이에요" },
+        { id: CANCEL_PENDING, label: "취소" },
+      ],
     };
   }
 

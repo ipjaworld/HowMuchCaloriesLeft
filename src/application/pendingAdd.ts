@@ -266,6 +266,29 @@ export function answerChoice(
   });
 }
 
+/**
+ * "다른 음식이에요": none of the offered foods is the one eaten.
+ *
+ * The part becomes a food the dataset does not have, which is a question the
+ * app already asks — "대략 몇 kcal였나요?" — and the user's figure is stored
+ * as said. No other part moves, so a sentence of three foods still becomes
+ * one record of three, and the amount already said stays on the record.
+ * Choosing which entry a *correction* is about is a different question, with
+ * its own "해당 없음" (see `decideCommand`): this one only ever picks a food.
+ */
+export function answerNoneOfChoices(pending: PendingAdd, partIndex: number): PendingAdd {
+  const part = pending.parts[partIndex];
+  if (part === undefined || part.status !== "ambiguous") return pending;
+
+  const amounts = new Set(part.candidates.map((candidate) => candidate.item.amount));
+  const [amount] = amounts;
+  return replacePart(pending, partIndex, {
+    status: "unknown",
+    phraseName: part.phraseName,
+    ...(amounts.size === 1 && amount !== undefined ? { amount } : {}),
+  });
+}
+
 /** The user supplied a weight, and the server priced it. */
 export function answerQuantity(
   pending: PendingAdd,
@@ -291,7 +314,8 @@ export function answerCalories(
   const part = pending.parts[partIndex];
   if (part === undefined || part.status !== "unknown") return pending;
 
-  const item = userStatedItem(cleanFoodLabel(part.phraseName), calories);
+  const stated = userStatedItem(cleanFoodLabel(part.phraseName), calories);
+  const item = part.amount === undefined ? stated : { ...stated, amount: part.amount };
   return replacePart(pending, partIndex, {
     status: "resolved",
     phraseName: item.name,
