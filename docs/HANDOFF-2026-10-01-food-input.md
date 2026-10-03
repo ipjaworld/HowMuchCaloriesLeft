@@ -1,19 +1,15 @@
-# HANDOFF — 음식 입력 해석 (production 244-food · 로컬 RC 442-food, 2026-10-03)
+# HANDOFF — 음식 입력 해석 (production 442-food, 2026-10-03 배포)
 
-> **현재 상태 — 이 블록이 유일한 기준이다 (2026-10-03 마지막 갱신).** 아래 절들은 과거 기록이며, 그 안의 "다음 세션 순서"·"다음 세션 첫 명령"은 모두 이 블록으로 대체됐다.
+> **현재 상태 — 이 블록이 유일한 기준이다 (2026-10-03 배포 후 갱신).** 아래 절들은 과거 기록이며, 그 안의 "다음 세션 순서"·"다음 세션 첫 명령"·"현재 상태"는 모두 이 블록으로 대체됐다.
 >
-> - **production**: 244-food, `c9aeb25`, 8A 후보 필터 on(`FOOD_CANDIDATE_FILTER=on`). 배포 SHA는 직접 조회하지 않았다 — 마지막 보고 기준.
-> - **origin/main**: `c9aeb25` (2026-10-03 `git fetch`로 확인). push된 것 없음.
-> - **로컬 `main`**: origin보다 **21커밋** 앞섬, working tree clean, 마지막 코드 커밋 `9f6193b`. dataset **442**.
-> - **들어 있는 것**: 426-food 2차 확장 → 2026-10-03 세션(정정 대상 · 별칭 정책 · 고르기 탈출 경로 · 3차 16개) → 후속(같아 보이는 별개 기록 · date.ts 출처) → 음식 수식어 정책(`d8d03bd`) → **수식어 경계 검증**(`487e123` · `1ea7796` · `9f6193b`, 맨 아래 절).
-> - **검증(최종 코드)**: test 1369 · typecheck · lint · build · `eval:food-coverage` 161/191 불변 · `eval:food-modifiers` 66/66 + 경계 13/16(나머지 3건은 기존 파서 한계, 안전) · `eval:food-judgment` 1회 177/191 wrong/drop 0 · 로컬 브라우저 통과.
-> - **배포를 막는 결함**: 없음.
+> - **production**: **442-food RC, source `0a02958`**(코드 = `9f6193b`). Vercel deployment `dpl_DyaGYGYFAwioteYRbdRsFoezCUxu` (`how-much-calories-left-cmgq923o6-…vercel.app`), 2026-10-03 14:46 KST, Ready. 서비스 도메인 `how-much-calories-left.vercel.app`이 이 deployment에 연결됨(`vercel inspect` 도메인 직접 조회, 정적 자산 변경, runtime 응답으로 확인). GitHub deployment 6823902362(sha `0a02958`, success).
+> - **8A 후보 필터**: on — production `/api/chat` 응답의 `candidateFilter`가 `applied`(팀원들 drop)로 배포 전·후 모두 확인. env는 바꾸지 않았다.
+> - **origin/main**: `0a02958`. 로컬은 이 문서 커밋만큼 앞섬(docs-only, push하지 않음 — 다음 코드 배포 때 함께 나간다).
+> - **직전 production(복구 대상)**: `dpl_Em6cenL866gHbg1i2yPrLgbUUbZT` (`pooe1h77q`, source `c9aeb25`, 244-food). 복구: `npx vercel rollback dpl_Em6cenL866gHbg1i2yPrLgbUUbZT`(Instant Rollback; 그 뒤 Git push가 production에 자동 연결되지 않으므로 다시 배포할 때는 `vercel promote`가 필요). 저장 스키마·migration 변경 없음 — 새 버전이 만든 기록(FoodItem 같은 모양)은 이전 버전이 그대로 읽는다.
+> - **production smoke**: 통과(아래 "2026-10-03 production 배포" 절). 테스트 데이터는 격리 origin에서만 만들고 지웠다.
+> - **배포를 막는 결함**: 없음. 알려진 한계는 아래 절.
 >
-> **다음 행동 (하나뿐)**: 사람의 배포 승인.
-> 1. 확인할 결정: 별칭 표(2026-10-03 세션) · 쌍둥이 정책과 칩 라벨(후속) · `modifierPolicy.ts`의 표와 승인 대표값 24개(수식어 정책) · 아래 "알려진 한계"를 릴리스에서 받아들일지.
-> 2. 승인되면 push 직전 `pnpm test && pnpm typecheck && pnpm lint && pnpm build` · `pnpm eval:food-coverage` · `pnpm eval:food-modifiers`. `main` push = production 배포.
-> 3. 배포 후 production smoke(`mealRecords` 백업 → 끝나면 복구): 2026-10-01 smoke 목록 + "따뜻한 커피 한 잔"(바로 기록) · "구운 계란 두 개"(kcal 질문 → 150 → 그 이름·양) · "친구가 튀겨준 고구마"(고구마튀김) · "케이크 먹었어" 두 번 → "케이크 700kcal로 고쳐줘"(칩 선택 전 불변) · "빙수 먹었어"(고르기).
-> 4. 승인 전까지 push·배포·새 기능 작업을 하지 않는다. 파서 규칙 추가 금지, add/modify 의도 판정은 범위 밖.
+> **다음 행동**: 이번 배포 작업은 끝났다. 다음 개선(파서의 "중"·후치 조리 동사·남긴 양, 김·맨 계란 별칭 결정, 같은 음식 맥락의 의도 흔들림 등)은 별도 작업으로 시작한다. 파서 규칙 추가 금지, `main` push = production 배포는 그대로다.
 
 ## food-input production checkpoint (2026-10-01)
 - **배포**: `main` push `86d11df..5a066fb` → Vercel production 배포 성공. 필터 off 상태의 production smoke(아래 "push 전 smoke test" 2~6, 9) 전부 통과: 김밥 한 줄 322 · 라면+커피 한 기록 · 비빔밥 밥 반 남김 → 반 그릇 320 · 양 질문 중 "김밥 먹었어" → 새 문장 · 떡볶이+튀김 반만 → 확인 → 300 → 1,688−259+130+300=1,859 · add 응답 `candidateFilter` `{"status":"off"}`.
@@ -668,3 +664,38 @@ dataset 442, seeds · serving reference · 생성 JSON · food-input 말뭉치/b
 
 ### rollback (배포했을 경우)
 `git revert --no-edit 9f6193b 1ea7796 487e123` → 수식어 정책(`d8d03bd`) 상태. 데이터 무관.
+
+## 2026-10-03 production 배포 (442-food RC, 사용자 승인 1회)
+### 배포 전 확인
+- 로컬 `0a02958`(코드 `9f6193b`), origin+21, clean, dataset 442. `git fetch` 후 origin/main `c9aeb25`, 원격에 새 커밋 없음.
+- 배포 경로: 저장소 ↔ Vercel 프로젝트 `how-much-calories-left`(`.vercel/project.json`), Git integration이 `main` push를 production으로 배포.
+- 배포 전 production: `dpl_Em6cenL866gHbg1i2yPrLgbUUbZT`, source `c9aeb25`(GitHub deployment 6798212479, `vercel[bot]`), 도메인 alias 확인. 도메인 정적 페이지의 `Age`가 그 deployment 생성 시각(2026-10-02 00:20Z)과 일치. 필터 on(runtime 응답).
+- 복구 준비: 위 deployment 존재·Ready, CLI 로그인 계정이 소유자, `vercel rollback <id>` 사용 가능. 배포 diff에 `src/domain` 타입·저장소·`/api/chat` 스키마 변경 없음(`date.ts`의 표시용 `clockTimeOf`만).
+- gate(이번 실행): test 1369 · typecheck · lint · build 통과 · `eval:food-coverage` 161/191 · 157/179, wrong/drop/nothing 0/0/0, baseline 불변 · `eval:food-modifiers` 66/66(잘못된 자동기록 0) + 경계 13/16(기존 한계 3건 별도, 잘못된 자동기록 0). seeds·serving reference·데이터·baseline 불변. `eval:food-judgment`는 **재사용**: 최종 `9f6193b`에서 실행(177/191, wrong/drop 0) — 그 뒤 커밋은 handoff 문서뿐이라 runtime 코드·데이터·모델 설정이 같다.
+### 배포
+- `git push origin main` fast-forward `c9aeb25..0a02958` (force 없음). Vercel deployment `dpl_DyaGYGYFAwioteYRbdRsFoezCUxu` Ready(빌드 23 s), GitHub deployment success. 서비스 도메인이 새 deployment를 가리킴(도메인 `vercel inspect`, 정적 자산 목록 변경, runtime이 새 동작 — "친구가 튀겨준 고구마" → 고구마튀김). 필터 on 유지.
+### production smoke (deployment 전용 URL — 서비스 도메인과 저장소가 분리된 빈 origin, 같은 build. 서비스 도메인의 사용자 기록은 건드리지 않음)
+| 시나리오 | 결과 | 실제 저장 |
+|---|---|---|
+| A 따뜻한 커피 한 잔 | 통과 — 질문 없이 기록 | 아메리카노 한 잔 14 dataset |
+| A 카페에 가서 따뜻한 커피 한 잔 | 통과 — 8A가 "카페" drop, kcal 질문 없음. 같은 음식이 있어 Jev가 add 확인을 물음("가서 따뜻한 커피를 기록할까요?" — 확인 문구에 원문 구절이 그대로 나오는 것은 기존 표시) | 아메리카노 한 잔 14 (카페 미기록) |
+| B 친구가 튀겨준 고구마 | 통과 | 고구마튀김 1인분 421 |
+| B 구운 계란 두 개 → 150 | 통과 — 실제 kcal 대기 질문, 질문 중 저장 없음 | 구운 계란 두 개 150 user (한 번) |
+| C 구운 계란 두 개랑 바나나 하나 → 140 | 통과 — add 확인("바나나를 기록할까요?" — 확인 문구는 아는 음식만 나열하는 기존 동작) → 계란만 질문 → 한 기록 | 구운 계란 두 개 140 user + 바나나 하나 77 |
+| C 같은 문장 → 취소 | 통과 — 저장 불변 | — |
+| D 케이크 + 초콜릿케이크 → 케이크 700 | 통과 — 대상 `e19bcc`(케이크)만 변경 | 케이크 266→700, 초콜릿케이크 292 그대로 |
+| D 같은 이름·양·kcal 케이크 2건(14:59, 8초 차) + 700짜리 → 케이크 300 | 통과 — 세 칩, 질문 중 불변, 해당 없음 → 불변, 서버 후보 id와 칩 일치("1번째"=`9232b2`, "2번째"=`fc89d3`) → 1번째 선택 → `9232b2`만 266→300 | 기록/항목 수 불변(9/10), 합계 2340→2374 |
+| E 빙수 → 다른 음식이에요 → 350 | 통과 — 고르기(팥/인절미/다른 음식이에요/취소) → 빙수 kcal 질문 | 빙수 350 user |
+| E 빙수 → 취소 | 통과 — 저장 불변 | — |
+| F 대기 kcal 질문 + 숫자 | 통과 (B·C·E에서 실제 대기 질문에 숫자 적용) | 위 |
+| F 대기 없는 안내 → "60" | 통과 — 이 분기가 production에서 실제 발생("설탕을 넣어서 커피 한 잔": needsConfirmation + 전부 unknown → "기록하지 않았어요 … 다시 말씀해주세요"). "60" → clarify low_confidence, 대상 없음, 저장 불변 | — |
+| F 이름·양·kcal 재입력 | 통과 — add 확인 → 한 번 기록, "직접 입력" 아님 | 설탕을 넣어서 커피 한 잔 60 user |
+최종 11 records / 12 items / 2784 kcal, 단계별 합계 모두 일치. 재시도 없음(실패 0). 테스트 origin의 localStorage 키 1개(11 records)를 삭제해 빈 상태로 되돌렸다.
+### 알려진 한계 (해결 아님, 배포 차단 아님)
+- 분량·잔량: "200g 중 반만"은 이름 없이 kcal을 묻고, 남긴 것만 말한 문장은 기록하지 않는다. "먹다 남긴 피자"는 기본 1인분.
+- 음식 뒤 조리 동사("계란을 삶아서 두 개")는 질문으로 간다.
+- 같은 음식이 이미 있으면 Jev add 확신이 중간이 되어 확인 질문이나 재입력 안내가 나온다(이번 smoke에서도 관찰). 안내는 상태와 맞고 저장은 안전.
+- 확인 문구가 원문 구절("가서 따뜻한 커피")을 그대로 쓰거나 아는 음식만 나열("바나나를 기록할까요?")하는 기존 표시.
+- 김 → 조미김, 맨 계란·달걀 → 삶은 달걀 별칭 보류. 표에 없는 수식어는 일반 음식 앞에서 질문. "통조림"류 단어 끝 표기 우연 일치. 하루 50항목 초과 시 `/api/chat` 400.
+### rollback
+수행하지 않음(회귀 없음). 필요 시 위 "현재 상태"의 절차.
