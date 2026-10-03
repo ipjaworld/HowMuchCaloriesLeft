@@ -61,6 +61,11 @@ describe("mentionedNames: a name counts where it is said as itself", () => {
   ])("%s → %j", (message, names) => {
     expect(mentionedNames(message, items)).toEqual(names);
   });
+
+  it("a one-syllable name is not read inside other words (회사, 배달)", () => {
+    const short = [entry("h", "회", 0), entry("p", "배", 1), entry("g", "김밥", 2)];
+    expect(mentionedNames("회사 앞에서 배달시킨 김밥 반만 먹었어", short)).toEqual(["김밥"]);
+  });
 });
 
 describe("a correction lands on the entry the user named", () => {

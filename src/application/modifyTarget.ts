@@ -69,7 +69,10 @@ export function mentionedNames(
   const logged = new Map(items.map((item) => [squash(item.name), item.name]));
 
   for (const [key, name] of logged) {
-    const spellings = new Set([key, ...(lexicon.get(key) ?? [])]);
+    // A one-syllable name (배, 귤, 회) is a syllable of too many other words
+    // — 배달, 회사 — to be read as a mention; such an entry is left to the
+    // judge and the fallback, as before.
+    const spellings = new Set([key, ...(lexicon.get(key) ?? [])].filter((spelling) => spelling.length >= 2));
     for (const spelling of spellings) {
       for (const start of occurrences(said, spelling)) {
         spans.push({ start, end: start + spelling.length, record: name });
