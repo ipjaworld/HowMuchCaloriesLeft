@@ -1,0 +1,218 @@
+{
+  "note": "Boundary checks for the food-modifier policy (2026-10-03, after d60ca12): narration vs additions, provenance vs cooking, leftovers and who ate. Expected results written before the fix; separate denominator from food-modifier-cases.json and the food-input corpus. 'limit' marks an existing parser limit: 'expect' is still the product goal, 'accepted' the current safe behaviour. status 'nothing' = no part names the food (it is not recorded).",
+  "cases": [
+    {
+      "id": "L00",
+      "group": "narration",
+      "input": "커피 한 잔 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "아메리카노"
+      },
+      "why": "base"
+    },
+    {
+      "id": "L01",
+      "group": "narration",
+      "input": "카페에 가서 따뜻한 커피 한 잔 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "아메리카노"
+      },
+      "pairOf": "L00",
+      "limit": {
+        "reason": "existing parser: 에 is read as a conjunction, so 카페 becomes its own phrase (카페라떼/카페모카?); the coffee itself reads as the base. The 8A filter is meant to drop 카페 at runtime — checked in the browser.",
+        "accepted": {
+          "status": "resolved",
+          "entry": "아메리카노"
+        }
+      },
+      "why": "narration before the food"
+    },
+    {
+      "id": "L02",
+      "group": "addition",
+      "input": "설탕 넣은 커피 한 잔 마셨어",
+      "expect": {
+        "status": "unknown",
+        "label": "설탕 넣은 커피",
+        "amount": "한 잔"
+      },
+      "why": "addition, adnominal"
+    },
+    {
+      "id": "L03",
+      "group": "addition",
+      "input": "설탕을 넣어서 커피 한 잔 마셨어",
+      "expect": {
+        "status": "unknown",
+        "label": "설탕을 넣어서 커피",
+        "amount": "한 잔"
+      },
+      "pairOf": "L02",
+      "why": "addition in a -서 clause must not be cut as narration"
+    },
+    {
+      "id": "L04",
+      "group": "addition",
+      "input": "설탕을 타서 커피 한 잔 마셨어",
+      "expect": {
+        "status": "unknown",
+        "label": "설탕을 타서 커피",
+        "amount": "한 잔"
+      },
+      "pairOf": "L02",
+      "why": "same, 타다"
+    },
+    {
+      "id": "L05",
+      "group": "provenance",
+      "input": "고구마 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "고구마"
+      },
+      "why": "base"
+    },
+    {
+      "id": "L06",
+      "group": "provenance",
+      "input": "친구가 사준 고구마 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "고구마"
+      },
+      "pairOf": "L05",
+      "why": "who bought it"
+    },
+    {
+      "id": "L07",
+      "group": "cooking",
+      "input": "튀긴 고구마 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "고구마튀김"
+      },
+      "why": "entry that names the method"
+    },
+    {
+      "id": "L08",
+      "group": "cooking",
+      "input": "친구가 튀겨준 고구마 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "고구마튀김"
+      },
+      "pairOf": "L07",
+      "why": "who made it + how: the method stays"
+    },
+    {
+      "id": "L09",
+      "group": "cooking",
+      "input": "친구가 구워온 계란 두 개 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "구워온 계란",
+        "amount": "두 개"
+      },
+      "why": "구워온 = baked; never 삶은 달걀"
+    },
+    {
+      "id": "L10",
+      "group": "cooking-after",
+      "input": "계란을 삶아서 두 개 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "삶은 달걀"
+      },
+      "limit": {
+        "reason": "existing parser: the food comes before its cooking verb, so the phrase does not end on the food and is asked about (no name quoted). Safe: nothing is recorded as another food.",
+        "accepted": {
+          "status": "unknown",
+          "label": ""
+        }
+      },
+      "why": "method after the food"
+    },
+    {
+      "id": "L11",
+      "group": "cooking-after",
+      "input": "계란을 구워서 두 개 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "구워서",
+        "amount": "두 개"
+      },
+      "limit": {
+        "reason": "existing parser, as L10.",
+        "accepted": {
+          "status": "unknown",
+          "label": ""
+        }
+      },
+      "why": "method after the food"
+    },
+    {
+      "id": "L12",
+      "group": "amount",
+      "input": "친구가 남긴 피자 100g 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "피자",
+        "amount": "100g"
+      },
+      "why": "someone's leftover, stated grams kept"
+    },
+    {
+      "id": "L13",
+      "group": "amount",
+      "input": "피자 200g 중 반만 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "피자"
+      },
+      "limit": {
+        "reason": "existing parser: '200g 중 반' is not read as half of 200 g; the food is asked about. Safe: neither 200 g nor 반 of a default serving is recorded.",
+        "accepted": {
+          "status": "unknown",
+          "label": ""
+        }
+      },
+      "why": "stated total and fraction"
+    },
+    {
+      "id": "L14",
+      "group": "amount",
+      "input": "피자 200g 중 반은 남겼어",
+      "expect": {
+        "status": "resolved",
+        "entry": "피자"
+      },
+      "limit": {
+        "reason": "existing parser: a sentence that only says what was left produces no food part; nothing is recorded and the app says so. Safe but the eaten half is not offered.",
+        "accepted": {
+          "status": "nothing",
+          "food": "피자"
+        }
+      },
+      "why": "stated total and the part left"
+    },
+    {
+      "id": "L15",
+      "group": "not-eaten",
+      "input": "나는 피자 안 먹고 친구가 먹었어",
+      "expect": {
+        "status": "nothing",
+        "food": "피자"
+      },
+      "limit": {
+        "reason": "existing parser leaves a stray 친구가 phrase (the 8A filter drops it at runtime); 피자 is never a part.",
+        "accepted": {
+          "status": "nothing",
+          "food": "피자"
+        }
+      },
+      "why": "someone else ate it"
+    }
+  ]
+}

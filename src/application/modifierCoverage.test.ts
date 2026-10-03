@@ -4,7 +4,7 @@ import type { RecentItem } from "@/ai/judgment/types";
 import { findByName } from "@/ai/nutrition/dataset";
 import { KOREAN_FOODS, koreanFoodResolver } from "@/ai/nutrition/koreanFoods";
 import { createLocalDatasetResolver } from "@/ai/nutrition/localDatasetResolver";
-import { GENERIC_REPRESENTATIVE_IDS, classifyModifier } from "@/ai/nutrition/modifierPolicy";
+import { GENERIC_REPRESENTATIVE_IDS, classifyModifier, nameCarriesMethod } from "@/ai/nutrition/modifierPolicy";
 import type { FoodEntry } from "@/ai/nutrition/types";
 import { itemsOf, resolveAddParts } from "./addFood";
 import { resolveModifyParts } from "./mixedModify";
@@ -144,5 +144,66 @@ describe("a correction reads its food through the same matcher", () => {
     const coffee: RecentItem = { id: "c", name: "아메리카노", amount: "1잔", calories: 14, consumedAt: "2026-10-03T08:00:00+09:00" };
     const { parts } = await resolveModifyParts("아메리카노 말고 따뜻한 커피 두 잔이었어", coffee, koreanFoodResolver);
     expect(parts.map((part) => (part.status === "resolved" ? part.item.name : part.status))).toEqual(["아메리카노"]);
+  });
+});
+
+describe("fixtures/food-modifier-boundary-cases.json — where narration ends and the food begins", () => {
+  const boundary = (JSON.parse(readFileSync("fixtures/food-modifier-boundary-cases.json", "utf8")) as { cases: ModifierCase[] }).cases;
+
+  it("an addition, a cooking verb or a stated amount is never dropped as narration", async () => {
+    const scored = await scoreModifierCases(boundary, koreanFoodResolver, representativeNamesFrom(KOREAN_FOODS));
+    // Cases without a known parser limit read exactly as expected …
+    expect(scored.filter((item) => item.case.limit === undefined && !item.correct).map((item) => item.case.id)).toEqual([]);
+    // … and the limits behave as recorded: safe, nothing stored as another food.
+    expect(scored.filter((item) => item.case.limit !== undefined && !item.correct && !item.withinLimit).map((item) => item.case.id)).toEqual([]);
+    expect(summarize(scored)).toMatchObject({ wrongAuto: 0, inconsistent: 0 });
+  });
+});
+
+describe("verbs that go on keep what they say", () => {
+  it.each([
+    ["튀겨준", "cooking"],
+    ["구워온", "cooking"],
+    ["구워서", "cooking"],
+    ["삶아서", "cooking"],
+    ["넣어서", "addition"],
+    ["타서", "addition"],
+    ["사준", "provenance"],
+    ["가져온", "provenance"],
+    ["가서", "boundary"],
+  ])("%s → %s", (word, kind) => {
+    expect(classifyModifier(word)).toBe(kind);
+  });
+
+  it("narration that ends before the food still leaves it alone (택시 타고 와서 김밥)", async () => {
+    const parts = await resolveAddParts("택시 타고 와서 김밥 먹었어", koreanFoodResolver);
+    expect(parts.at(-1)).toMatchObject({ status: "resolved", item: { name: "김밥" } });
+  });
+});
+
+describe("a cooking method is carried at the edge of a name's word, not anywhere in it", () => {
+  it.each([
+    ["삼겹살구이", ["구이", "구운", "군"], true],
+    ["군만두", ["구이", "구운", "군"], true],
+    ["삶은 달걀", ["삶은"], true],
+    ["닭볶음(닭갈비)", ["볶음", "볶은"], true],
+    ["두부전", ["부침", "전"], true],
+    // 전 in 전골 and 볶음 in 김치볶음밥 are other words that contain the form.
+    ["곱창전골", ["부침", "전"], false],
+    ["두부전골", ["부침", "전"], false],
+    ["김치볶음밥", ["볶음", "볶은"], false],
+    ["김치부침개", ["부침", "전"], false],
+  ] as const)("%s carries %j: %s", (name, forms, carries) => {
+    expect(nameCarriesMethod(name, forms)).toBe(carries);
+  });
+
+  it.each([
+    ["구운 삼겹살 먹었어", "삼겹살구이"],
+    ["구운 만두 먹었어", "군만두"],
+    ["부친 두부 먹었어", "두부전"],
+    ["튀긴 고구마 먹었어", "고구마튀김"],
+  ])("%s → %s, as before the edge rule", async (sentence, name) => {
+    const parts = await resolveAddParts(sentence, koreanFoodResolver);
+    expect(parts.at(-1)).toMatchObject({ status: "resolved", item: { name } });
   });
 });

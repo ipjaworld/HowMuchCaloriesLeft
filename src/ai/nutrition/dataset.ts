@@ -4,6 +4,7 @@ import {
   GENERIC_REPRESENTATIVE_IDS,
   classifyModifier,
   cookingFormsOf,
+  nameCarriesMethod,
   type ModifierKind,
 } from "./modifierPolicy";
 import type { FoodEntry } from "./types";
@@ -319,7 +320,7 @@ function readModifiers(
   for (const { word } of said.filter(({ kind }) => kind === "cooking")) {
     const methodForms = cookingFormsOf(word) ?? [];
     const carries = (entry: FoodEntry) =>
-      formsOf(entry).some((name) => methodForms.some((method) => name.includes(method)));
+      [entry.name, ...(entry.aliases ?? [])].some((name) => nameCarriesMethod(name, methodForms));
     const agreeing = current.filter(carries);
     if (agreeing.length > 0) {
       current = agreeing;

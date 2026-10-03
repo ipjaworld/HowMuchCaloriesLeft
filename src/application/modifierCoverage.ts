@@ -15,7 +15,9 @@ import { resolveAddParts, type AddPart } from "./addFood";
  */
 
 export type ModifierExpect =
-  | { status: "resolved"; entry: string }
+  | { status: "resolved"; entry: string; amount?: string }
+  /** Not recorded: no part is the food, and nothing is recorded under it. */
+  | { status: "nothing"; food?: string }
   | { status: "unmeasurable"; entry: string }
   | { status: "ambiguous"; candidates: string[] }
   | { status: "unknown"; label: string; amount?: string };
@@ -27,11 +29,16 @@ export type ModifierCase = {
   expect: ModifierExpect;
   pairOf?: string;
   why?: string;
+  /**
+   * An existing limit outside the code under test: `expect` stays the
+   * product goal, `accepted` is the current behaviour, which must be safe.
+   */
+  limit?: { reason: string; accepted: ModifierExpect };
 };
 
 export type Outcome =
-  | { kind: "exact"; entry: string }
-  | { kind: "representative"; entry: string }
+  | { kind: "exact"; entry: string; amount?: string }
+  | { kind: "representative"; entry: string; amount?: string }
   | { kind: "choose"; candidates: string[] }
   | { kind: "amount"; entries: string[] }
   | { kind: "kcal"; label: string | null; amount?: string }
@@ -49,6 +56,12 @@ export type ScoredCase = {
   needed: boolean;
   /** Reads differently from the input it is paired with. */
   inconsistent: boolean;
+  /** Not the goal, but the accepted current behaviour of a known limit. */
+  withinLimit: boolean;
+  /** Questions about other phrases of the same sentence (story words read as food). */
+  extraQuestions: number;
+  /** Every phrase name, for the "nothing" check. */
+  phrases: string[];
 };
 
 const squash = (text: string) => text.replace(/\s+/g, "");
@@ -64,9 +77,14 @@ function outcomeOf(part: AddPart | undefined, representativeNames: ReadonlySet<s
     case "resolved":
       // Recorded under a generic representative for words that are not its
       // own name — "생크림 케이크" → 케이크 — is counted apart from an exact hit.
-      return representativeNames.has(part.item.name) && squash(part.phraseName) !== squash(part.item.name)
-        ? { kind: "representative", entry: part.item.name }
-        : { kind: "exact", entry: part.item.name };
+      return {
+        kind:
+          representativeNames.has(part.item.name) && squash(part.phraseName) !== squash(part.item.name)
+            ? "representative"
+            : "exact",
+        entry: part.item.name,
+        ...(part.item.amount === undefined ? {} : { amount: part.item.amount }),
+      };
     case "ambiguous":
       return { kind: "choose", candidates: part.candidates.map((candidate) => candidate.name).sort() };
     case "unmeasurable":
@@ -108,13 +126,22 @@ const QUESTION_WEIGHT: Record<Outcome["kind"], number> = {
 };
 
 function expectedWeight(expect: ModifierExpect): number {
-  return expect.status === "resolved" ? 0 : expect.status === "unknown" ? 2 : 1;
+  return expect.status === "resolved" || expect.status === "nothing" ? 0 : expect.status === "unknown" ? 2 : 1;
 }
 
-function matches(expect: ModifierExpect, outcome: Outcome): boolean {
+function matches(expect: ModifierExpect, outcome: Outcome, phrases: string[]): boolean {
   switch (expect.status) {
+    case "nothing":
+      return (
+        (outcome.kind === "dropped" || outcome.kind === "kcal") &&
+        (expect.food === undefined || !phrases.some((phrase) => squash(phrase).includes(squash(expect.food ?? ""))))
+      );
     case "resolved":
-      return (outcome.kind === "exact" || outcome.kind === "representative") && outcome.entry === expect.entry;
+      return (
+        (outcome.kind === "exact" || outcome.kind === "representative") &&
+        outcome.entry === expect.entry &&
+        (expect.amount === undefined || outcome.amount === expect.amount)
+      );
     case "unmeasurable":
       return outcome.kind === "amount" && outcome.entries.includes(expect.entry);
     case "ambiguous":
@@ -122,8 +149,7 @@ function matches(expect: ModifierExpect, outcome: Outcome): boolean {
     case "unknown":
       return (
         outcome.kind === "kcal" &&
-        outcome.label !== null &&
-        squash(outcome.label).includes(squash(expect.label)) &&
+        (expect.label === "" || (outcome.label !== null && squash(outcome.label).includes(squash(expect.label)))) &&
         (expect.amount === undefined || outcome.amount === expect.amount)
       );
   }
@@ -135,14 +161,21 @@ export async function scoreModifierCases(
   representativeNames: ReadonlySet<string>,
 ): Promise<ScoredCase[]> {
   const outcomes = new Map<string, Outcome>();
+  const others = new Map<string, { extraQuestions: number; phrases: string[] }>();
   for (const item of cases) {
     const parts = await resolveAddParts(item.input, resolver);
     outcomes.set(item.id, outcomeOf(scoredPart(parts), representativeNames));
+    others.set(item.id, {
+      extraQuestions: parts.slice(0, -1).filter((part) => part.status !== "resolved" && part.status !== "skipped").length,
+      phrases: parts.map((part) => part.phraseName),
+    });
   }
 
   return cases.map((item) => {
     const outcome = outcomes.get(item.id) ?? { kind: "dropped" };
-    const correct = matches(item.expect, outcome);
+    const { extraQuestions, phrases } = others.get(item.id) ?? { extraQuestions: 0, phrases: [] };
+    const correct = matches(item.expect, outcome, phrases);
+    const withinLimit = !correct && item.limit !== undefined && matches(item.limit.accepted, outcome, phrases);
     const asked = QUESTION_WEIGHT[outcome.kind] > 0;
     const resolved = outcome.kind === "exact" || outcome.kind === "representative";
     const pair = item.pairOf === undefined ? undefined : outcomes.get(item.pairOf);
@@ -154,6 +187,9 @@ export async function scoreModifierCases(
       unnecessary: asked && QUESTION_WEIGHT[outcome.kind] > expectedWeight(item.expect),
       needed: asked && QUESTION_WEIGHT[outcome.kind] <= expectedWeight(item.expect) && expectedWeight(item.expect) > 0,
       inconsistent: pair !== undefined && signature(pair) !== signature(outcome),
+      withinLimit,
+      extraQuestions,
+      phrases,
     };
   });
 }
@@ -171,6 +207,8 @@ export type ModifierSummary = {
   wrongAuto: number;
   dropped: number;
   inconsistent: number;
+  withinLimit: number;
+  extraQuestions: number;
 };
 
 export function summarize(scored: ScoredCase[]): ModifierSummary {
@@ -188,6 +226,8 @@ export function summarize(scored: ScoredCase[]): ModifierSummary {
     wrongAuto: count((item) => item.wrongAuto),
     dropped: count((item) => item.outcome.kind === "dropped"),
     inconsistent: count((item) => item.inconsistent),
+    withinLimit: count((item) => item.withinLimit),
+    extraQuestions: scored.reduce((sum, item) => sum + item.extraQuestions, 0),
   };
 }
 

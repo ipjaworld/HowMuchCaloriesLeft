@@ -139,7 +139,9 @@ export function cleanFoodLabel(text: string): string | null {
   if (stripped.length === 0) return null;
   words[lastIndex] = stripped;
 
-  if (words.some((word) => CLAUSE_ENDING.test(word))) return null;
+  // In a described food every word in front was already read as describing
+  // it (구워온, 넣어서), so only the food itself is checked for a clause ending.
+  if ((said.length > 2 ? words.slice(-1) : words).some((word) => CLAUSE_ENDING.test(word))) return null;
   if (!words.every((word) => /^[가-힣a-zA-Z0-9]+$/.test(word))) return null;
 
   const label = words.join(" ");

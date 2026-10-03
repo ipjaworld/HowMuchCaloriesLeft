@@ -63,6 +63,33 @@ const COOKING_FORMS: ReadonlyArray<readonly [readonly string[], readonly string[
   [["무친"], ["무침"]],
 ];
 
+/**
+ * The same methods and additions said as a verb that goes on — 구워서,
+ * 튀겨준, 구워온, 넣어서, 타서 (2026-10-03). The stem decides what the word
+ * is; the ending only says the clause continues, or who did it. Without this
+ * the -서 ending read "설탕을 넣어서" as narration and the -준/-온 endings
+ * read "튀겨준" and "구워온" as who brought it, and the method was lost.
+ */
+const VERB_STEMS: ReadonlyArray<readonly [readonly string[], string]> = [
+  [["구워", "굽"], "구운"],
+  [["튀겨", "튀기"], "튀긴"],
+  [["볶아", "볶"], "볶은"],
+  [["삶아", "삶"], "삶은"],
+  [["쪄"], "찐"],
+  [["조려", "졸여"], "조린"],
+  [["데쳐"], "데친"],
+  [["부쳐"], "부친"],
+  [["무쳐"], "무친"],
+  [["훈제해"], "훈제"],
+];
+const ADDITION_STEMS = ["넣어", "넣", "타", "뿌려", "올려", "얹어", "섞어", "곁들여", "발라", "찍어"];
+/** Endings after a verb stem: the clause goes on (서, 고), or someone did it for the user (준, 온). */
+const VERB_ENDINGS = ["서", "고", "준", "다준", "온", "와서", "놓은", "낸"];
+
+function verbStemOf(word: string, stems: readonly string[]): boolean {
+  return stems.some((stem) => VERB_ENDINGS.some((ending) => word === stem + ending));
+}
+
 /** Something was put in or on it — the food is no longer the plain one. */
 const ADDITION_WORDS = new Set(["넣은", "넣은거", "들어간", "올린", "얹은", "뿌린", "섞은", "추가한", "곁들인", "바른", "찍은", "탄", "타먹은"]);
 
@@ -108,7 +135,7 @@ export function classifyModifier(word: string): ModifierKind {
   if (MANNER_WORDS.has(word) || (word.length >= 3 && word.endsWith("게"))) return "manner";
   if (SIZE_WORDS.has(word)) return "size";
   if (cookingFormsOf(word) !== null) return "cooking";
-  if (ADDITION_WORDS.has(word)) return "addition";
+  if (ADDITION_WORDS.has(word) || verbStemOf(word, ADDITION_STEMS)) return "addition";
   if (NEUTRAL_SUFFIXES.some((suffix) => word.length > suffix.length && word.endsWith(suffix))) return "provenance";
   if (isNarration(word) || CLAUSE_ENDINGS.test(word)) return "boundary";
   if (ARGUMENT_PARTICLES.some((particle) => word.length > particle.length && word.endsWith(particle))) return "argument";
@@ -128,7 +155,14 @@ export function classifyModifier(word: string): ModifierKind {
 export function describedFoodWords(words: readonly string[]): string[] | null {
   const kinds = words.map(classifyModifier);
   let from = kinds.lastIndexOf("boundary") + 1;
-  while (from < words.length - 1 && (kinds[from] === "argument" || kinds[from] === "provenance")) from += 1;
+  // Who and where are left out — but not what was put in ("설탕을 넣어서").
+  while (
+    from < words.length - 1 &&
+    (kinds[from] === "argument" || kinds[from] === "provenance") &&
+    kinds[from + 1] !== "addition"
+  ) {
+    from += 1;
+  }
 
   const kept = words.slice(from);
   // A described food has at least one word describing it. A lone word left
@@ -145,10 +179,27 @@ export function describedFoodWords(words: readonly string[]): string[] | null {
   return kept;
 }
 
-/** The dataset forms of a cooking word, or null when it is not one. */
+/** The dataset forms of a cooking word, or null when it is not one — also when said as a verb that goes on. */
 export function cookingFormsOf(word: string): readonly string[] | null {
+  for (const [stems, adnominal] of VERB_STEMS) {
+    if (verbStemOf(word, stems)) return cookingFormsOf(adnominal);
+  }
   for (const [said, forms] of COOKING_FORMS) if (said.includes(word)) return forms;
   return null;
+}
+
+/**
+ * Whether a dataset name carries a cooking method for this food: the method
+ * at the edge of one of its words (삼겹살구이, 군만두, 삶은 달걀, 닭볶음) —
+ * the way Korean compounds name how a food was cooked. A method form in the
+ * middle of a word is another word that happens to contain it: 전 in 전골,
+ * 볶음 in 김치볶음밥.
+ */
+export function nameCarriesMethod(name: string, methodForms: readonly string[]): boolean {
+  return name
+    .split(/[^가-힣A-Za-z0-9]+/)
+    .filter((word) => word.length > 0)
+    .some((word) => methodForms.some((method) => word.startsWith(method) || word.endsWith(method)));
 }
 
 /** Every dataset form of every cooking method, for taking a method out of a name. */
