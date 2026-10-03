@@ -241,7 +241,13 @@ export async function resolveAddParts(
         }
 
         case "unknown":
-          return { status: "unknown", phraseName: phrase.name };
+          // The amount said ("구운 계란 두 개") stays with the food, so the record
+          // made from the user's own figure still says how much it was.
+          return {
+            status: "unknown",
+            phraseName: phrase.name,
+            ...(phrase.quantity.assumed ? {} : { amount: phrase.quantity.text }),
+          };
       }
     }),
   );

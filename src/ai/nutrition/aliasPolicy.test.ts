@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { resolveAddParts } from "@/application/addFood";
 import { findByName } from "./dataset";
 import { parseFoodPhrases } from "./foodPhrases";
 import { KOREAN_FOODS, koreanFoodResolver } from "./koreanFoods";
+import { cleanFoodLabel } from "./statedCalories";
 
 /**
  * Which words may stand for which entry — the alias review of 2026-10-03.
@@ -126,4 +128,72 @@ describe("held for a separate decision (not changed in this review)", () => {
       if (result.status === "resolved") expect(result.match.entry.name).toBe("삶은 달걀");
     }
   });
+});
+
+describe("a cooking method the user states is not dropped by a space (2026-10-03)", () => {
+  // Before: "구운계란" asked for the calories, but "구운 계란" was taken as the
+  // last word 계란 → 삶은 달걀 and stored as a boiled egg. A modifier in front
+  // of an alias of a specific food now keeps the food unknown, as without
+  // the space. Plain 계란 · 달걀 → 삶은 달걀 is held as before (see above).
+  const statusOf = async (sentence: string) => {
+    const parts = await resolveAddParts(sentence, koreanFoodResolver);
+    return parts.map((part) =>
+      part.status === "resolved"
+        ? `${part.item.name}${part.item.amount === undefined ? "" : ` ${part.item.amount}`}`
+        : part.status === "unknown"
+          ? `unknown:${cleanFoodLabel(part.phraseName)}${part.amount === undefined ? "" : ` ${part.amount}`}`
+          : part.status,
+    );
+  };
+
+  it.each([
+    ["구운계란 먹었어", "unknown:구운계란"],
+    ["구운 계란 먹었어", "unknown:구운 계란"],
+    ["구운달걀 먹었어", "unknown:구운달걀"],
+    ["구운 달걀 먹었어", "unknown:구운 달걀"],
+    ["훈제계란 먹었어", "unknown:훈제계란"],
+    ["훈제 계란 먹었어", "unknown:훈제 계란"],
+    ["구운 계란 두 개 먹었어", "unknown:구운 계란 두 개"],
+  ])("%s → %s (asks for the calories under the user's own name and amount)", async (sentence, expected) => {
+    expect(await statusOf(sentence)).toEqual([expected]);
+  });
+
+  it.each([
+    ["삶은계란 먹었어", "삶은 달걀 1개"],
+    ["삶은 계란 먹었어", "삶은 달걀 1개"],
+    ["삶은 달걀 두 개 먹었어", "삶은 달걀 두 개"],
+    ["계란 2개 먹었어", "삶은 달걀 2개"],
+    ["아침에 계란 두 개 먹었어", "삶은 달걀 두 개"],
+    ["아침은 계란 두 개 먹었어", "삶은 달걀 두 개"],
+    ["계란말이 먹었어", "계란말이 1인분"],
+    ["훈제 닭가슴살 100g 먹었어", "훈제 닭가슴살 100g"],
+    ["생크림 케이크 먹었어", "케이크 1조각"],
+    ["봉골레 파스타 먹었어", "스파게티 1접시"],
+    ["교촌 치킨 먹었어", "치킨 1인분"],
+    ["맛있는 김밥 먹었어", "김밥 1줄"],
+    ["친구가 사준 커피 마셨어", "아메리카노 1잔"],
+  ])("%s → %s, as before", async (sentence, expected) => {
+    expect(await statusOf(sentence)).toEqual([expected]);
+  });
+
+  it("계란후라이 still reaches its own entry (asks for the amount, as before)", async () => {
+    expect(await statusOf("계란후라이 먹었어")).toEqual(["unmeasurable"]);
+  });
+
+  it("a stated figure keeps the user's name", async () => {
+    const parts = await resolveAddParts("구운 계란 150kcal 먹었어", koreanFoodResolver);
+    expect(parts).toHaveLength(1);
+    expect(parts[0]).toMatchObject({ status: "resolved", item: { name: "구운 계란", calories: 150, calorieSource: "user" } });
+  });
+
+  it("beside another food: nothing dropped, nothing doubled", async () => {
+    expect(await statusOf("구운 계란 두 개랑 바나나 먹었어")).toEqual(["unknown:구운 계란 두 개", "바나나 1개"]);
+  });
+
+  it.each(["큰 계란 두 개 먹었어", "따뜻한 커피 마셨어", "구운 삼겹살 먹었어", "편의점 삼각김밥 먹었어"])(
+    "%s now asks too — one modifier in front of an alias of a specific food (intended, conservative)",
+    async (sentence) => {
+      expect((await statusOf(sentence))[0]).toMatch(/^unknown:/);
+    },
+  );
 });

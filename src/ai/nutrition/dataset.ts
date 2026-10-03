@@ -170,7 +170,14 @@ function scoreEntry(
   return { score: best, generic };
 }
 
-type Mention = { entries: Set<FoodEntry>; start: number; end: number; length: number };
+type Mention = {
+  entries: Set<FoodEntry>;
+  /** Entries reached by their own name here, not only through an alias. */
+  byName: Set<FoodEntry>;
+  start: number;
+  end: number;
+  length: number;
+};
 
 /**
  * Dataset names that appear inside the phrase as words of their own.
@@ -195,6 +202,7 @@ function embeddedMentions(entries: FoodEntry[], spoken: string): Mention[] {
 
   const found = new Map<string, Mention>();
   for (const entry of entries) {
+    const ownName = squash(entry.name);
     for (const form of [entry.name, ...(entry.aliases ?? [])].map(squash)) {
       if (form.length < 2 || HOMOGRAPH_FORMS.has(form)) continue;
 
@@ -207,8 +215,9 @@ function embeddedMentions(entries: FoodEntry[], spoken: string): Mention[] {
         if (rest.length > 0 && !WORD_FINAL_PARTICLES.has(rest)) continue;
 
         const key = `${start}:${form.length}`;
-        const mention = found.get(key) ?? { entries: new Set(), start, end: wordEnd, length: form.length };
+        const mention = found.get(key) ?? { entries: new Set(), byName: new Set(), start, end: wordEnd, length: form.length };
         mention.entries.add(entry);
+        if (form === ownName) mention.byName.add(entry);
         found.set(key, mention);
       }
     }
@@ -243,6 +252,7 @@ function findEmbedded(entries: FoodEntry[], spoken: string): NameSearch {
   const [only] = mentions;
   if (mentions.length === 1 && only !== undefined) {
     if (only.end !== total) return { kind: "none" };
+    if (aliasOverridesModifier(spoken, only)) return { kind: "none" };
     const matched = [...only.entries];
     const [first] = matched;
     if (matched.length === 1 && first !== undefined) {
@@ -257,6 +267,41 @@ function findEmbedded(entries: FoodEntry[], spoken: string): NameSearch {
   }
 
   return { kind: "none" };
+}
+
+/**
+ * "구운 계란": a word that says *which* 계란, in front of an alias that stands
+ * for one particular food (계란 → 삶은 달걀).
+ *
+ * An alias of a specific food promises that the word as said means that
+ * food. With a modifier in front, the user may be naming a different kind —
+ * 구운, 훈제, 반숙 — and taking the alias would silently drop what they said.
+ * The same words without the space ("구운계란") already reach no entry, so
+ * this keeps a space from deciding what gets stored (2026-10-03).
+ *
+ * Deliberately narrow, and no list of cooking words:
+ *   - only an alias match. A food's own name keeps the existing reading —
+ *     "생크림 케이크" is a kind of 케이크, and "맛있는 김밥" is 김밥;
+ *   - only an entry that is not a generic representative. Those
+ *     (`variance: "high"`) exist to take kinds the dataset cannot price
+ *     separately: "봉골레 파스타" stays 스파게티;
+ *   - only when the phrase is exactly one word plus the food — a modified
+ *     food name. A longer phrase is narration, which is what the embedded
+ *     reading exists for: "친구가 사준 커피" is the coffee a friend bought;
+ *   - only when that word is a modifier. A word that ends in a particle is
+ *     narration too: "회식에서 삼겹살", "아침은 계란" (time words at the
+ *     front are already stripped).
+ * The result is the existing unknown path: the food is asked about by the
+ * name the user used, and their own figure is stored under it.
+ */
+function aliasOverridesModifier(spoken: string, mention: Mention): boolean {
+  if (mention.byName.size > 0) return false;
+  if ([...mention.entries].some((entry) => entry.variance === "high")) return false;
+
+  const words = spoken.split(/\s+/).filter((word) => word.length > 0);
+  const [before] = words;
+  if (words.length !== 2 || before === undefined || before.length !== mention.start) return false;
+  return ![...WORD_FINAL_PARTICLES].some((particle) => before.length > particle.length && before.endsWith(particle));
 }
 
 /**
