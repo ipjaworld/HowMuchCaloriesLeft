@@ -379,6 +379,20 @@ describe("identical-looking entries are different records (2026-10-03)", () => {
     expect(chips.map((option) => option.label)).toEqual(["케이크 1조각 · 14:00 · 1번째 기록", "케이크 1조각 · 14:00 · 2번째 기록"]);
   });
 
+  it("same minute, different seconds: numbered by when logged, not by chip position", () => {
+    // Found in the local browser run: two 케이크 logged at 12:05:10 and
+    // 12:05:40 came newest first, and the chip numbered "2번째 기록" was the
+    // one logged first. The id under each chip was right; its label was not.
+    const first = { ...entry("k1", "케이크", 0, 266, "1조각"), consumedAt: "2026-10-02T12:05:10+09:00" };
+    const second = { ...entry("k2", "케이크", 0, 266, "1조각"), consumedAt: "2026-10-02T12:05:40+09:00" };
+    const command = decide(modify("k2", 0.99), "케이크 700kcal로 고쳐줘", [first, second]);
+    const reply = describeCommand(command, summarizeDay([], 2000));
+    if (reply.kind !== "question") throw new Error("expected a question");
+    const byId = new Map(reply.options.map((option) => [option.id, option.label]));
+    expect(byId.get("k1")).toBe("케이크 1조각 · 12:05 · 1번째 기록");
+    expect(byId.get("k2")).toBe("케이크 1조각 · 12:05 · 2번째 기록");
+  });
+
   it("the same stored id listed twice is one entry: no question", () => {
     expect(decide(modify("k-am", 0.95), "케이크 700kcal로 고쳐줘", [morning, { ...morning }])).toMatchObject({
       type: "modify_candidate",

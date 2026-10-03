@@ -119,9 +119,18 @@ function candidateLabels(
   return labels.map((label, index) => {
     const same = labels.flatMap((other, at) => (other === label ? [at] : []));
     if (same.length < 2) return label;
-    // Candidates arrive newest first; entries logged at the same moment keep
-    // the day's order, so the earlier-logged one comes first among them.
-    return `${label} · ${same.indexOf(index) + 1}번째 기록`;
+    // Numbered by when each was logged, earliest first — not by where the
+    // chip sits (candidates arrive newest first). Two entries can share a
+    // minute and differ in seconds; a true tie keeps the day's order, which
+    // is the order they were stored in.
+    const order = same
+      .slice()
+      .sort(
+        (a, b) =>
+          (candidates[a]?.consumedAt ?? "").localeCompare(candidates[b]?.consumedAt ?? "") ||
+          a - b,
+      );
+    return `${label} · ${order.indexOf(index) + 1}번째 기록`;
   });
 }
 
