@@ -280,12 +280,10 @@ export function answerNoneOfChoices(pending: PendingAdd, partIndex: number): Pen
   const part = pending.parts[partIndex];
   if (part === undefined || part.status !== "ambiguous") return pending;
 
-  const amounts = new Set(part.candidates.map((candidate) => candidate.item.amount));
-  const [amount] = amounts;
   return replacePart(pending, partIndex, {
     status: "unknown",
     phraseName: part.phraseName,
-    ...(amounts.size === 1 && amount !== undefined ? { amount } : {}),
+    ...(part.saidAmount === undefined ? {} : { amount: part.saidAmount }),
   });
 }
 

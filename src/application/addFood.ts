@@ -44,6 +44,12 @@ export type AddPart =
        * pick and not a recalculation.
        */
       candidates: AddCandidate[];
+      /**
+       * The amount as the user said it ("한 공기"), absent when none was said
+       * and a serving was assumed — so answering "다른 음식이에요" never puts
+       * an assumed 1인분 on a record of the user's own figure.
+       */
+      saidAmount?: string;
     }
   | {
       status: "unmeasurable";
@@ -214,6 +220,7 @@ export async function resolveAddParts(
               name: match.entry.name,
               item: toFoodItem(match),
             })),
+            ...(phrase.quantity.assumed ? {} : { saidAmount: phrase.quantity.text }),
           };
 
         case "unmeasurable": {

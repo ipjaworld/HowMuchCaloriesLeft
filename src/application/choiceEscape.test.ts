@@ -113,5 +113,8 @@ describe("떡볶이랑 튀김, 떡볶이는 반만 — the production smoke sent
     expect(items.map((item) => item.name)).toEqual(["떡볶이", "튀김"]);
     expect(items.filter((item) => item.name === "튀김")).toHaveLength(1);
     expect(items.find((item) => item.name === "튀김")?.calories).toBe(300);
+    // No amount was said for 튀김, so none is invented (the browser run first
+    // showed "튀김 1인분 300" — the candidates' assumed serving).
+    expect(items.find((item) => item.name === "튀김")?.amount).toBeUndefined();
   });
 });
