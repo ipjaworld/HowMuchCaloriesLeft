@@ -201,6 +201,14 @@ export function createLocalDatasetResolver(
       // Not in the dataset. Nothing the user can say will price it.
       if (found.kind === "none") return { status: "unknown", phrase };
 
+      // "큰 계란 두 개": the food is known, but the published weight of one
+      // is not a large one's, and no rule scales it. Grams settle it; a count
+      // cannot, so the amount is asked rather than the standard size stored.
+      if (found.sizeQualified === true && (phrase.quantity.unit === null || !isMetricUnit(phrase.quantity.unit))) {
+        const entries = found.kind === "one" ? [found.entry] : found.entries;
+        return { status: "unmeasurable", phrase, entries, reason: "missing_serving" };
+      }
+
       const matched =
         found.kind === "one"
           ? [found.entry]

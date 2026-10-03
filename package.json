@@ -18,6 +18,7 @@
     "eval:local-router": "vitest run --config vitest.eval.mts evalLocalRouter",
     "eval:food-judgment": "vitest run --config vitest.eval.mts evalFoodJudgment",
     "eval:food-coverage": "vitest run --config vitest.eval.mts evalFoodCoverage",
+    "eval:food-modifiers": "vitest run --config vitest.eval.mts evalFoodModifiers",
     "sync:mfds": "vitest run --config vitest.sync.mts",
     "candidates:mfds": "vitest run --config vitest.candidates.mts"
   },

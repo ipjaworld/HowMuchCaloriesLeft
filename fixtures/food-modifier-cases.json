@@ -1,0 +1,688 @@
+{
+  "note": "Food-name modifiers (2026-10-03). Expected results were written before the implementation. Separate from fixtures/food-input-coverage.json; never mix the denominators. A: descriptions that leave the food as it is — must match the base input (pairOf). B: a stated cooking method no entry carries — the user's food is kept and asked about. C: methods the dataset carries. D: several modifiers, size, amounts. E: existing behaviour. X: other foods and modifiers, decided before running.",
+  "cases": [
+    {
+      "id": "A01",
+      "group": "A",
+      "input": "커피 한 잔 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "아메리카노"
+      },
+      "why": "base"
+    },
+    {
+      "id": "A02",
+      "group": "A",
+      "input": "따뜻한 커피 한 잔 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "아메리카노"
+      },
+      "pairOf": "A01",
+      "why": "temperature"
+    },
+    {
+      "id": "A03",
+      "group": "A",
+      "input": "친구가 사준 커피 한 잔 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "아메리카노"
+      },
+      "pairOf": "A01",
+      "why": "who bought it"
+    },
+    {
+      "id": "A04",
+      "group": "A",
+      "input": "삼각김밥 하나 먹었어",
+      "expect": {
+        "status": "unmeasurable",
+        "entry": "삼각김밥 (참치마요)"
+      },
+      "why": "base: the row has no 개, so it asks the amount (existing)"
+    },
+    {
+      "id": "A05",
+      "group": "A",
+      "input": "편의점 삼각김밥 하나 먹었어",
+      "expect": {
+        "status": "unmeasurable",
+        "entry": "삼각김밥 (참치마요)"
+      },
+      "pairOf": "A04",
+      "why": "place"
+    },
+    {
+      "id": "A06",
+      "group": "A",
+      "input": "편의점에서 산 삼각김밥 하나 먹었어",
+      "expect": {
+        "status": "unmeasurable",
+        "entry": "삼각김밥 (참치마요)"
+      },
+      "pairOf": "A04",
+      "why": "place + bought"
+    },
+    {
+      "id": "B01",
+      "group": "B",
+      "input": "구운계란 두 개 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "구운계란",
+        "amount": "두 개"
+      },
+      "why": "no baked-egg entry"
+    },
+    {
+      "id": "B02",
+      "group": "B",
+      "input": "구운 계란 두 개 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "구운 계란",
+        "amount": "두 개"
+      },
+      "pairOf": "B01",
+      "why": "space"
+    },
+    {
+      "id": "B03",
+      "group": "B",
+      "input": "잘 구운 계란 두 개 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "잘 구운 계란",
+        "amount": "두 개"
+      },
+      "pairOf": "B01",
+      "why": "manner word"
+    },
+    {
+      "id": "B04",
+      "group": "B",
+      "input": "아주 잘 구운 계란 두 개 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "아주 잘 구운 계란",
+        "amount": "두 개"
+      },
+      "pairOf": "B01",
+      "why": "two manner words"
+    },
+    {
+      "id": "B05",
+      "group": "B",
+      "input": "친구가 사준 구운 계란 두 개 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "구운 계란",
+        "amount": "두 개"
+      },
+      "pairOf": "B01",
+      "why": "narration in front"
+    },
+    {
+      "id": "B06",
+      "group": "B",
+      "input": "편의점에서 산 구운 계란 두 개 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "구운 계란",
+        "amount": "두 개"
+      },
+      "pairOf": "B01",
+      "why": "place in front"
+    },
+    {
+      "id": "B07",
+      "group": "B",
+      "input": "구운달걀 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "구운달걀"
+      }
+    },
+    {
+      "id": "B08",
+      "group": "B",
+      "input": "구운 달걀 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "구운 달걀"
+      },
+      "pairOf": "B07",
+      "why": "space"
+    },
+    {
+      "id": "B09",
+      "group": "B",
+      "input": "훈제계란 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "훈제계란"
+      }
+    },
+    {
+      "id": "B10",
+      "group": "B",
+      "input": "훈제 계란 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "훈제 계란"
+      },
+      "pairOf": "B09",
+      "why": "space"
+    },
+    {
+      "id": "B11",
+      "group": "B",
+      "input": "튀긴두부 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "튀긴두부"
+      },
+      "why": "no fried-tofu entry"
+    },
+    {
+      "id": "B12",
+      "group": "B",
+      "input": "튀긴 두부 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "튀긴 두부"
+      },
+      "pairOf": "B11",
+      "why": "own name, not an alias"
+    },
+    {
+      "id": "B13",
+      "group": "B",
+      "input": "바삭하게 튀긴 두부 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "바삭하게 튀긴 두부"
+      },
+      "pairOf": "B11",
+      "why": "manner word"
+    },
+    {
+      "id": "C01",
+      "group": "C",
+      "input": "삶은계란 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "삶은 달걀"
+      }
+    },
+    {
+      "id": "C02",
+      "group": "C",
+      "input": "삶은 계란 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "삶은 달걀"
+      },
+      "pairOf": "C01"
+    },
+    {
+      "id": "C03",
+      "group": "C",
+      "input": "삶은 달걀 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "삶은 달걀"
+      },
+      "pairOf": "C01"
+    },
+    {
+      "id": "C04",
+      "group": "C",
+      "input": "구운 삼겹살 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "삼겹살구이"
+      },
+      "why": "구운 ↔ 구이"
+    },
+    {
+      "id": "C05",
+      "group": "C",
+      "input": "훈제 닭가슴살 100g 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "훈제 닭가슴살"
+      }
+    },
+    {
+      "id": "C06",
+      "group": "C",
+      "input": "계란후라이 먹었어",
+      "expect": {
+        "status": "unmeasurable",
+        "entry": "달걀프라이"
+      },
+      "why": "existing: asks the amount"
+    },
+    {
+      "id": "C07",
+      "group": "C",
+      "input": "계란말이 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "계란말이"
+      }
+    },
+    {
+      "id": "D01",
+      "group": "D",
+      "input": "따뜻한 설탕 넣은 커피 마셨어",
+      "expect": {
+        "status": "unknown",
+        "label": "따뜻한 설탕 넣은 커피"
+      },
+      "why": "따뜻한 is harmless, 설탕 넣은 is not"
+    },
+    {
+      "id": "D02",
+      "group": "D",
+      "input": "큰 계란 두 개 먹었어",
+      "expect": {
+        "status": "unmeasurable",
+        "entry": "삶은 달걀"
+      },
+      "why": "size: the published 1개 = 50 g is not a large egg — ask the amount"
+    },
+    {
+      "id": "D03",
+      "group": "D",
+      "input": "큰 계란 120g 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "삶은 달걀"
+      },
+      "why": "size with grams: the grams decide"
+    },
+    {
+      "id": "D04",
+      "group": "D",
+      "input": "김밥 반 줄 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "김밥"
+      },
+      "why": "existing amount"
+    },
+    {
+      "id": "D05",
+      "group": "D",
+      "input": "동생이 먹다 남긴 피자 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "피자"
+      },
+      "why": "existing leftover narration (the 동생이 phrase is a separate existing question)"
+    },
+    {
+      "id": "D06",
+      "group": "D",
+      "input": "우유 넣은 커피 마셨어",
+      "expect": {
+        "status": "unknown",
+        "label": "우유 넣은 커피"
+      },
+      "why": "우유 is put in the coffee, not a second food"
+    },
+    {
+      "id": "E01",
+      "group": "E",
+      "input": "생크림 케이크 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "케이크"
+      },
+      "why": "approved representative"
+    },
+    {
+      "id": "E02",
+      "group": "E",
+      "input": "봉골레 파스타 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "스파게티"
+      },
+      "why": "approved representative"
+    },
+    {
+      "id": "E03",
+      "group": "E",
+      "input": "교촌 치킨 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "치킨"
+      },
+      "why": "approved representative (brand)"
+    },
+    {
+      "id": "E04",
+      "group": "E",
+      "input": "김밥 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "김밥"
+      }
+    },
+    {
+      "id": "E05",
+      "group": "E",
+      "input": "참치김밥 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "참치김밥"
+      }
+    },
+    {
+      "id": "E06",
+      "group": "E",
+      "input": "커피 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "아메리카노"
+      }
+    },
+    {
+      "id": "E07",
+      "group": "E",
+      "input": "커피우유 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "커피우유"
+      }
+    },
+    {
+      "id": "E08",
+      "group": "E",
+      "input": "치킨버거 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "치킨버거"
+      },
+      "why": "trap: not 치킨"
+    },
+    {
+      "id": "E09",
+      "group": "E",
+      "input": "샐러드 먹었어",
+      "expect": {
+        "status": "ambiguous",
+        "candidates": [
+          "감자 샐러드",
+          "단호박 샐러드",
+          "닭가슴살 샐러드",
+          "참치 샐러드",
+          "채소 샐러드"
+        ]
+      },
+      "why": "existing which-one"
+    },
+    {
+      "id": "E10",
+      "group": "E",
+      "input": "김 한 봉지 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "조미김"
+      },
+      "why": "held alias"
+    },
+    {
+      "id": "E11",
+      "group": "E",
+      "input": "계란 두 개 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "삶은 달걀"
+      },
+      "why": "held alias"
+    },
+    {
+      "id": "X01",
+      "group": "X",
+      "input": "아이스 커피 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "아메리카노"
+      },
+      "pairOf": "E06",
+      "why": "temperature"
+    },
+    {
+      "id": "X02",
+      "group": "X",
+      "input": "맛있는 김밥 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "김밥"
+      },
+      "pairOf": "E04",
+      "why": "opinion"
+    },
+    {
+      "id": "X03b",
+      "group": "X",
+      "input": "김치찌개 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "김치찌개"
+      },
+      "why": "base"
+    },
+    {
+      "id": "X03",
+      "group": "X",
+      "input": "엄마가 해준 김치찌개 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "김치찌개"
+      },
+      "pairOf": "X03b",
+      "why": "who made it"
+    },
+    {
+      "id": "X04b",
+      "group": "X",
+      "input": "샌드위치 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "샌드위치"
+      },
+      "why": "base"
+    },
+    {
+      "id": "X04",
+      "group": "X",
+      "input": "회사에서 사온 샌드위치 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "샌드위치"
+      },
+      "pairOf": "X04b",
+      "why": "place + brought"
+    },
+    {
+      "id": "X05b",
+      "group": "X",
+      "input": "우유 한 잔 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "우유"
+      },
+      "why": "base"
+    },
+    {
+      "id": "X05",
+      "group": "X",
+      "input": "따뜻한 우유 한 잔 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "우유"
+      },
+      "pairOf": "X05b",
+      "why": "temperature"
+    },
+    {
+      "id": "X06b",
+      "group": "X",
+      "input": "바나나우유 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "바나나우유"
+      },
+      "why": "base"
+    },
+    {
+      "id": "X06",
+      "group": "X",
+      "input": "편의점 바나나우유 마셨어",
+      "expect": {
+        "status": "resolved",
+        "entry": "바나나우유"
+      },
+      "pairOf": "X06b",
+      "why": "place"
+    },
+    {
+      "id": "X07",
+      "group": "X",
+      "input": "튀긴 고구마 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "고구마튀김"
+      },
+      "why": "the entry that names the method"
+    },
+    {
+      "id": "X08",
+      "group": "X",
+      "input": "구운 감자 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "구운 감자"
+      },
+      "why": "감자 is not grilled; no 감자구이"
+    },
+    {
+      "id": "X09",
+      "group": "X",
+      "input": "볶은 김치 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "볶은 김치"
+      },
+      "why": "not 김치볶음밥"
+    },
+    {
+      "id": "X10",
+      "group": "X",
+      "input": "구운 치킨 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "구운 치킨"
+      },
+      "why": "a representative does not take a method it does not carry"
+    },
+    {
+      "id": "X11",
+      "group": "X",
+      "input": "누드 김밥 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "누드 김밥"
+      },
+      "why": "unknown word in front of a specific food"
+    },
+    {
+      "id": "X12b",
+      "group": "X",
+      "input": "바나나 하나 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "바나나"
+      },
+      "why": "base"
+    },
+    {
+      "id": "X12",
+      "group": "X",
+      "input": "큰 바나나 하나 먹었어",
+      "expect": {
+        "status": "unmeasurable",
+        "entry": "바나나"
+      },
+      "why": "size + count: ask the amount"
+    },
+    {
+      "id": "X13b",
+      "group": "X",
+      "input": "컵라면 하나 먹었어",
+      "expect": {
+        "status": "resolved",
+        "entry": "컵라면"
+      },
+      "why": "base"
+    },
+    {
+      "id": "X13",
+      "group": "X",
+      "input": "작은 컵라면 하나 먹었어",
+      "expect": {
+        "status": "unmeasurable",
+        "entry": "컵라면"
+      },
+      "why": "size + count: ask the amount"
+    },
+    {
+      "id": "X14b",
+      "group": "X",
+      "input": "콜라 마셨어",
+      "expect": {
+        "status": "unmeasurable",
+        "entry": "콜라"
+      },
+      "why": "base: asks the amount (existing)"
+    },
+    {
+      "id": "X14",
+      "group": "X",
+      "input": "시원한 콜라 마셨어",
+      "expect": {
+        "status": "unmeasurable",
+        "entry": "콜라"
+      },
+      "pairOf": "X14b",
+      "why": "temperature"
+    },
+    {
+      "id": "X15",
+      "group": "X",
+      "input": "설탕 넣은 케이크 먹었어",
+      "expect": {
+        "status": "unknown",
+        "label": "설탕 넣은 케이크"
+      },
+      "why": "a representative does not take an addition"
+    },
+    {
+      "id": "X16",
+      "group": "X",
+      "input": "훈제 연어 먹었어",
+      "expect": {
+        "status": "unmeasurable",
+        "entry": "훈제연어"
+      },
+      "why": "exact name with a space (existing amount question)"
+    }
+  ]
+}

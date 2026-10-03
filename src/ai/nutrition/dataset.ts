@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  ALL_COOKING_FORMS,
+  GENERIC_REPRESENTATIVE_IDS,
+  classifyModifier,
+  cookingFormsOf,
+  type ModifierKind,
+} from "./modifierPolicy";
 import type { FoodEntry } from "./types";
 
 /**
@@ -170,14 +177,7 @@ function scoreEntry(
   return { score: best, generic };
 }
 
-type Mention = {
-  entries: Set<FoodEntry>;
-  /** Entries reached by their own name here, not only through an alias. */
-  byName: Set<FoodEntry>;
-  start: number;
-  end: number;
-  length: number;
-};
+type Mention = { entries: Set<FoodEntry>; start: number; end: number; length: number; form: string };
 
 /**
  * Dataset names that appear inside the phrase as words of their own.
@@ -202,7 +202,6 @@ function embeddedMentions(entries: FoodEntry[], spoken: string): Mention[] {
 
   const found = new Map<string, Mention>();
   for (const entry of entries) {
-    const ownName = squash(entry.name);
     for (const form of [entry.name, ...(entry.aliases ?? [])].map(squash)) {
       if (form.length < 2 || HOMOGRAPH_FORMS.has(form)) continue;
 
@@ -215,9 +214,8 @@ function embeddedMentions(entries: FoodEntry[], spoken: string): Mention[] {
         if (rest.length > 0 && !WORD_FINAL_PARTICLES.has(rest)) continue;
 
         const key = `${start}:${form.length}`;
-        const mention = found.get(key) ?? { entries: new Set(), byName: new Set(), start, end: wordEnd, length: form.length };
+        const mention = found.get(key) ?? { entries: new Set(), start, end: wordEnd, length: form.length, form };
         mention.entries.add(entry);
-        if (form === ownName) mention.byName.add(entry);
         found.set(key, mention);
       }
     }
@@ -248,60 +246,114 @@ function findEmbedded(entries: FoodEntry[], spoken: string): NameSearch {
   // names, not verbs.
   const mentions = embeddedMentions(entries, spoken);
   const total = squash(spoken).length;
+  const last = mentions.at(-1);
+  if (last === undefined) return { kind: "none" };
 
-  const [only] = mentions;
-  if (mentions.length === 1 && only !== undefined) {
-    if (only.end !== total) return { kind: "none" };
-    if (aliasOverridesModifier(spoken, only)) return { kind: "none" };
-    const matched = [...only.entries];
-    const [first] = matched;
-    if (matched.length === 1 && first !== undefined) {
-      return { kind: "one", entry: first, score: EMBEDDED_SCORE };
-    }
-    return { kind: "several", entries: matched, score: EMBEDDED_SCORE };
-  }
+  const said = modifiersBefore(spoken, last);
 
   if (mentions.length > 1) {
+    // "우유 넣은 커피" is one coffee with milk in it, not 우유 and 커피.
+    if (said.some(({ kind }) => kind === "addition")) return { kind: "none" };
     const all = [...new Set(mentions.flatMap((mention) => [...mention.entries]))];
     return { kind: "several", entries: all, score: EMBEDDED_SCORE };
   }
 
-  return { kind: "none" };
+  if (last.end !== total) return { kind: "none" };
+  return readModifiers(entries, [...last.entries], last.form, said);
 }
 
-/**
- * "구운 계란": a word that says *which* 계란, in front of an alias that stands
- * for one particular food (계란 → 삶은 달걀).
- *
- * An alias of a specific food promises that the word as said means that
- * food. With a modifier in front, the user may be naming a different kind —
- * 구운, 훈제, 반숙 — and taking the alias would silently drop what they said.
- * The same words without the space ("구운계란") already reach no entry, so
- * this keeps a space from deciding what gets stored (2026-10-03).
- *
- * Deliberately narrow, and no list of cooking words:
- *   - only an alias match. A food's own name keeps the existing reading —
- *     "생크림 케이크" is a kind of 케이크, and "맛있는 김밥" is 김밥;
- *   - only an entry that is not a generic representative. Those
- *     (`variance: "high"`) exist to take kinds the dataset cannot price
- *     separately: "봉골레 파스타" stays 스파게티;
- *   - only when the phrase is exactly one word plus the food — a modified
- *     food name. A longer phrase is narration, which is what the embedded
- *     reading exists for: "친구가 사준 커피" is the coffee a friend bought;
- *   - only when that word is a modifier. A word that ends in a particle is
- *     narration too: "회식에서 삼겹살", "아침은 계란" (time words at the
- *     front are already stripped).
- * The result is the existing unknown path: the food is asked about by the
- * name the user used, and their own figure is stored under it.
- */
-function aliasOverridesModifier(spoken: string, mention: Mention): boolean {
-  if (mention.byName.size > 0) return false;
-  if ([...mention.entries].some((entry) => entry.variance === "high")) return false;
+type SaidModifier = { word: string; kind: ModifierKind };
 
+/**
+ * The words in front of the food that describe it: those after the last
+ * clause ending. "기분이 안좋아서 떡볶이를" has none; "친구가 사준 구운 계란"
+ * has 친구가 · 사준 · 구운. Counted over the words as said, so the squashed
+ * offsets of the mention line up with whole words.
+ */
+function modifiersBefore(spoken: string, mention: Mention): SaidModifier[] {
   const words = spoken.split(/\s+/).filter((word) => word.length > 0);
-  const [before] = words;
-  if (words.length !== 2 || before === undefined || before.length !== mention.start) return false;
-  return ![...WORD_FINAL_PARTICLES].some((particle) => before.length > particle.length && before.endsWith(particle));
+  const before: string[] = [];
+  let offset = 0;
+  for (const word of words) {
+    if (offset + word.length > mention.start) break;
+    before.push(word);
+    offset += word.length;
+  }
+  const classified = before.map((word) => ({ word, kind: classifyModifier(word) }));
+  const lastBoundary = classified.map(({ kind }) => kind).lastIndexOf("boundary");
+  return classified.slice(lastBoundary + 1);
+}
+
+const formsOf = (entry: FoodEntry) => [entry.name, ...(entry.aliases ?? [])].map(squash);
+
+/**
+ * What the words in front of a food do to which food it is (2026-10-03).
+ *
+ * The same reading for a food's own name and for an alias, whatever its
+ * `variance` — the only things that count are the words said and the names
+ * the dataset has:
+ *   - neutral words (temperature, taste, where or from whom it came), manner
+ *     words, and narration leave the food as it is: 따뜻한 커피, 편의점 삼각김밥;
+ *   - a cooking method must be carried by the entry's own names. If it is
+ *     not, the entry named exactly "food + method" is taken (튀긴 고구마 →
+ *     고구마튀김, 구운 삼겹살 → 삼겹살구이); if none is, the food is unknown
+ *     and asked about under the user's own words (구운 계란, 튀긴 두부) —
+ *     never the plain or the boiled one;
+ *   - an addition (넣은, 뿌린…) makes it a different food: unknown;
+ *   - size keeps the food but not its per-piece weight: the resolver asks
+ *     the amount unless grams were said;
+ *   - any other word may change the food. It is asked about, except in front
+ *     of an approved generic representative (생크림 케이크 → 케이크), which
+ *     exists to take kinds the dataset cannot price — but not a cooking
+ *     method or an addition it does not carry.
+ */
+function readModifiers(
+  entries: FoodEntry[],
+  matched: FoodEntry[],
+  form: string,
+  said: SaidModifier[],
+): NameSearch {
+  if (said.some(({ kind }) => kind === "addition")) return { kind: "none" };
+
+  let current = matched;
+  for (const { word } of said.filter(({ kind }) => kind === "cooking")) {
+    const methodForms = cookingFormsOf(word) ?? [];
+    const carries = (entry: FoodEntry) =>
+      formsOf(entry).some((name) => methodForms.some((method) => name.includes(method)));
+    const agreeing = current.filter(carries);
+    if (agreeing.length > 0) {
+      current = agreeing;
+      continue;
+    }
+    // No matched entry is cooked this way. The entry named exactly "food +
+    // method" is the same food cooked as said; anything looser (김치 →
+    // 김치볶음밥) is a different dish.
+    const stems = new Set([
+      form,
+      ...current
+        .flatMap(formsOf)
+        .filter((name) => !name.includes("_") && !ALL_COOKING_FORMS.some((method) => name.includes(method))),
+    ]);
+    const named = entries.filter((entry) =>
+      formsOf(entry).some((name) =>
+        [...stems].some((stem) => methodForms.some((method) => name === stem + method || name === method + stem)),
+      ),
+    );
+    if (named.length === 0) return { kind: "none" };
+    current = named;
+  }
+
+  const unresolved = said.some(({ kind }) => kind === "unresolved");
+  if (unresolved && !current.every((entry) => GENERIC_REPRESENTATIVE_IDS.has(entry.id))) {
+    return { kind: "none" };
+  }
+
+  const sized = said.some(({ kind }) => kind === "size") ? { sizeQualified: true as const } : {};
+  const [first] = current;
+  if (current.length === 1 && first !== undefined) {
+    return { kind: "one", entry: first, score: EMBEDDED_SCORE, ...sized };
+  }
+  return { kind: "several", entries: current, score: EMBEDDED_SCORE, ...sized };
 }
 
 /**
@@ -315,7 +367,16 @@ function isParticleSplit(entry: FoodEntry, variants: string[]): boolean {
 
 export type NameSearch =
   | { kind: "none" }
-  | { kind: "one"; entry: FoodEntry; score: number }
+  | {
+      kind: "one";
+      entry: FoodEntry;
+      score: number;
+      /**
+       * A size was said ("큰 계란"). The food is known; the weight of one
+       * piece is not the published one, so a count cannot be priced.
+       */
+      sizeQualified?: true;
+    }
   | {
       kind: "several";
       entries: FoodEntry[];
@@ -327,6 +388,8 @@ export type NameSearch =
        * when the counter the user said fits only one of them.
        */
       generic?: true;
+      /** As on `one`: a size was said. */
+      sizeQualified?: true;
     };
 
 /**

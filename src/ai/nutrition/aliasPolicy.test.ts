@@ -190,10 +190,17 @@ describe("a cooking method the user states is not dropped by a space (2026-10-03
     expect(await statusOf("구운 계란 두 개랑 바나나 먹었어")).toEqual(["unknown:구운 계란 두 개", "바나나 1개"]);
   });
 
-  it.each(["큰 계란 두 개 먹었어", "따뜻한 커피 마셨어", "구운 삼겹살 먹었어", "편의점 삼각김밥 먹었어"])(
-    "%s now asks too — one modifier in front of an alias of a specific food (intended, conservative)",
-    async (sentence) => {
-      expect((await statusOf(sentence))[0]).toMatch(/^unknown:/);
-    },
-  );
+  // Until the modifier policy (2026-10-03, later the same day) these four
+  // asked for the calories: a two-word rule could not tell a harmless word
+  // from one that changes the food. Now: temperature and place keep the food
+  // (as without them), 구운 matches the entry that names 구이, and a size
+  // keeps the food but asks the amount instead of the calories.
+  it.each([
+    ["따뜻한 커피 마셨어", "아메리카노 1잔"],
+    ["편의점 삼각김밥 먹었어", "unmeasurable"],
+    ["구운 삼겹살 먹었어", "삼겹살구이 1인분"],
+    ["큰 계란 두 개 먹었어", "unmeasurable"],
+  ])("%s → %s (no calorie question)", async (sentence, expected) => {
+    expect(await statusOf(sentence)).toEqual([expected]);
+  });
 });

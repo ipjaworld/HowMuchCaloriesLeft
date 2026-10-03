@@ -1,3 +1,4 @@
+import { describedFoodWords } from "./modifierPolicy";
 import { normalizeSpacing, parseAmountOnly } from "./quantity";
 
 /**
@@ -121,11 +122,15 @@ const CLAUSE_ENDING = /(겠어|겠다|같고|하고|했고|는데|은데|해서|
  * survive, which covers "회사 도시락" and not much that is not a name.
  */
 export function cleanFoodLabel(text: string): string | null {
-  const words = normalizeSpacing(text.replace(/[.,!?~…"'()]/g, " "))
+  const said = normalizeSpacing(text.replace(/[.,!?~…"'()]/g, " "))
     .split(" ")
     .filter((word) => word.length > 0 && !FILLER_WORDS.has(word));
 
-  if (words.length === 0 || words.length > 2) return null;
+  // Longer than two words only when every word in front of the food says
+  // something about it — "잘 구운 계란", "따뜻한 설탕 넣은 커피" — after the
+  // narration in front is left out ("친구가 사준 구운 계란" → 구운 계란).
+  const words = said.length > 2 ? describedFoodWords(said) : said;
+  if (words === null || words.length === 0 || words.length > 4) return null;
 
   const lastIndex = words.length - 1;
   const last = words[lastIndex] ?? "";
@@ -138,7 +143,7 @@ export function cleanFoodLabel(text: string): string | null {
   if (!words.every((word) => /^[가-힣a-zA-Z0-9]+$/.test(word))) return null;
 
   const label = words.join(" ");
-  return label.length <= 15 ? label : null;
+  return label.replace(/\s+/g, "").length <= 15 ? label : null;
 }
 
 export type CalorieAnswer =
