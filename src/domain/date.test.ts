@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, compareDateKeys, dateKeyOf, isDateKey, toDateKey, todayKey } from "./date";
+import { addDays, clockTimeOf, compareDateKeys, dateKeyOf, isDateKey, toDateKey, todayKey } from "./date";
 
 describe("toDateKey — the day is always a KST day", () => {
   it("23:59 KST is still that day", () => {
@@ -100,5 +100,23 @@ describe("compareDateKeys", () => {
       "2026-09-10",
       "2026-10-01",
     ]);
+  });
+});
+
+describe("clockTimeOf — the time a question shows, in the same zone as the day", () => {
+  // Policy unchanged since b06ae15 (2026-09-27): a day is Asia/Seoul. The
+  // clock shown beside a 케이크 in "어떤 기록…?" must agree with the day key
+  // it was filed under, whatever zone the device is in.
+  it.each([
+    ["2026-10-02T14:59:00.000Z", "23:59", "2026-10-02"],
+    ["2026-10-02T15:10:00.000Z", "00:10", "2026-10-03"],
+    ["2026-10-03T00:10:00+09:00", "00:10", "2026-10-03"],
+  ])("%s → %s on %s", (iso, clock, day) => {
+    expect(clockTimeOf(iso)).toBe(clock);
+    expect(dateKeyOf(iso)).toBe(day);
+  });
+
+  it("returns null for an unparseable instant", () => {
+    expect(clockTimeOf("not a date")).toBeNull();
   });
 });
