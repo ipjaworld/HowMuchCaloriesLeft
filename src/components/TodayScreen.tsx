@@ -4,16 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Intent } from "@/ai/judgment/types";
 import { readAmountAnswer } from "@/ai/nutrition/quantity";
 import { readCalorieAnswer } from "@/ai/nutrition/statedCalories";
-import {
-  isAllUnknown,
-  isSameAs,
-  isSettled,
-  isUnreadCorrectionOf,
-  namesASubstitution,
-  itemsOf,
-  preferTargetFood,
-  type AddPart,
-} from "@/application/addFood";
+import { isAllUnknown, isSettled, itemsOf, type AddPart } from "@/application/addFood";
 import type { ChosenTarget } from "@/application/commands";
 import { adoptCalculatedGoal, shouldOfferCalculator } from "@/application/calculatedGoal";
 import { setDailyGoal, type SetDailyGoalResult } from "@/application/dailyGoal";
@@ -25,6 +16,7 @@ import {
   type Removed,
 } from "@/application/editFood";
 import { addMealRecord } from "@/application/mealRecords";
+import { planModifyStart } from "@/application/modifyFlow";
 import {
   answerCalories,
   answerChoice,
@@ -63,46 +55,19 @@ import {
   describeCommand,
   describeDeleted,
   describeModified,
+  describeNoneOfThese,
   describeRestored,
   describeNothingAdded,
   describeQuestion,
   describeTargetGone,
   describeUnreadableAmount,
+  NONE_OF_THESE,
   UNDO_DELETE,
   type ClarifyOption,
   type Reply,
 } from "./replyText";
 import type { ChatResponse } from "@/app/api/chat/schema";
 import type { ResolveResponse } from "@/app/api/resolve/route";
-
-/**
- * "아까 거 800칼로리였어" corrects the figure, not the food. The label read
- * from that sentence is "거" or nothing, so a user-stated figure keeps the
- * name and amount of the entry it corrects — unless the sentence names a
- * replacement ("갈비탕 말고 쌀국수 700칼로리"), where the new name is the
- * point.
- */
-function keepTargetName(
-  parts: AddPart[],
-  target: { name: string; amount?: string },
-  substitutes: boolean,
-): AddPart[] {
-  if (substitutes) return parts;
-  return parts.map((part) => {
-    if (part.status !== "resolved" || part.item.calorieSource !== "user") {
-      return part;
-    }
-    return {
-      ...part,
-      phraseName: target.name,
-      item: {
-        ...part.item,
-        name: target.name,
-        ...(target.amount === undefined ? {} : { amount: target.amount }),
-      },
-    };
-  });
-}
 
 type State =
   | { status: "loading" }
@@ -647,15 +612,7 @@ export function TodayScreen() {
     }
   }
 
-  /**
-   * A correction runs the same pipeline as an add, then lands on one item.
-   *
-   * The only thing it adds is the target: knowing the entry is 쌀밥 collapses
-   * the ambiguity in "밥 반만 먹었어" before anyone is asked about it. When the
-   * re-priced result matches what is already stored, the sentence was one the
-   * phrase parser could not read — so it asks for the amount rather than
-   * reporting a change that did not happen.
-   */
+  /** A correction the server proposed; see `planModifyStart` for the cases. */
   async function startModify(
     targetId: string,
     sourceText: string,
@@ -664,62 +621,29 @@ export function TodayScreen() {
     /** Other foods the sentence reported, added beside the correction. */
     extraParts: AddPart[] = [],
   ): Promise<void> {
-    const found = locateItem(records, targetId);
-    if (found === null) {
-      setReply(describeTargetGone());
-      return;
-    }
-
-    const substitutes = namesASubstitution(sourceText);
-    const narrowed = keepTargetName(
-      preferTargetFood(parts, found.item.name, substitutes),
-      found.item,
-      substitutes,
+    const start = planModifyStart(
+      records,
+      { targetId, sourceText, parts, needsConfirmation, extraParts },
+      new Date().toISOString(),
     );
 
-    const pending: PendingAdd = {
-      sourceText,
-      now: new Date().toISOString(),
-      parts: [...narrowed, ...extraParts],
-      needsConfirmation,
-      target: { itemId: targetId, foodName: found.item.name, modifyParts: narrowed.length },
-    };
-
-    const only = itemsOf(narrowed)[0];
-    const nothingChanged =
-      isSettled(narrowed) && only !== undefined && isSameAs(only, found.item);
-    const unreadable =
-      narrowed.length === 0 ||
-      nothingChanged ||
-      isUnreadCorrectionOf(narrowed, found.item.name, substitutes);
-
-    // The correction changes nothing or cannot be read, but the sentence also
-    // named other foods. Those still go ahead — as an add the user confirms,
-    // which names them — rather than vanishing behind "how much was it?".
-    if (unreadable && extraParts.length > 0) {
-      await startAdd(sourceText, extraParts, true);
-      return;
+    switch (start.kind) {
+      case "gone":
+        setReply(describeTargetGone());
+        return;
+      case "add_instead":
+        await startAdd(sourceText, start.parts, true);
+        return;
+      case "already_logged":
+        setReply(describeAlreadyLogged(start.item));
+        return;
+      case "ask_amount":
+        askAmountFor(start.itemId);
+        return;
+      case "pending":
+        await advance(start.pending);
+        return;
     }
-
-    // "2개라니까" about an entry already at 2개: the user is insisting on what
-    // is there, not failing to be understood. Say so instead of asking again.
-    if (
-      nothingChanged &&
-      only?.amount !== undefined &&
-      only.amount.replace(/\s+/g, "") === found.item.amount?.replace(/\s+/g, "")
-    ) {
-      setReply(describeAlreadyLogged(found.item));
-      return;
-    }
-
-    if (unreadable) {
-      // The sentence was a correction the phrase parser cannot read. Rather
-      // than guess at its grammar, ask for the amount.
-      askAmountFor(targetId);
-      return;
-    }
-
-    await advance(pending);
   }
 
   async function startAdd(
@@ -800,6 +724,14 @@ export function TodayScreen() {
     }
 
     const intent = clarification?.intent;
+
+    // The entry is not among the chips. Nothing is changed and nothing is
+    // added: a correction that found no entry is not a new meal.
+    if (option.id === NONE_OF_THESE && (intent === "modify_food" || intent === "delete_food")) {
+      setClarification(null);
+      setReply(describeNoneOfThese(intent));
+      return;
+    }
 
     if (intent === "modify_food" || intent === "delete_food") {
       // "yes" answers a confirmation, which offered exactly one candidate;

@@ -3,6 +3,7 @@ import type { AddPart } from "@/application/addFood";
 import type { Command } from "@/application/commands";
 import type { PendingQuestion } from "@/application/pendingAdd";
 import type { DailySummary } from "@/domain/calories";
+import { clockTimeOf } from "@/domain/date";
 
 /**
  * Every sentence the app says, built in code from a Command and the current
@@ -83,6 +84,36 @@ function nameOf(command: Extract<Command, { type: "clarify" }>): string | null {
 
 const TIMES = ["", "한", "두", "세", "네"];
 
+/** The chip under "어떤 기록을…?" that says the entry is not among those shown. */
+export const NONE_OF_THESE = "none_of_these";
+
+/**
+ * "케이크 1조각 · 15:10". The time is added only when another candidate would
+ * otherwise read the same, which is the case it exists for.
+ */
+function candidateLabel(
+  candidate: { id: string; name: string; amount?: string; consumedAt?: string },
+  all: { id: string; name: string; amount?: string }[],
+): string {
+  const base = candidate.amount === undefined ? candidate.name : `${candidate.name} ${candidate.amount}`;
+  const twin = all.some(
+    (other) => other.id !== candidate.id && other.name === candidate.name && other.amount === candidate.amount,
+  );
+  const time = candidate.consumedAt === undefined ? null : clockTimeOf(candidate.consumedAt);
+  return twin && time !== null ? `${base} · ${time}` : base;
+}
+
+/** Said after "해당 없음": nothing changed, and how to point at the entry. */
+export function describeNoneOfThese(intent: "modify_food" | "delete_food"): Reply {
+  return {
+    kind: "statement",
+    text:
+      intent === "delete_food"
+        ? "아무것도 지우지 않았어요. 지울 음식 이름을 다시 말씀해주세요."
+        : "아무것도 바꾸지 않았어요. 고칠 음식 이름과 바꿀 내용을 다시 말씀해주세요.",
+  };
+}
+
 /**
  * "사과를 두 번 기록했어요. 어느 기록을 고칠까요?" — when every candidate is
  * the same food, saying so explains why the app is asking at all.
@@ -101,15 +132,11 @@ function describeClarify(command: Extract<Command, { type: "clarify" }>): Reply 
     { id: "no", label: "아니요" },
   ];
 
-  const candidateOptions: ClarifyOption[] = (command.candidates ?? []).map(
-    (candidate) => ({
-      id: candidate.id,
-      label:
-        candidate.amount === undefined
-          ? candidate.name
-          : `${candidate.name} ${candidate.amount}`,
-    }),
-  );
+  const candidates = command.candidates ?? [];
+  const candidateOptions: ClarifyOption[] = candidates.map((candidate) => ({
+    id: candidate.id,
+    label: candidateLabel(candidate, candidates),
+  }));
 
   switch (command.reason) {
     case "low_confidence":
@@ -121,8 +148,10 @@ function describeClarify(command: Extract<Command, { type: "clarify" }>): Reply 
     case "unknown_target": {
       const verb = command.intent === "delete_food" ? "취소할까요?" : "수정할까요?";
       const text = sameFoodTwice(command.candidates ?? []) ?? `어떤 기록을 ${verb}`;
+      // Only a few chips fit, and the entry meant may not be among them. "해당
+      // 없음" is always there so nobody has to pick a wrong one to move on.
       return candidateOptions.length > 0
-        ? { kind: "question", text, options: candidateOptions }
+        ? { kind: "question", text, options: [...candidateOptions, { id: NONE_OF_THESE, label: "해당 없음" }] }
         : { kind: "statement", text: "아직 오늘 기록이 없어요." };
     }
 
@@ -334,6 +363,18 @@ export function describeQuestion(question: PendingQuestion): Reply {
         ],
       };
     }
+    // A modify names the exact entry a "yes" will change, and what it becomes.
+    const change = question.mode === "modify" ? question.change : undefined;
+    if (change !== undefined && change.replacement !== null) {
+      return {
+        kind: "question",
+        text: describeChange(change.target, change.replacement),
+        options: [
+          { id: "yes", label: "네" },
+          { id: "no", label: "아니요" },
+        ],
+      };
+    }
     const verb = question.mode === "modify" ? "고칠까요?" : "기록할까요?";
     return {
       kind: "question",
@@ -411,6 +452,24 @@ export function describeQuestion(question: PendingQuestion): Reply {
     kind: "statement",
     text: `${name}${topicParticle(name)} 찾았어요. 얼마나 드셨는지 g이나 ml로 알려주세요.`,
   };
+}
+
+/** "케이크 1조각(15:10) 기록을 700kcal로 바꿀까요?" */
+function describeChange(
+  target: { name: string; amount?: string; consumedAt?: string },
+  replacement: { name: string; amount?: string; calories: number },
+): string {
+  const time = target.consumedAt === undefined ? null : clockTimeOf(target.consumedAt);
+  const entry = `${entryLabel(target)}${time === null ? "" : `(${time})`} 기록`;
+  const kcal = `${numberFormat.format(replacement.calories)}kcal`;
+  const sameFood = replacement.name === target.name;
+  const sameAmount = replacement.amount === target.amount;
+  const becomes = sameFood
+    ? sameAmount || replacement.amount === undefined
+      ? kcal
+      : `${replacement.amount} ${kcal}`
+    : `${entryLabel(replacement)} ${kcal}`;
+  return `${entry}을 ${becomes}로 바꿀까요?`;
 }
 
 /** The amount they gave could not be read as one. */

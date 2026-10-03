@@ -7,6 +7,7 @@ import {
 import type { AddPart } from "./addFood";
 import { parseAmountOnly } from "@/ai/nutrition/quantity";
 import { splitCorrection } from "./correction";
+import { checkModifyTarget, relatedFirst } from "./modifyTarget";
 import {
   findReferenceMatches,
   resolveReferenceByName,
@@ -42,6 +43,8 @@ export type ClarifyCandidate = {
   id: string;
   name: string;
   amount?: string;
+  /** When it was logged, so two entries of the same food can be told apart. */
+  consumedAt?: string;
 };
 
 export type Command =
@@ -109,7 +112,23 @@ function toCandidates(recentItems: RecentItem[]): ClarifyCandidate[] {
       id: item.id,
       name: item.name,
       ...(item.amount === undefined ? {} : { amount: item.amount }),
+      consumedAt: item.consumedAt,
     }));
+}
+
+/**
+ * Same as `toCandidates`, but in the order given. For a question about which
+ * entry a sentence means, the order is "related to what was said, then
+ * newest" (`relatedFirst`), so the entry the user named is not pushed off
+ * the few chips by whatever was logged since.
+ */
+function toRankedCandidates(items: RecentItem[]): ClarifyCandidate[] {
+  return items.slice(0, MAX_CLARIFY_CANDIDATES).map((item) => ({
+    id: item.id,
+    name: item.name,
+    ...(item.amount === undefined ? {} : { amount: item.amount }),
+    consumedAt: item.consumedAt,
+  }));
 }
 
 /**
@@ -153,26 +172,6 @@ function usableTarget(judgment: Judgment, input: JudgmentInput): string | null {
  * ambiguity in any way the user could act on: either choice removes the same
  * number from the same day, so asking would be friction for nothing.
  */
-/**
- * Entries a correction could equally be about: "사과 두 개였어" with two 사과
- * logged today. Asked about rather than guessed, because a correction on the
- * wrong one changes a number the user already checked.
- *
- * Only the old side of the sentence counts — in "떠먹는 요거트 말고 그릭
- * 요거트" the 그릭 요거트 entry is the replacement, not a candidate — and a
- * name must appear whole in it, so 요거트 alone does not pull in every
- * yoghurt. Identical entries are not a choice worth asking about.
- */
-function contestedModifyTargets(input: JudgmentInput, judgedId: string | null): RecentItem[] {
-  const judged = input.recentItems.find((item) => item.id === judgedId);
-  const { previous } = splitCorrection(input.message, judged?.name ?? null);
-  const said = (previous ?? input.message).replace(/\s+/g, "");
-
-  const named = input.recentItems.filter((item) => said.includes(item.name.replace(/\s+/g, "")));
-  const distinct = new Set(named.map((item) => `${item.name}|${item.amount ?? ""}|${item.calories}`));
-  return distinct.size > 1 ? named : [];
-}
-
 /**
  * "2개 먹었다니까?" names no food, only a new amount. Said as a correction, it
  * is about the entry just logged — the one whose amount the user is looking
@@ -237,8 +236,11 @@ export function decideCommand(
   }
 
   // The user's pick settles both the intent and the target. What is left is
-  // only what to change it to, which the lookup answers.
-  if (chosen !== undefined && input.recentItems.some((item) => item.id === chosen.targetId)) {
+  // only what to change it to, which the lookup answers. A pick that is no
+  // longer on the day is still passed on as picked: the browser, which owns
+  // the records, says it is gone. Judging the sentence afresh instead could
+  // land the change on some other entry the user never chose.
+  if (chosen !== undefined) {
     return chosen.intent === "delete_food"
       ? { type: "delete_candidate", targetId: chosen.targetId }
       : {
@@ -261,13 +263,13 @@ export function decideCommand(
     // modify at 0.45-0.69. The ambiguity it is reacting to is the one worth
     // asking about, and picking a record answers both questions at once.
     if (judgment.intent === "modify_food") {
-      const contested = contestedModifyTargets(input, usableTarget(judgment, input));
-      if (contested.length > 0) {
+      const check = checkModifyTarget(input.message, input.recentItems, usableTarget(judgment, input));
+      if (check.kind === "ask") {
         return {
           type: "clarify",
           reason: "unknown_target",
           intent: "modify_food",
-          candidates: toCandidates(contested),
+          candidates: toRankedCandidates(check.candidates),
         };
       }
     }
@@ -352,13 +354,25 @@ export function decideCommand(
       const targetId = judgedTarget ?? fromAmount;
 
       if (judgment.intent === "modify_food") {
-        const contested = contestedModifyTargets(input, targetId);
-        if (contested.length > 0) {
+        // What the sentence names outranks what was picked: a different entry
+        // is proposed or asked about, never changed unseen — however sure the
+        // pick claimed to be.
+        const check = checkModifyTarget(input.message, input.recentItems, targetId);
+        if (check.kind === "ask") {
           return {
             type: "clarify",
             reason: "unknown_target",
             intent: "modify_food",
-            candidates: toCandidates(contested),
+            candidates: toRankedCandidates(check.candidates),
+          };
+        }
+        if (check.kind === "confirm") {
+          return {
+            type: "modify_candidate",
+            targetId: check.targetId,
+            sourceText: input.message,
+            needsConfirmation: true,
+            parts: [],
           };
         }
       }
@@ -375,7 +389,7 @@ export function decideCommand(
           type: "clarify",
           reason: "unknown_target",
           intent: judgment.intent,
-          candidates: toCandidates(input.recentItems),
+          candidates: toRankedCandidates(relatedFirst(input.message, input.recentItems)),
         };
       }
 

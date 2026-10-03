@@ -41,6 +41,22 @@ export function toDateKey(date: Date): string {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
+const clockFormat = new Intl.DateTimeFormat("en-GB", {
+  timeZone: APP_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+/**
+ * The KST wall-clock time of a moment, as HH:MM — how two entries of the same
+ * food are told apart in a question. Null if unparseable.
+ */
+export function clockTimeOf(isoDateTime: string): string | null {
+  const parsed = new Date(isoDateTime);
+  return Number.isNaN(parsed.getTime()) ? null : clockFormat.format(parsed);
+}
+
 /** Today's date key, in KST. */
 export function todayKey(now: Date = new Date()): string {
   return toDateKey(now);

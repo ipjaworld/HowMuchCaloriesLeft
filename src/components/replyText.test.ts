@@ -3,6 +3,8 @@ import type { Command } from "@/application/commands";
 import type { DailySummary } from "@/domain/calories";
 import {
   describeAlreadyLogged,
+  describeNoneOfThese,
+  NONE_OF_THESE,
   describeCommand,
   describeDeleted,
   describeModified,
@@ -104,6 +106,8 @@ describe("clarifying questions", () => {
       options: [
         { id: "a", label: "흰쌀밥 1공기" },
         { id: "b", label: "갈비탕" },
+        // Always offered: the entry meant may not be among the chips.
+        { id: NONE_OF_THESE, label: "해당 없음" },
       ],
     });
   });
@@ -439,8 +443,55 @@ describe("changes to the log say exactly what changed", () => {
     );
     expect(reply).toMatchObject({ kind: "question", text: "사과를 두 번 기록했어요. 어느 기록인가요?" });
     if (reply.kind === "question") {
-      expect(reply.options.map((option) => option.label)).toEqual(["사과 1개", "사과 2개"]);
+      expect(reply.options.map((option) => option.label)).toEqual(["사과 1개", "사과 2개", "해당 없음"]);
     }
+  });
+
+  it("tells same-looking entries apart by the time they were logged", () => {
+    const reply = describeCommand(
+      {
+        type: "clarify",
+        reason: "unknown_target",
+        intent: "modify_food",
+        candidates: [
+          { id: "k1", name: "케이크", amount: "1조각", consumedAt: "2026-10-02T03:10:00.000Z" },
+          { id: "k2", name: "케이크", amount: "1조각", consumedAt: "2026-10-02T09:45:00.000Z" },
+          { id: "c", name: "초콜릿케이크", amount: "1조각", consumedAt: "2026-10-02T10:00:00.000Z" },
+        ],
+      },
+      after,
+    );
+    if (reply.kind !== "question") throw new Error("expected a question");
+    expect(reply.options.map((option) => option.label)).toEqual([
+      "케이크 1조각 · 12:10",
+      "케이크 1조각 · 18:45",
+      "초콜릿케이크 1조각",
+      "해당 없음",
+    ]);
+  });
+
+  it("a confirmed correction names the exact entry and what it becomes", () => {
+    const question = {
+      type: "confirm_add" as const,
+      mode: "modify" as const,
+      names: ["케이크"],
+      change: {
+        target: { name: "케이크", amount: "1조각", consumedAt: "2026-10-02T06:10:00.000Z" },
+        replacement: { name: "케이크", amount: "1조각", calories: 700 },
+      },
+    };
+    expect(describeQuestion(question)).toMatchObject({ text: "케이크 1조각(15:10) 기록을 700kcal로 바꿀까요?" });
+    expect(
+      describeQuestion({
+        ...question,
+        change: { ...question.change, replacement: { name: "치즈케이크", amount: "1조각", calories: 300 } },
+      }),
+    ).toMatchObject({ text: "케이크 1조각(15:10) 기록을 치즈케이크 1조각 300kcal로 바꿀까요?" });
+  });
+
+  it("'해당 없음' changes nothing and says how to point at the entry", () => {
+    expect(describeNoneOfThese("modify_food").text).toContain("아무것도 바꾸지 않았어요");
+    expect(describeNoneOfThese("delete_food").text).toContain("아무것도 지우지 않았어요");
   });
 });
 

@@ -599,9 +599,12 @@ describe("a record the user picked is final", () => {
     );
   });
 
-  it("ignores a pick that is no longer on the day", () => {
+  it("passes on a pick that is no longer on the day, never a substitute", () => {
+    // Policy changed 2026-10-03: re-judging the sentence used to land the
+    // change on the newest entry instead. The browser owns the records and
+    // answers a vanished pick with "그 기록을 찾지 못했어요".
     const withGonePick = decideCommand(unsure, at("2개 먹었다니까?"), { targetId: "gone", intent: "modify_food" });
-    expect(withGonePick).toEqual(decideCommand(unsure, at("2개 먹었다니까?")));
+    expect(withGonePick).toMatchObject({ type: "modify_candidate", targetId: "gone" });
   });
 
   it("a bare amount corrects the newest entry, confirmed first", () => {

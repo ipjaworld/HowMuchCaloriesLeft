@@ -44,6 +44,9 @@ export type PendingAdd = {
   target?: {
     itemId: string;
     foodName: string;
+    /** How the entry is shown in the confirmation, so the user sees which one. */
+    amount?: string;
+    consumedAt?: string;
     /**
      * How many leading parts are the correction. The parts after them are
      * other foods the same sentence reported, added as new entries — see
@@ -76,6 +79,15 @@ export type PendingQuestion =
        * in the question, so the user sees every food the sentence touches.
        */
       addNames?: string[];
+      /**
+       * For a modify: the exact entry that will change and what it becomes.
+       * The entry is the one `target.itemId` names — the one a "yes" writes
+       * to — so the question cannot show one entry and change another.
+       */
+      change?: {
+        target: { name: string; amount?: string; consumedAt?: string };
+        replacement: { name: string; amount?: string; calories: number } | null;
+      };
     }
   | {
       type: "choose_food";
@@ -139,11 +151,37 @@ export function nextQuestion(pending: PendingAdd): PendingQuestion | null {
         : named
             .filter(({ partIndex }) => !isModifyPart(pending, partIndex))
             .map(({ part }) => part.phraseName);
+    const target = pending.target;
+    const replacement =
+      target === undefined
+        ? undefined
+        : pending.parts.find(
+            (part, partIndex) => isModifyPart(pending, partIndex) && part.status === "resolved",
+          );
     return {
       type: "confirm_add",
-      mode: pending.target === undefined ? "add" : "modify",
+      mode: target === undefined ? "add" : "modify",
       names,
       ...(addNames.length === 0 ? {} : { addNames }),
+      ...(target === undefined
+        ? {}
+        : {
+            change: {
+              target: {
+                name: target.foodName,
+                ...(target.amount === undefined ? {} : { amount: target.amount }),
+                ...(target.consumedAt === undefined ? {} : { consumedAt: target.consumedAt }),
+              },
+              replacement:
+                replacement?.status === "resolved"
+                  ? {
+                      name: replacement.item.name,
+                      ...(replacement.item.amount === undefined ? {} : { amount: replacement.item.amount }),
+                      calories: replacement.item.calories,
+                    }
+                  : null,
+            },
+          }),
     };
   }
 
