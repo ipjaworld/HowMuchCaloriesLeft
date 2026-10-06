@@ -254,9 +254,11 @@ const PATTERNS: { re: RegExp; read: (m: RegExpMatchArray) => Quantity | null }[]
       return { value, unit: null, text: spoken(m[0]), assumed: false };
     },
   },
-  // 반, 절반 — "아까 밥은 반만"
+  // 반, 절반 — "아까 밥은 반만". Only as a word of its own: a name can end
+  // in 반 (햇반, 콩자반), and reading that syllable as half left a food
+  // called "햇" (2026-10-06).
   {
-    re: new RegExp(`(${halfPattern})${ONLY}[ ]*$`),
+    re: new RegExp(`(?<=^|[ ])(${halfPattern})${ONLY}[ ]*$`),
     read: (m) => ({ value: 0.5, unit: null, text: spoken(m[0]), assumed: false }),
   },
   // 2, 3 — a bare digit

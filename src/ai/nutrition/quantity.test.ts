@@ -67,6 +67,12 @@ describe("fractions — people leave food, so these matter", () => {
     expect(parse("밥은 반")).toMatchObject({ value: 0.5, unit: null });
   });
 
+  it("does not read the 반 that ends a name (햇반, 콩자반)", () => {
+    expect(parseTrailingQuantity("햇반")).toBeNull();
+    expect(parseTrailingQuantity("콩자반")).toBeNull();
+    expect(parse("햇반 반")).toMatchObject({ value: 0.5, unit: null });
+  });
+
   it("reads 반만, which is how a correction is usually phrased", () => {
     expect(parse("밥은 반만")).toMatchObject({ value: 0.5, unit: null });
   });
