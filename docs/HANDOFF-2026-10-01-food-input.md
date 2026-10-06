@@ -8,7 +8,7 @@
 > - **직전 production(복구 대상)**: `dpl_Em6cenL866gHbg1i2yPrLgbUUbZT` (`pooe1h77q`, source `c9aeb25`, 244-food). 복구: `npx vercel rollback dpl_Em6cenL866gHbg1i2yPrLgbUUbZT`(Instant Rollback; 그 뒤 Git push가 production에 자동 연결되지 않으므로 다시 배포할 때는 `vercel promote`가 필요). 저장 스키마·migration 변경 없음 — 새 버전이 만든 기록(FoodItem 같은 모양)은 이전 버전이 그대로 읽는다.
 > - **production smoke**: 통과(아래 "2026-10-03 production 배포" 절). 테스트 데이터는 격리 origin에서만 만들고 지웠다.
 > - **배포를 막는 결함**: 없음. 알려진 한계는 아래 절.
-> - **2026-10-06 커밋 `c0f7dd9`·`3e3df59`·`951e0c5`**: 사용자 피드백 P0 — 분수 `1/2`, `+`와 띄어쓰기 나열(자른 목록은 기록 전 확인), 답장의 기록 내용·기본량 안내, 목록에서 탭해 보는 계산 기준. 상태와 포장제품 표본 조사는 [`product/user-feedback-status-2026-10-06.md`](product/user-feedback-status-2026-10-06.md).
+> - **2026-10-06 커밋 `c0f7dd9`·`3e3df59`·`951e0c5`·`d0c9451`·`03a01b7`·`11822f7`**: 사용자 피드백 P0 — 분수 `1/2`, `+`와 띄어쓰기 나열(자른 목록은 기록 전 확인), 답장의 기록 내용·기본량 안내, 목록에서 탭해 보는 계산 기준, 끝 글자 "반"(햇반·콩자반), 햇반·소금빵(dataset 444), 고르기 질문의 "둘 다". 상태와 포장제품 표본 조사는 [`product/user-feedback-status-2026-10-06.md`](product/user-feedback-status-2026-10-06.md).
 >
 > **다음 행동**: 이번 배포 작업은 끝났다. 다음 개선(파서의 "중"·후치 조리 동사·남긴 양, 김·맨 계란 별칭 결정, 같은 음식 맥락의 의도 흔들림 등)은 별도 작업으로 시작한다. 파서 규칙 추가 금지, `main` push = production 배포는 그대로다.
 
