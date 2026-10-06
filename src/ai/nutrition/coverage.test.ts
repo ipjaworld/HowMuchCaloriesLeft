@@ -426,8 +426,9 @@ describe("v1 coverage expansion (2026-10-02)", () => {
 });
 
 /** 27 from the first round, the rest from the second. Counted, not derived. */
-// 70 after the second round; +2 in the third (고구마튀김, 인절미빙수).
-const HIGH_VARIANCE_COUNT = 72;
+// 70 after the second round; +2 in the third (고구마튀김, 인절미빙수); +1 from
+// testers' feedback (소금빵, 2026-10-06).
+const HIGH_VARIANCE_COUNT = 73;
 
 describe("v1 coverage expansion, second round (2026-10-02)", () => {
   /**
@@ -514,7 +515,7 @@ describe("v1 coverage expansion, second round (2026-10-02)", () => {
     },
   );
 
-  it.each(["포케", "타코", "마라샹궈", "크로플", "소금빵", "스콘", "브라우니", "리조또", "부리또", "프로틴바", "와퍼", "허니콤보", "엽떡"])(
+  it.each(["포케", "타코", "마라샹궈", "크로플", "스콘", "브라우니", "리조또", "부리또", "프로틴바", "와퍼", "허니콤보", "엽떡"])(
     "%s stays unknown — MFDS has it only as brand products",
     async (phrase) => {
       expect((await resolveOne(`${phrase} 먹었어`)).status).toBe("unknown");
@@ -552,7 +553,28 @@ describe("v1 coverage expansion, second round (2026-10-02)", () => {
   });
 
   it("ships the size this round was planned for, plus the third round", () => {
-    // 426 after the second round; +16 in the third (2026-10-03), capped at 450.
-    expect(KOREAN_FOODS.length).toBe(442);
+    // 426 after the second round; +16 in the third (2026-10-03), capped at
+    // 450; +2 from testers' feedback (2026-10-06).
+    expect(KOREAN_FOODS.length).toBe(444);
+  });
+});
+
+describe("foods testers named (2026-10-06)", () => {
+  it("records 햇반 as the plain 210 g pack, and half of it as half", async () => {
+    const one = await resolved("햇반 먹었어");
+    expect(one.entry.id).toBe("P123-201020300-2924");
+    expect(one.calories).toBe(Math.round(one.entry.caloriesPer100g * 2.1));
+    expect((await resolved("햇반 1/2 먹었어")).calories).toBe(Math.round(one.entry.caloriesPer100g * 1.05));
+  });
+
+  it("does not stretch 햇반 to its other kinds", async () => {
+    expect((await resolveOne("햇반 흑미밥 먹었어")).status).not.toBe("resolved");
+  });
+
+  it("records 소금빵 at one chain's piece, said to be representative", async () => {
+    const match = await resolved("소금빵 하나 먹었어");
+    expect(match.entry.id).toBe("D202-092000000-0004");
+    expect(match.entry.variance).toBe("high");
+    expect(match.calories).toBe(Math.round(match.entry.caloriesPer100g * 0.75));
   });
 });

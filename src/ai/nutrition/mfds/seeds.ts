@@ -3303,4 +3303,32 @@ export const FOOD_SEEDS: FoodSeed[] = [
     query: "치즈, 크림",
     name: "크림치즈",
   },
+
+  // ── 사용자 피드백 (2026-10-06) ────────────────────────────────────
+  // Two foods testers named that the dataset lacked. Both are 상용제품
+  // rows — a brand's or a chain's product — which the list has avoided so
+  // far, so each was read and chosen by the user's decision, not by rule.
+  {
+    // 햇반 is one product: CJ's plain white rice, 210 g. Three rows carry
+    // the same figures (-2924, -5470, -6281); this is the first. The
+    // flavoured and mixed-grain 햇반 are other rows and other foods, so no
+    // alias reaches them. The 210 g is both the row's serving and its total
+    // contents — on 가공식품 rows those are not always one unit (see
+    // docs/product/user-feedback-status-2026-10-06.md §3), so it was checked.
+    foodCode: "P123-201020300-2924",
+    query: "햇반",
+    name: "햇반",
+    counter: "개",
+  },
+  {
+    // No 품목대표 row exists for 소금빵, only cafés' and bakeries' own (325-432
+    // kcal/100 g, 53-85 g a piece). Of the four plainly named ones this is the
+    // middle in both — 달콤's 버터 소금빵, 75 g — and it is marked
+    // high-variance, so the app says the figure is a representative one.
+    foodCode: "D202-092000000-0004",
+    query: "버터빵_버터 소금빵",
+    name: "소금빵",
+    counter: "개",
+    variance: "high",
+  },
 ];

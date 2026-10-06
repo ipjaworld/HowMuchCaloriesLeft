@@ -87,6 +87,20 @@
       ]
     },
     {
+      "id": "clean-13",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 햇반 (1개) ← \"햇반\""
+      ]
+    },
+    {
+      "id": "clean-14",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 소금빵 (1개) ← \"소금빵\""
+      ]
+    },
+    {
       "id": "narr-01",
       "verdict": "correct_resolved",
       "actual": [
@@ -533,7 +547,7 @@
       "id": "homo-pos-05",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 식빵|소보로빵|모닝빵|단팥빵|붕어빵|찐빵|크림빵|소시지빵|피자빵|마늘빵|계란빵|슈크림빵 ← \"빵\""
+        "ambiguous 식빵|소보로빵|모닝빵|단팥빵|붕어빵|찐빵|크림빵|소시지빵|피자빵|마늘빵|계란빵|슈크림빵|소금빵 ← \"빵\""
       ]
     },
     {
@@ -921,6 +935,15 @@
       "actual": [
         "resolved 라면 (1그릇) ← \"라면\"",
         "resolved 김밥 (두 줄) ← \"김밥\""
+      ]
+    },
+    {
+      "id": "multi-21",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 햇반 (1/2) ← \"햇반\"",
+        "resolved 제육볶음 (1인분) ← \"제육\"",
+        "resolved 배추김치 (1인분) ← \"김치\""
       ]
     },
     {

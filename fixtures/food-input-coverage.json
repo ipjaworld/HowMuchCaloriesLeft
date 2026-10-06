@@ -209,6 +209,46 @@
       ]
     },
     {
+      "id": "clean-13",
+      "category": "clean",
+      "input": "햇반 먹었어",
+      "consumed": true,
+      "why": "테스터가 이름을 댄 제품. 흰밥 햇반 210g 한 개 (2026-10-06 사용자 결정).",
+      "foods": [
+        {
+          "said": "햇반",
+          "status": "resolved",
+          "entry": "햇반",
+          "amount": {
+            "value": 1
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
+      "id": "clean-14",
+      "category": "clean",
+      "input": "소금빵 먹었어",
+      "consumed": true,
+      "why": "품목대표가 없어 체인 행 하나를 대표값으로 (2026-10-06 사용자 결정). 고편차 안내가 붙는다.",
+      "foods": [
+        {
+          "said": "소금빵",
+          "status": "resolved",
+          "entry": "소금빵",
+          "amount": {
+            "value": 1
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
       "id": "narr-01",
       "category": "narrative",
       "input": "오늘 퇴근하고 기분이 안좋아져서 떡볶이를 먹었어",
@@ -2417,6 +2457,42 @@
           "amount": {
             "value": 2,
             "unit": "줄"
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
+      "id": "multi-21",
+      "category": "multi_food",
+      "input": "햇반 1/2 + 제육 + 김치",
+      "consumed": true,
+      "why": "피드백 원문 그대로. 반 개는 햇반에만.",
+      "foods": [
+        {
+          "said": "햇반",
+          "status": "resolved",
+          "entry": "햇반",
+          "amount": {
+            "value": 0.5
+          }
+        },
+        {
+          "said": "제육",
+          "status": "resolved",
+          "entry": "제육볶음",
+          "amount": {
+            "value": 1
+          }
+        },
+        {
+          "said": "김치",
+          "status": "resolved",
+          "entry": "배추김치",
+          "amount": {
+            "value": 1
           }
         }
       ],
