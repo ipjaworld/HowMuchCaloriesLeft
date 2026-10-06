@@ -278,8 +278,16 @@ export function describeAdded(
   skipped: string[] = [],
   /** Foods recorded at a representative figure: 마라탕, 치킨, 피자. */
   highVariance: string[] = [],
+  /**
+   * What was written, so the reply says which food and how much each figure
+   * stands on (2026-10-06 feedback: "무엇을 먹고 9kcal였는지 알 수 없음").
+   */
+  recorded: RecordedFood[] = [],
 ): Reply {
-  const lines = ["기록했어요."];
+  const lines =
+    recorded.length === 0
+      ? ["기록했어요."]
+      : [`기록했어요: ${recorded.map(recordedLabel).join(", ")}.`];
 
   lines.push(`오늘 ${numberFormat.format(summary.consumedCalories)} kcal 먹었어요.`);
 
@@ -294,6 +302,14 @@ export function describeAdded(
     } else {
       lines.push(`${numberFormat.format(-summary.remainingCalories)} kcal 넘었어요.`);
     }
+  }
+
+  // Said only when it happened: the amount is the one thing the user can
+  // fix in a word, and an assumed one is where a figure most often goes wrong.
+  const assumed = [...new Set(recorded.filter((food) => food.amountAssumed).map((food) => food.name))];
+  if (assumed.length > 0) {
+    const names = listNames(assumed);
+    lines.push(`${names}${topicParticle(assumed.at(-1) ?? names)} 양을 말하지 않아 기본량으로 계산했어요.`);
   }
 
   if (skipped.length > 0) {
@@ -312,6 +328,21 @@ export function describeAdded(
   }
 
   return { kind: "statement", text: lines.join(" ") };
+}
+
+/** One food as the reply names it after writing. */
+export type RecordedFood = {
+  name: string;
+  amount?: string;
+  calories: number;
+  caloriesEstimated: boolean;
+  amountAssumed?: boolean;
+};
+
+/** "제육볶음 1인분 ~488 kcal": the same ~ the list uses for an estimate. */
+function recordedLabel(food: RecordedFood): string {
+  const figure = `${food.caloriesEstimated ? "~" : ""}${numberFormat.format(food.calories)} kcal`;
+  return `${entryLabel(food)} ${figure}`;
 }
 
 /**

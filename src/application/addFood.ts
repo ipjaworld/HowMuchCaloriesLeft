@@ -46,6 +46,11 @@ type AddPartBody =
       /** The phrase as the user said it, for the reply. */
       phraseName: string;
       item: NewFoodItem;
+      /**
+       * No amount was said and one serving was assumed. Not stored — the
+       * reply says it once, so the user knows what the figure stands on.
+       */
+      amountAssumed?: true;
     }
   | {
       status: "ambiguous";
@@ -263,6 +268,7 @@ function partFor(
         status: "resolved",
         phraseName: phrase.name,
         item: toFoodItem(resolution.match),
+        ...(phrase.quantity.assumed ? { amountAssumed: true as const } : {}),
       };
 
     case "ambiguous":

@@ -117,6 +117,21 @@ describe("resolved — one sentence, one turn", () => {
     }
   });
 
+  it("marks an amount it assumed, and only that one", async () => {
+    const parts = await resolveAddParts("김밥 반 줄이랑 라면 먹었어", koreanFoodResolver);
+    expect(parts.map((part) => part.status === "resolved" && part.amountAssumed === true)).toEqual([false, true]);
+  });
+
+  it("keeps the assumption through a choice between foods", async () => {
+    const pending = await start("밥 먹었어");
+    const part = pending.parts[0];
+    if (part?.status !== "ambiguous") throw new Error("expected a choice");
+    const [first] = part.candidates;
+    if (first === undefined) throw new Error("expected candidates");
+    const chosen = answerChoice(pending, 0, first.entryId).parts[0];
+    expect(chosen).toMatchObject({ status: "resolved", amountAssumed: true });
+  });
+
   it("gives the record no meal type — none is inferred in this phase", async () => {
     const { repository, records } = fakeRepository();
     await commit(repository, await start("갈비탕 하나 먹었어"));

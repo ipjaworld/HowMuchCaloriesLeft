@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { MEAL_TYPES, type FoodItem, type MealRecord, type MealType } from "@/domain/meal";
+import { describeItemBasis } from "./itemBasis";
 
 const numberFormat = new Intl.NumberFormat("ko-KR");
 
@@ -64,6 +66,8 @@ type Props = {
  */
 export function MealList({ records, isLoading = false, onDeleteItem, isBusy = false }: Props) {
   const groups = isLoading ? [] : groupItems(records);
+  // One row's basis open at a time: it is a glance, not a report.
+  const [openId, setOpenId] = useState<string | null>(null);
 
   return (
     <section aria-labelledby="meals-heading" className="px-6">
@@ -86,46 +90,77 @@ export function MealList({ records, isLoading = false, onDeleteItem, isBusy = fa
               </h3>
 
               <ul className="mt-2.5 space-y-2">
-                {group.items.map((item) => (
-                  <li key={item.id} className="flex items-baseline gap-4">
-                    <span className="min-w-0 flex-1 text-[0.9375rem] break-keep text-ink [overflow-wrap:anywhere]">
+                {group.items.map((item) => {
+                  const basis = describeItemBasis(item);
+                  const isOpen = basis !== null && openId === item.id;
+                  const label = (
+                    <>
                       {item.name}
                       {item.amount !== undefined && (
                         <span className="text-ink-soft"> {item.amount}</span>
                       )}
-                    </span>
-                    <span className="numeric shrink-0 text-[0.8125rem] text-ink-soft">
-                      {item.caloriesEstimated && (
-                        <span
-                          title={
-                            item.portionNote === undefined
-                              ? "추정값"
-                              : `추정값 · ${item.portionNote}`
-                          }
-                        >
-                          ~
+                    </>
+                  );
+                  return (
+                    <li key={item.id} className="flex flex-wrap items-baseline gap-x-4">
+                      {basis === null ? (
+                        <span className="min-w-0 flex-1 text-[0.9375rem] break-keep text-ink [overflow-wrap:anywhere]">
+                          {label}
                         </span>
+                      ) : (
+                        // The name is the tap target for what its figure stands
+                        // on — a title tooltip never reached a phone.
+                        <button
+                          type="button"
+                          onClick={() => setOpenId(isOpen ? null : item.id)}
+                          aria-expanded={isOpen}
+                          aria-controls={`basis-${item.id}`}
+                          className="min-w-0 flex-1 rounded-sm text-left text-[0.9375rem] break-keep text-ink [overflow-wrap:anywhere] focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
+                        >
+                          {label}
+                        </button>
                       )}
-                      {numberFormat.format(item.calories)}
-                      <span className="sr-only"> kcal</span>
-                    </span>
-                    {onDeleteItem !== undefined && (
-                      <button
-                        type="button"
-                        onClick={() => onDeleteItem(item)}
-                        disabled={isBusy}
-                        aria-label={`${item.amount === undefined ? item.name : `${item.name} ${item.amount}`} 지우기`}
-                        // 32 px to hit, drawn at 12: easy for a thumb, quiet
-                        // next to the numbers the eye is actually scanning.
-                        className="-my-1.5 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full text-ink-soft transition-colors hover:bg-raised hover:text-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none disabled:opacity-40"
-                      >
-                        <svg aria-hidden="true" viewBox="0 0 12 12" className="h-3 w-3">
-                          <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                        </svg>
-                      </button>
-                    )}
-                  </li>
-                ))}
+                      <span className="numeric shrink-0 text-[0.8125rem] text-ink-soft">
+                        {item.caloriesEstimated && (
+                          <span
+                            title={
+                              item.portionNote === undefined
+                                ? "추정값"
+                                : `추정값 · ${item.portionNote}`
+                            }
+                          >
+                            ~
+                          </span>
+                        )}
+                        {numberFormat.format(item.calories)}
+                        <span className="sr-only"> kcal</span>
+                      </span>
+                      {onDeleteItem !== undefined && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteItem(item)}
+                          disabled={isBusy}
+                          aria-label={`${item.amount === undefined ? item.name : `${item.name} ${item.amount}`} 지우기`}
+                          // 32 px to hit, drawn at 12: easy for a thumb, quiet
+                          // next to the numbers the eye is actually scanning.
+                          className="-my-1.5 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full text-ink-soft transition-colors hover:bg-raised hover:text-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none disabled:opacity-40"
+                        >
+                          <svg aria-hidden="true" viewBox="0 0 12 12" className="h-3 w-3">
+                            <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      )}
+                      {isOpen && (
+                        <p
+                          id={`basis-${item.id}`}
+                          className="mt-0.5 basis-full text-[0.75rem] break-keep text-ink-soft"
+                        >
+                          {basis}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

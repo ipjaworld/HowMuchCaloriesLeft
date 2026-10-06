@@ -263,6 +263,8 @@ export function answerChoice(
     status: "resolved",
     phraseName: part.phraseName,
     item: chosen.item,
+    // The candidates were priced for the amount said, or a serving when none was.
+    ...(part.saidAmount === undefined ? { amountAssumed: true as const } : {}),
   });
 }
 

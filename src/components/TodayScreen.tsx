@@ -223,7 +223,13 @@ export function TodayScreen() {
       .filter((item) => item.calorieVariance === "high")
       .map((item) => item.name);
 
-    setReply(describeAdded(await reloadDay(), skipped, highVariance));
+    const recorded = pending.parts.flatMap((part) =>
+      part.status === "resolved"
+        ? [{ ...part.item, ...(part.amountAssumed === true ? { amountAssumed: true } : {}) }]
+        : [],
+    );
+
+    setReply(describeAdded(await reloadDay(), skipped, highVariance, recorded));
   }
 
   /**

@@ -199,6 +199,33 @@ describe("the add pipeline's sentences", () => {
     expect(reply.text).toBe("기록했어요. 오늘 1,580 kcal 먹었어요. 520 kcal 남았어요.");
   });
 
+  it("names each food it wrote, its amount and its figure (2026-10-06 feedback)", () => {
+    const reply = describeAdded(summary(), [], [], [
+      { name: "쌀밥", amount: "1/2공기", calories: 175, caloriesEstimated: false },
+      { name: "제육볶음", amount: "1인분", calories: 488, caloriesEstimated: true, amountAssumed: true },
+      { name: "배추김치", amount: "1인분", calories: 19, caloriesEstimated: true, amountAssumed: true },
+    ]);
+    expect(reply.text).toBe(
+      "기록했어요: 쌀밥 1/2공기 175 kcal, 제육볶음 1인분 ~488 kcal, 배추김치 1인분 ~19 kcal. " +
+        "오늘 1,580 kcal 먹었어요. 520 kcal 남았어요. " +
+        "제육볶음과 배추김치는 양을 말하지 않아 기본량으로 계산했어요.",
+    );
+  });
+
+  it("says nothing about a default amount when every amount was said", () => {
+    const reply = describeAdded(summary(), [], [], [
+      { name: "김밥", amount: "반 줄", calories: 161, caloriesEstimated: false },
+    ]);
+    expect(reply.text).toBe("기록했어요: 김밥 반 줄 161 kcal. 오늘 1,580 kcal 먹었어요. 520 kcal 남았어요.");
+  });
+
+  it("names a figure the user gave as theirs, without an amount", () => {
+    const reply = describeAdded(summary(), [], [], [
+      { name: "샌드위치", calories: 450, caloriesEstimated: false },
+    ]);
+    expect(reply.text.startsWith("기록했어요: 샌드위치 450 kcal.")).toBe(true);
+  });
+
   it("stops after the total when no goal is set", () => {
     const reply = describeAdded(
       summary({ consumedCalories: 362, calorieTarget: null, remainingCalories: null, status: null }),
