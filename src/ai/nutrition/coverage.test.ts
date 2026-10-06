@@ -207,7 +207,7 @@ describe("a name inside a longer word is not that food", () => {
    * after it; otherwise the answer is unknown.
    */
   it.each([
-    "수박바", "불닭볶음면",
+    "수박바",
     "치킨버거", "스팸김밥", "로제떡볶이",
     "깍두기볶음밥", "뼈다귀감자탕", "백순대", "순대곱창볶음", "감자전골",
     // The same trap one round on: a new generic name inside a longer word.
@@ -219,9 +219,11 @@ describe("a name inside a longer word is not that food", () => {
 
   // 감자탕 and 참치김밥 were in the list above until they got rows of their
   // own (2026-10-01), and 감자튀김, 딸기케이크, 컵라면, 커피우유, 두부김치
-  // and 김치전 until the second round (2026-10-02). What matters now is that
-  // each is its own entry and not the shorter name inside it.
+  // and 김치전 until the second round (2026-10-02), and 불닭볶음면 until it
+  // became a product of its own (2026-10-06). What matters now is that each
+  // is its own entry and not the shorter name inside it.
   it.each([
+    ["불닭볶음면", "불닭볶음면"],
     ["감자튀김", "감자튀김"],
     ["딸기케이크", "딸기케이크"],
     ["컵라면", "컵라면"],
@@ -554,8 +556,8 @@ describe("v1 coverage expansion, second round (2026-10-02)", () => {
 
   it("ships the size this round was planned for, plus the third round", () => {
     // 426 after the second round; +16 in the third (2026-10-03), capped at
-    // 450; +2 from testers' feedback (2026-10-06).
-    expect(KOREAN_FOODS.length).toBe(444);
+    // 450; +2 from testers' feedback and +11 packaged products (2026-10-06).
+    expect(KOREAN_FOODS.length).toBe(455);
   });
 });
 
@@ -577,4 +579,53 @@ describe("foods testers named (2026-10-06)", () => {
     expect(match.entry.variance).toBe("high");
     expect(match.calories).toBe(Math.round(match.entry.caloriesPer100g * 0.75));
   });
+});
+
+describe("representative packaged products (2026-10-06 user decision)", () => {
+  // One pack is the row's total contents (`unitFrom: "contents"`), so each
+  // figure is the row's kcal/100 g times its own pack weight.
+  it.each([
+    ["신라면", "신라면", 120],
+    ["신라면 컵", "신라면 컵", 65],
+    ["진라면", "진라면 매운맛", 120],
+    ["진라면 순한맛", "진라면 순한맛", 120],
+    ["육개장사발면", "육개장사발면", 86],
+    ["불닭볶음면", "불닭볶음면", 140],
+    ["새우깡", "새우깡", 90],
+    ["포카칩", "포카칩 오리지널", 66],
+    ["포카칩 어니언맛", "포카칩 어니언맛", 66],
+    ["허니버터칩", "허니버터칩", 60],
+    ["팔도비빔면", "팔도비빔면", 130],
+    ["햇반", "햇반", 210],
+  ] as const)("%s → %s, one pack %i g", async (said, name, grams) => {
+    const match = await resolved(`${said} 먹었어`);
+    expect(match.entry.name).toBe(name);
+    expect(match.entry.brand).toBe(true);
+    expect(match.calories).toBe(Math.round((match.entry.caloriesPer100g * grams) / 100));
+  });
+
+  it("takes half a pack as half", async () => {
+    const half = await resolved("새우깡 반 봉지 먹었어");
+    expect(half.calories).toBe(Math.round(half.entry.caloriesPer100g * 0.45));
+  });
+
+  it("marks the kind a bare name stands for, and only there", async () => {
+    expect((await resolved("포카칩 먹었어")).entry.variant).toMatchObject({ brand: "포카칩", label: "오리지널" });
+    expect((await resolved("진라면 먹었어")).entry.variant).toMatchObject({ brand: "진라면", label: "매운맛" });
+    expect((await resolved("포카칩 어니언맛 먹었어")).entry.variant).toBeUndefined();
+  });
+
+  it.each(["새우", "칩", "라면", "컵라면", "비빔면", "바나나우유", "우유"])(
+    "leaves the everyday word %s where it was",
+    async (word) => {
+      const result = await resolveOne(`${word} 먹었어`);
+      const names =
+        result.status === "resolved"
+          ? [result.match.entry.name]
+          : result.status === "ambiguous"
+            ? result.candidates.map((candidate) => candidate.entry.name)
+            : [];
+      expect(names.some((name) => KOREAN_FOODS.find((entry) => entry.name === name)?.brand === true && name !== "햇반")).toBe(false);
+    },
+  );
 });

@@ -42,6 +42,10 @@ export const foodEntrySchema = z.object({
   caloriesPer100g: z.number().nonnegative().finite(),
   servings: z.array(servingSchema).min(1).optional(),
   variance: z.literal("high").optional(),
+  variant: z
+    .object({ brand: z.string().min(1), label: z.string().min(1), example: z.string().min(1) })
+    .optional(),
+  brand: z.literal(true).optional(),
   source: z.string().min(1),
 });
 
@@ -169,6 +173,9 @@ function scoreEntry(
 
     for (const name of names) {
       if (name === variant) raise(1 * exactness, false);
+      // A brand's product is reached only by its own names: "새우" is not
+      // 새우깡 and "칩" is not 포카칩 (2026-10-06).
+      else if (entry.brand === true) continue;
       else if (variant.length === 1) {
         if (name.endsWith(variant)) raise(0.7 * exactness, true);
       } else if (name.startsWith(variant)) raise(0.8 * exactness, false);

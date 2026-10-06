@@ -101,6 +101,20 @@
       ]
     },
     {
+      "id": "clean-15",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 신라면 (1봉지) ← \"신라면\""
+      ]
+    },
+    {
+      "id": "clean-16",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 포카칩 오리지널 (한 봉지) ← \"포카칩\""
+      ]
+    },
+    {
       "id": "narr-01",
       "verdict": "correct_resolved",
       "actual": [
@@ -342,9 +356,9 @@
     },
     {
       "id": "trap-10",
-      "verdict": "correct_unknown",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"불닭볶음면\""
+        "resolved 불닭볶음면 (1봉지) ← \"불닭볶음면\""
       ]
     },
     {
@@ -947,6 +961,14 @@
       ]
     },
     {
+      "id": "multi-22",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 불닭볶음면 (1봉지) ← \"불닭볶음면\"",
+        "resolved 햇반 (반 개) ← \"햇반\""
+      ]
+    },
+    {
       "id": "pol-09",
       "verdict": "correct_resolved",
       "actual": [
@@ -1076,6 +1098,13 @@
       "verdict": "correct_ask",
       "actual": [
         "unmeasurable 망고 [missing_serving] ← \"망고\""
+      ]
+    },
+    {
+      "id": "unk-90",
+      "verdict": "correct_unknown",
+      "actual": [
+        "unknown ← \"새우\""
       ]
     },
     {

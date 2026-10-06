@@ -249,6 +249,47 @@
       ]
     },
     {
+      "id": "clean-15",
+      "category": "clean",
+      "input": "신라면 먹었어",
+      "consumed": true,
+      "why": "대표 포장제품. 한 봉지는 행의 총 내용량 120g (2026-10-06 사용자 결정).",
+      "foods": [
+        {
+          "said": "신라면",
+          "status": "resolved",
+          "entry": "신라면",
+          "amount": {
+            "value": 1
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
+      "id": "clean-16",
+      "category": "clean",
+      "input": "포카칩 한 봉지 먹었어",
+      "consumed": true,
+      "why": "맨 브랜드명은 오리지널 66g. 1회 섭취참고량 30g이 아니다.",
+      "foods": [
+        {
+          "said": "포카칩",
+          "status": "resolved",
+          "entry": "포카칩 오리지널",
+          "amount": {
+            "value": 1,
+            "unit": "봉지"
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
       "id": "narr-01",
       "category": "narrative",
       "input": "오늘 퇴근하고 기분이 안좋아져서 떡볶이를 먹었어",
@@ -891,11 +932,15 @@
       "category": "compound_trap",
       "input": "불닭볶음면 먹었어",
       "consumed": true,
-      "why": "감사 실측: alias '닭볶음' 때문에 닭갈비로 확정됨.",
+      "why": "감사 실측: alias '닭볶음' 때문에 닭갈비로 확정됨. 2026-10-06부터 불닭볶음면은 자기 항목(삼양 140g)이 있다 — 닭갈비가 아니라 그 항목이어야 한다.",
       "foods": [
         {
           "said": "불닭볶음면",
-          "status": "unknown"
+          "status": "resolved",
+          "entry": "불닭볶음면",
+          "amount": {
+            "value": 1
+          }
         }
       ]
     },
@@ -2501,6 +2546,35 @@
       ]
     },
     {
+      "id": "multi-22",
+      "category": "multi_food",
+      "input": "불닭볶음면이랑 햇반 반 개 먹었어",
+      "consumed": true,
+      "why": "제품 둘. 반 개는 햇반에만.",
+      "foods": [
+        {
+          "said": "불닭볶음면",
+          "status": "resolved",
+          "entry": "불닭볶음면",
+          "amount": {
+            "value": 1
+          }
+        },
+        {
+          "said": "햇반",
+          "status": "resolved",
+          "entry": "햇반",
+          "amount": {
+            "value": 0.5,
+            "unit": "개"
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
       "id": "pol-09",
       "category": "polarity",
       "input": "짜장면 먹으려고 했는데 짬뽕 먹었어",
@@ -2884,6 +2958,22 @@
       ],
       "tags": [
         "b2_round1"
+      ]
+    },
+    {
+      "id": "unk-90",
+      "category": "unknown",
+      "input": "새우 먹었어",
+      "consumed": true,
+      "why": "재료 단어는 제품(새우깡)으로 좁히지 않는다. 전처럼 모르는 음식.",
+      "foods": [
+        {
+          "said": "새우",
+          "status": "unknown"
+        }
+      ],
+      "tags": [
+        "feedback_1006"
       ]
     },
     {

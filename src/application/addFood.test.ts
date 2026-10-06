@@ -123,6 +123,14 @@ describe("resolved — one sentence, one turn", () => {
     expect(parts.map((part) => part.status === "resolved" && part.amountAssumed === true)).toEqual([false, true]);
   });
 
+  it("says nothing of a default amount for a brand's pack, but names the kind it took", async () => {
+    const [part] = await resolveAddParts("포카칩 먹었어", koreanFoodResolver);
+    expect(part).toMatchObject({ status: "resolved", variantAssumed: { brand: "포카칩", label: "오리지널" } });
+    expect(part).not.toHaveProperty("amountAssumed");
+    const [said] = await resolveAddParts("오리지널 포카칩 먹었어", koreanFoodResolver);
+    expect(said).not.toHaveProperty("variantAssumed");
+  });
+
   it("keeps the assumption through a choice between foods", async () => {
     const pending = await start("밥 먹었어");
     const part = pending.parts[0];

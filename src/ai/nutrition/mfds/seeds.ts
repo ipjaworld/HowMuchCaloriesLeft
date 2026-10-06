@@ -3319,6 +3319,8 @@ export const FOOD_SEEDS: FoodSeed[] = [
     query: "햇반",
     name: "햇반",
     counter: "개",
+    unitFrom: "contents",
+    brand: true,
   },
   {
     // No 품목대표 row exists for 소금빵, only cafés' and bakeries' own (325-432
@@ -3330,5 +3332,127 @@ export const FOOD_SEEDS: FoodSeed[] = [
     name: "소금빵",
     counter: "개",
     variance: "high",
+  },
+
+  // ── 대표 포장제품 10개 (2026-10-06 사용자 결정) ─────────────────────
+  // 햇반 above and the nine below. Each row was read by hand and the field
+  // that is one pack named in `unitFrom` — the grams are still the row's.
+  // Single packs only: a multipack row's total contents is not one of
+  // anything, so none is pinned. Products the field rule cannot serve were
+  // left out: 초코파이 and 맥심 모카골드 rows state only the box (468 g,
+  // 240 g) and the category serving, never one piece or one stick;
+  // 코카콜라 comes in 300/355/500 mL and 1.8 L and "한 캔" picks none;
+  // 바나나맛우유 was already here, as an alias of 바나나우유. Their bare names
+  // stay as they were, and a figure the user knows still works.
+  //
+  // `brand: true` keeps each reachable by its own names only.
+  //
+  // `variant` marks the kind a bare name is taken as (포카칩 → 오리지널):
+  // the reply says so once and how to change it, rather than asking first.
+  {
+    // Every 신라면 row states the 1회 섭취참고량 as a sentence of noodle
+    // categories; Z10500 is the one 120 g pack.
+    foodCode: "P108-003000400-0138",
+    query: "신라면",
+    name: "신라면",
+    counter: "봉지",
+    unitFrom: "contents",
+    brand: true,
+  },
+  {
+    foodCode: "P108-003000400-0144",
+    query: "신라면컵",
+    name: "신라면 컵",
+    aliases: ["신라면컵", "컵 신라면"],
+    counter: "개",
+    unitFrom: "contents",
+    brand: true,
+  },
+  {
+    // 매운맛 and 순한맛 publish the same 417 kcal/100 g and 120 g; the bare
+    // name is taken as 매운맛, the one sold first.
+    foodCode: "P108-003000400-0242",
+    query: "진라면(매운맛)",
+    name: "진라면 매운맛",
+    aliases: ["진라면", "진라면(매운맛)"],
+    counter: "봉지",
+    unitFrom: "contents",
+    brand: true,
+    variant: { brand: "진라면", label: "매운맛", example: "순한맛" },
+  },
+  {
+    foodCode: "P108-003000400-0243",
+    query: "진라면(순한맛)",
+    name: "진라면 순한맛",
+    aliases: ["진라면(순한맛)"],
+    counter: "봉지",
+    unitFrom: "contents",
+    brand: true,
+  },
+  {
+    foodCode: "P108-003000400-0215",
+    query: "육개장사발면",
+    name: "육개장사발면",
+    aliases: ["육개장 사발면"],
+    counter: "개",
+    unitFrom: "contents",
+    brand: true,
+  },
+  {
+    // 140 g single pack; one 불닭볶음면 row states 700 g, the five-pack.
+    foodCode: "P108-009000400-0021",
+    query: "불닭볶음면",
+    name: "불닭볶음면",
+    counter: "봉지",
+    unitFrom: "contents",
+    brand: true,
+  },
+  {
+    // 90 g; a 180 g bag is a separate row (P101-106000100-7165).
+    foodCode: "P101-106000100-0968",
+    query: "새우깡",
+    name: "새우깡",
+    counter: "봉지",
+    unitFrom: "contents",
+    brand: true,
+  },
+  {
+    // The serving field says 30 g for every crisp; the bag is 66 g.
+    foodCode: "P101-106000100-1875",
+    query: "포카칩오리지널",
+    name: "포카칩 오리지널",
+    aliases: ["포카칩", "포카칩오리지널"],
+    counter: "봉지",
+    unitFrom: "contents",
+    brand: true,
+    variant: { brand: "포카칩", label: "오리지널", example: "어니언맛" },
+  },
+  {
+    foodCode: "P101-106000100-1874",
+    query: "포카칩어니언맛",
+    name: "포카칩 어니언맛",
+    aliases: ["포카칩어니언맛", "포카칩 어니언"],
+    counter: "봉지",
+    unitFrom: "contents",
+    brand: true,
+  },
+  {
+    // 60 g; the 132 g bag is another row (P101-106000100-7214).
+    foodCode: "P101-104000100-1022",
+    query: "허니버터칩",
+    name: "허니버터칩",
+    counter: "봉지",
+    unitFrom: "contents",
+    brand: true,
+  },
+  {
+    // 130 g single pack; the 650 g rows are the five-pack. Bare "비빔면"
+    // keeps its own entry and is not an alias of this one.
+    foodCode: "P108-009000400-0216",
+    query: "팔도비빔면",
+    name: "팔도비빔면",
+    counter: "봉지",
+    unitFrom: "contents",
+    brand: true,
   },
 ];

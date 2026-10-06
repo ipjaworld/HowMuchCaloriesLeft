@@ -315,6 +315,17 @@ export function describeAdded(
     lines.push(`${names}${topicParticle(assumed.at(-1) ?? names)} 양을 말하지 않아 기본량으로 계산했어요.`);
   }
 
+  // A product's kind is said like its amount: once, after the fact, with
+  // the sentence that changes it — "…로 고쳐줘" is the form read as a
+  // correction, as in `highVarianceHint` (2026-10-06 user decision).
+  for (const food of recorded) {
+    const variant = food.variantAssumed;
+    if (variant === undefined) continue;
+    lines.push(
+      `${variant.brand}${topicParticle(variant.brand)} ${variant.label}${directionParticle(variant.label)} 기록했어요. 다른 맛이면 "${variant.brand} ${variant.example}${directionParticle(variant.example)} 고쳐줘"처럼 말해주세요.`,
+    );
+  }
+
   if (skipped.length > 0) {
     lines.push(`${unknownSubject(skipped)} 빼고 기록했어요.`);
   }
@@ -340,6 +351,8 @@ export type RecordedFood = {
   calories: number;
   caloriesEstimated: boolean;
   amountAssumed?: boolean;
+  /** The kind a bare product name was taken as (포카칩 → 오리지널). */
+  variantAssumed?: { brand: string; label: string; example: string };
 };
 
 /** "제육볶음 1인분 ~488 kcal": the same ~ the list uses for an estimate. */

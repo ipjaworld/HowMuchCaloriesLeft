@@ -150,6 +150,21 @@ export type SeedSpec = {
    * still the row's.
    */
   variance?: "high";
+  /**
+   * Which of the row's two weights is one `counter` of a packaged product
+   * (2026-10-06 user decision). On 가공식품 rows neither is reliably one
+   * unit: `NUTRI_AMOUNT_SERVING` is the food category's 1회 섭취참고량 (30 g
+   * for every bag of crisps) and `Z10500` is the total contents, a whole
+   * multipack included. So a person reads the row and names the field —
+   * "contents" for `Z10500`, "serving" for `NUTRI_AMOUNT_SERVING` — and the
+   * grams still come from the row. Unset, the old rule applies: the serving
+   * first, then the weight, a value of exactly 100 read as absent.
+   */
+  unitFrom?: "contents" | "serving";
+  /** See `FoodEntry.variant`: the kind a bare product name is taken as. */
+  variant?: { brand: string; label: string; example: string };
+  /** See `FoodEntry.brand`: a product matched by its own names only. */
+  brand?: true;
 };
 
 /**
@@ -192,7 +207,7 @@ export function toFoodEntry(row: MfdsRow, seed: SeedSpec = {}): ImportResult {
   const basisNote = basis.unit === "ml" ? " · 100mL 기준" : "";
 
   const servings: Serving[] = [];
-  const statedGrams = statedServingGrams(row);
+  const statedGrams = seed.unitFrom === undefined ? statedServingGrams(row) : namedUnitGrams(row, seed.unitFrom);
   if (statedGrams !== null && seed.counter !== undefined) {
     servings.push({ unit: seed.counter, grams: statedGrams });
   }
@@ -210,12 +225,24 @@ export function toFoodEntry(row: MfdsRow, seed: SeedSpec = {}): ImportResult {
       caloriesPer100g: energy,
       ...(servings.length > 0 ? { servings } : {}),
       ...(seed.variance === undefined ? {} : { variance: seed.variance }),
+      ...(seed.variant === undefined ? {} : { variant: seed.variant }),
+      ...(seed.brand === true ? { brand: true as const } : {}),
       source: `식약처 식품영양성분DB ${row.FOOD_CD}${
         method === "" ? "" : ` (${method})`
       }${retrieved === "" ? "" : ` ${retrieved}`}${basisNote}`,
     },
     issue: null,
   };
+}
+
+/**
+ * The weight in the one field a person named for a packaged product. A
+ * value of 100 is taken as stated here — a 100 g product is real, and the
+ * person who named the field read the row.
+ */
+export function namedUnitGrams(row: MfdsRow, field: "contents" | "serving"): number | null {
+  const parsed = parseWeight(field === "contents" ? row.Z10500 : row.NUTRI_AMOUNT_SERVING);
+  return parsed === null || parsed.value <= 0 ? null : parsed.value;
 }
 
 /**

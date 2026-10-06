@@ -608,3 +608,21 @@ describe("the 둘 다 chip", () => {
     expect(labels(choose())).toEqual(["라면", "삶은 달걀", "다른 음식이에요", "취소"]);
   });
 });
+
+describe("the kind a bare product name was taken as (2026-10-06 user decision)", () => {
+  it("says it once, after the figures, with the sentence that changes it", () => {
+    const reply = describeAdded(summary(), [], [], [
+      {
+        name: "포카칩 오리지널",
+        amount: "1봉지",
+        calories: 368,
+        caloriesEstimated: false,
+        variantAssumed: { brand: "포카칩", label: "오리지널", example: "어니언맛" },
+      },
+    ]);
+    expect(reply.text).toBe(
+      "기록했어요: 포카칩 오리지널 1봉지 368 kcal. 오늘 1,580 kcal 먹었어요. 520 kcal 남았어요. " +
+        '포카칩은 오리지널로 기록했어요. 다른 맛이면 "포카칩 어니언맛으로 고쳐줘"처럼 말해주세요.',
+    );
+  });
+});

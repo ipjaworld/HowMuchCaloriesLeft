@@ -74,9 +74,24 @@ export type FoodEntry = {
    * one. Absent means the row can be taken as it stands.
    */
   variance?: "high";
+  /**
+   * Set on the one kind of a product its bare name stands for — 포카칩 is
+   * recorded as 포카칩 오리지널. `brand` is the bare name, `label` the kind it
+   * was taken as, and `example` another kind to show in the hint, so the
+   * reply can say which was assumed and how to change it.
+   */
+  variant?: FoodVariant;
+  /**
+   * A brand's product (신라면, 포카칩): reached only by its own name or an
+   * alias said in full, never by a word inside it — "새우" must not offer
+   * 새우깡, nor "라면" 신라면.
+   */
+  brand?: true;
   /** Provenance, so a figure can always be traced back. */
   source: string;
 };
+
+export type FoodVariant = { brand: string; label: string; example: string };
 
 export type NutritionMatch = {
   entry: FoodEntry;

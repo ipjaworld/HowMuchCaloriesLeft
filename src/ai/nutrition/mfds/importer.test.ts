@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { mfdsRowSchema, type MfdsRow } from "./client";
 import {
   energyLooksRight,
+  namedUnitGrams,
   parseAmount,
   parseWeight,
   selectRow,
@@ -168,6 +169,41 @@ describe("toFoodEntry", () => {
     const { entry, issue } = toFoodEntry({ ...byCode(GALBITANG), AMT_NUM1: "" });
     expect(entry).toBeNull();
     expect(issue?.reason).toBe("no_energy");
+  });
+});
+
+describe("a packaged product's unit, from the field a person named (2026-10-06)", () => {
+  // Shaped like the 포카칩 row: the category serving is 30 g for every
+  // crisp, the bag itself 66 g.
+  const crisps = { ...byCode(GALBITANG), NUTRI_AMOUNT_SERVING: "30g", Z10500: "66.00g" };
+
+  it("takes the total contents when told to, not the category serving", () => {
+    expect(statedServingGrams(crisps)).toBe(30);
+    expect(namedUnitGrams(crisps, "contents")).toBe(66);
+    expect(toFoodEntry(crisps, { counter: "봉지", unitFrom: "contents" }).entry?.servings).toEqual([
+      { unit: "봉지", grams: 66 },
+    ]);
+  });
+
+  it("takes the serving field when that is the one named", () => {
+    expect(namedUnitGrams(crisps, "serving")).toBe(30);
+  });
+
+  it("believes a named field of exactly 100 — a 100 g product is real", () => {
+    const hundred = { ...crisps, Z10500: "100.000g" };
+    expect(namedUnitGrams(hundred, "contents")).toBe(100);
+  });
+
+  it("gives no unit when the named field is empty or a sentence", () => {
+    expect(namedUnitGrams({ ...crisps, Z10500: null }, "contents")).toBeNull();
+    const noodles = { ...crisps, NUTRI_AMOUNT_SERVING: "생·숙면 200g, 건면 100g, 유탕면(봉지)120g" };
+    expect(namedUnitGrams(noodles, "serving")).toBeNull();
+  });
+
+  it("carries the brand mark and the kind a bare name stands for", () => {
+    const variant = { brand: "포카칩", label: "오리지널", example: "어니언맛" };
+    const { entry } = toFoodEntry(crisps, { counter: "봉지", unitFrom: "contents", brand: true, variant });
+    expect(entry).toMatchObject({ brand: true, variant });
   });
 });
 

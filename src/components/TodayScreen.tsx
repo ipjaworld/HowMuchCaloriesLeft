@@ -227,7 +227,13 @@ export function TodayScreen() {
 
     const recorded = pending.parts.flatMap((part) =>
       part.status === "resolved"
-        ? [{ ...part.item, ...(part.amountAssumed === true ? { amountAssumed: true } : {}) }]
+        ? [
+            {
+              ...part.item,
+              ...(part.amountAssumed === true ? { amountAssumed: true } : {}),
+              ...(part.variantAssumed === undefined ? {} : { variantAssumed: part.variantAssumed }),
+            },
+          ]
         : [],
     );
 

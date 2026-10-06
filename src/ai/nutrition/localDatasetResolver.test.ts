@@ -552,3 +552,23 @@ describe("foods listed with only a space between them (2026-10-06 feedback)", ()
     expect(await shipped(sentence)).not.toMatchObject({ status: "listed" });
   });
 });
+
+describe("a brand's product is reached by its own names only (2026-10-06)", () => {
+  const products: FoodEntry[] = [
+    { id: "p-shrimp", name: "새우깡", brand: true, caloriesPer100g: 517, servings: [{ unit: "봉지", grams: 90 }], source: "test-fixture" },
+    { id: "p-shrimp-rice", name: "새우볶음밥", caloriesPer100g: 160, servings: [{ unit: "그릇", grams: 300 }], source: "test-fixture" },
+    { id: "p-chips", name: "포카칩 오리지널", aliases: ["포카칩"], brand: true, caloriesPer100g: 557, source: "test-fixture" },
+  ];
+
+  it("is found by its name and its alias, said in full", () => {
+    expect(findByName(products, "새우깡")).toMatchObject({ kind: "one" });
+    expect(findByName(products, "포카칩")).toMatchObject({ kind: "one" });
+    expect(findByName(products, "포카칩을")).toMatchObject({ kind: "one" });
+  });
+
+  it("is never offered for a word inside its name", () => {
+    // Without the mark, "새우" tied 새우깡 with 새우볶음밥 and became a choice.
+    expect(findByName(products, "새우")).toEqual({ kind: "none" });
+    expect(findByName(products, "칩")).toEqual({ kind: "none" });
+  });
+});

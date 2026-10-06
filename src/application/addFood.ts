@@ -8,6 +8,7 @@ import {
 import type {
   NutritionMatch,
   NutritionResolver,
+  FoodVariant,
   ParsedFoodPhrase,
   PhraseResolution,
   UnmeasurableReason,
@@ -51,6 +52,11 @@ type AddPartBody =
        * reply says it once, so the user knows what the figure stands on.
        */
       amountAssumed?: true;
+      /**
+       * A bare product name was taken as one kind of it (포카칩 → 오리지널).
+       * Not stored — the reply says which, and how to change it.
+       */
+      variantAssumed?: FoodVariant;
     }
   | {
       status: "ambiguous";
@@ -249,6 +255,18 @@ export async function resolveAddParts(
   );
 }
 
+/**
+ * The kind a product was taken as, when the user did not say it: "포카칩"
+ * names no flavour, "포카칩 오리지널" and "오리지널 포카칩" do. Compared without
+ * spaces and without a trailing 맛, so "매운 맛" and "매운맛" both say it.
+ */
+function variantAssumed(said: string, variant: FoodVariant | undefined): { variantAssumed?: FoodVariant } {
+  if (variant === undefined) return {};
+  const squash = (text: string) => text.replace(/\s+/g, "");
+  const label = squash(variant.label).replace(/맛$/, "");
+  return squash(said).includes(label) ? {} : { variantAssumed: variant };
+}
+
 /** A part, and whether the user said its amount rather than leaving it assumed. */
 type Said = { part: AddPart; explicit: boolean };
 
@@ -285,7 +303,12 @@ function partFor(
         status: "resolved",
         phraseName: phrase.name,
         item: toFoodItem(resolution.match),
-        ...(phrase.quantity.assumed ? { amountAssumed: true as const } : {}),
+        // A pack is the natural unit of a brand's product, and the reply's
+        // first line already says "1봉지" — no "기본량" sentence for it.
+        ...(phrase.quantity.assumed && resolution.match.entry.brand !== true
+          ? { amountAssumed: true as const }
+          : {}),
+        ...variantAssumed(phrase.name, resolution.match.entry.variant),
       };
 
     case "ambiguous":
