@@ -1,6 +1,6 @@
 import { toFoodPhrase, type ParsedFoodPhrase } from "./foodPhrases";
 import { assumedQuantity, type Quantity } from "./quantity";
-import { findByName, splitListedFoods } from "./dataset";
+import { findByName, mentionPieces, splitListedFoods } from "./dataset";
 import {
   isEstimatedServing,
   type FoodEntry,
@@ -270,6 +270,20 @@ export function createLocalDatasetResolver(
           return { status: "unknown", phrase };
         }
         return { status: "resolved", phrase, match: candidates[0] };
+      }
+
+      // Different foods in one phrase, not kinds of one: the user may say
+      // "둘 다", so each is kept ready as its own phrase. An amount at the
+      // very end belongs to the last.
+      const pieces = found.kind === "several" ? mentionPieces(entries, phrase.name) : null;
+      if (pieces !== null) {
+        const together = pieces.map((piece, index) => {
+          const own = toFoodPhrase(piece) ?? { name: piece, quantity: assumedQuantity(), sourceText: piece };
+          return index === pieces.length - 1 && own.quantity.assumed
+            ? { ...own, quantity: phrase.quantity }
+            : own;
+        });
+        return { status: "ambiguous", phrase, candidates, together };
       }
 
       return { status: "ambiguous", phrase, candidates };

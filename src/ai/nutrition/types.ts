@@ -144,6 +144,12 @@ export type PhraseResolution =
       status: "ambiguous";
       phrase: ParsedFoodPhrase;
       candidates: NutritionMatch[];
+      /**
+       * Present when the candidates are different foods the phrase names
+       * ("라면 끓여서 계란 두 개 넣고"), not readings of one word: each food as
+       * its own phrase, for when the user answers "둘 다".
+       */
+      together?: ParsedFoodPhrase[];
     }
   | {
       status: "unmeasurable";

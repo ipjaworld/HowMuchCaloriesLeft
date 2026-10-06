@@ -13,6 +13,7 @@ import {
 } from "./addFood";
 import { addMealRecord } from "./mealRecords";
 import {
+  answerAllOfChoices,
   answerCalories,
   answerChoice,
   answerQuantity,
@@ -187,6 +188,36 @@ describe("ambiguous — the record waits for a choice", () => {
     const pending = await start("밥 한 공기 먹었어");
     const unchanged = answerChoice(pending, 0, "not-a-candidate");
     expect(isComplete(unchanged)).toBe(false);
+  });
+});
+
+describe("둘 다 — every food the phrase named was eaten (2026-10-06 user decision)", () => {
+  it("records each food with the amount said after it", async () => {
+    const { repository, records } = fakeRepository();
+    const pending = await start("라면 끓여서 계란 두 개 넣고 먹었어");
+    const question = nextQuestion(pending);
+    expect(question).toMatchObject({ type: "choose_food", allCount: 2 });
+
+    const both = answerAllOfChoices(pending, 0);
+    expect(isSettled(both.parts)).toBe(true);
+    await commit(repository, both);
+    expect(records[0]?.items.map((item) => [item.name, item.amount])).toEqual([
+      ["라면", "1그릇"],
+      ["삶은 달걀", "두 개"],
+    ]);
+  });
+
+  it("is not offered when the choices are kinds of one word", async () => {
+    const question = nextQuestion(await start("밥 먹었어"));
+    expect(question).toMatchObject({ type: "choose_food" });
+    expect(question).not.toHaveProperty("allCount");
+  });
+
+  it("is not offered for a correction, whose part count says what is corrected", async () => {
+    const pending = await start("라면 끓여서 계란 두 개 넣고 먹었어");
+    const correcting = { ...pending, target: { itemId: "x", foodName: "라면" } };
+    expect(nextQuestion(correcting)).not.toHaveProperty("allCount");
+    expect(answerAllOfChoices(correcting, 0)).toBe(correcting);
   });
 });
 

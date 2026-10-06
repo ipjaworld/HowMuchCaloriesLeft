@@ -87,6 +87,9 @@ const TIMES = ["", "한", "두", "세", "네"];
 /** The chip under "어떤 ○○인가요?" that says the food is none of those offered. */
 export const OTHER_FOOD = "other_food";
 
+/** The chip under "어떤 ○○인가요?" that says every food offered was eaten. */
+export const ALL_OF_THESE = "all_of_these";
+
 /** The chip that drops an unfinished sentence; nothing has been stored yet. */
 export const CANCEL_PENDING = "cancel_pending";
 
@@ -469,6 +472,11 @@ export function describeQuestion(question: PendingQuestion): Reply {
           id: candidate.entryId,
           label: candidate.name,
         })),
+        // Offered only when the choices are different foods the sentence
+        // named: picking one would drop the other (2026-10-06 feedback).
+        ...(question.allCount === undefined
+          ? []
+          : [{ id: ALL_OF_THESE, label: question.allCount === 2 ? "둘 다" : "모두" }]),
         { id: OTHER_FOOD, label: "다른 음식이에요" },
         { id: CANCEL_PENDING, label: "취소" },
       ],

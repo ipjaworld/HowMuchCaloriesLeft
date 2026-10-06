@@ -18,6 +18,7 @@ import {
 import { addMealRecord } from "@/application/mealRecords";
 import { planModifyStart } from "@/application/modifyFlow";
 import {
+  answerAllOfChoices,
   answerCalories,
   answerChoice,
   answerNoneOfChoices,
@@ -64,6 +65,7 @@ import {
   describeUnreadableAmount,
   CANCEL_PENDING,
   NONE_OF_THESE,
+  ALL_OF_THESE,
   OTHER_FOOD,
   UNDO_DELETE,
   type ClarifyOption,
@@ -719,7 +721,9 @@ export function TodayScreen() {
         void advance(
           option.id === OTHER_FOOD
             ? answerNoneOfChoices(pendingAdd, question.partIndex)
-            : answerChoice(pendingAdd, question.partIndex, option.id),
+            : option.id === ALL_OF_THESE
+              ? answerAllOfChoices(pendingAdd, question.partIndex)
+              : answerChoice(pendingAdd, question.partIndex, option.id),
         );
         return;
       }

@@ -66,6 +66,11 @@ type AddPartBody =
        * an assumed 1인분 on a record of the user's own figure.
        */
       saidAmount?: string;
+      /**
+       * When the candidates are different foods the phrase names, each one
+       * as its own part — what "둘 다" replaces this part with.
+       */
+      together?: AddPart[];
     }
   | {
       status: "unmeasurable";
@@ -206,6 +211,18 @@ export async function resolveAddParts(
       if (phrase === null) return [];
 
       const resolution = await resolver.resolve(phrase);
+      if (resolution.status === "ambiguous" && resolution.together !== undefined && amountUnresolved !== true) {
+        const together = await Promise.all(
+          resolution.together.map(async (piece) => {
+            const own = await resolver.resolve(piece);
+            return own.status === "listed"
+              ? ({ status: "unknown", phraseName: piece.name } as const)
+              : partFor(piece, own, undefined);
+          }),
+        );
+        const part = partFor(phrase, resolution, amountUnresolved);
+        return [{ part: part.status === "ambiguous" ? { ...part, together } : part, explicit }];
+      }
       if (resolution.status !== "listed") {
         return [{ part: partFor(phrase, resolution, amountUnresolved), explicit }];
       }

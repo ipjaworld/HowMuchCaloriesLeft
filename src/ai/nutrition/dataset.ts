@@ -508,3 +508,50 @@ export function splitListedFoods(entries: FoodEntry[], spoken: string): string[]
 
   return next === words.length ? pieces : null;
 }
+
+/**
+ * Each food a phrase names, with the amount said right after it — for the
+ * "둘 다" answer to a choice between them (2026-10-06 user decision).
+ *
+ * Looser than `splitListedFoods`, because it is never acted on alone: the
+ * user is shown the foods and picks "둘 다" themselves. Words that are not
+ * an amount ("끓여서", "넣고") are simply not carried, so "라면 끓여서 계란 두
+ * 개 넣고" gives 라면 and 계란 두 개. Null when the phrase names fewer than
+ * two foods, or names one food on its own.
+ */
+export function mentionPieces(entries: FoodEntry[], spoken: string): string[] | null {
+  const words = spoken.split(/\s+/).filter((word) => word.length > 0);
+  const variants = nameVariants(spoken);
+  if (entries.some((entry) => scoreEntry(entry, variants).score >= MIN_MATCH_SCORE)) return null;
+
+  const mentions = embeddedMentions(entries, spoken);
+  if (mentions.length < 2) return null;
+
+  const starts: number[] = [];
+  let offset = 0;
+  for (const word of words) {
+    starts.push(offset);
+    offset += word.length;
+  }
+
+  const pieces: string[] = [];
+  for (const [index, mention] of mentions.entries()) {
+    const first = starts.indexOf(mention.start);
+    if (first === -1) return null;
+    const after = starts.findIndex((start) => start >= mention.end);
+    const last = after === -1 ? words.length : after;
+    const nextMention = mentions[index + 1];
+    const limit = nextMention === undefined ? words.length : starts.indexOf(nextMention.start);
+
+    // The longest run of following words that reads as an amount, if any.
+    let end = last;
+    for (let stop = limit; stop > last; stop--) {
+      if (parseAmountOnly(words.slice(last, stop).join(" ")) !== null) {
+        end = stop;
+        break;
+      }
+    }
+    pieces.push(words.slice(first, end).join(" "));
+  }
+  return pieces;
+}

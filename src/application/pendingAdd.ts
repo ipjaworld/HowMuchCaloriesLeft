@@ -96,6 +96,11 @@ export type PendingQuestion =
       candidates: { entryId: string; name: string }[];
       /** Choosing what to add reads differently from choosing a replacement. */
       mode: "add" | "modify";
+      /**
+       * How many foods "둘 다" would record, when the candidates are
+       * different foods the phrase named. Absent otherwise, and in a modify.
+       */
+      allCount?: number;
     }
   | {
       type: "provide_quantity";
@@ -195,6 +200,9 @@ export function nextQuestion(pending: PendingAdd): PendingQuestion | null {
         candidates: part.candidates
           .slice(0, MAX_CHOICES)
           .map(({ entryId, name }) => ({ entryId, name })),
+        ...(part.together !== undefined && pending.target === undefined
+          ? { allCount: part.together.length }
+          : {}),
       };
     }
     if (part.status === "unmeasurable") {
@@ -266,6 +274,23 @@ export function answerChoice(
     // The candidates were priced for the amount said, or a serving when none was.
     ...(part.saidAmount === undefined ? { amountAssumed: true as const } : {}),
   });
+}
+
+/**
+ * "둘 다": every food the phrase named was eaten. The part becomes one part
+ * per food, each already resolved on its own — with the amount said after
+ * it — so anything still unknown about one of them is asked next. Only in
+ * an add: a correction's part count is what says which parts are the
+ * correction.
+ */
+export function answerAllOfChoices(pending: PendingAdd, partIndex: number): PendingAdd {
+  const part = pending.parts[partIndex];
+  if (part === undefined || part.status !== "ambiguous" || part.together === undefined) return pending;
+  if (pending.target !== undefined) return pending;
+
+  const parts = pending.parts.slice();
+  parts.splice(partIndex, 1, ...part.together);
+  return { ...pending, parts };
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   describeAdded,
   describeNothingAdded,
   describeQuestion,
+  ALL_OF_THESE,
   describeCancelled,
   describeAddFailure,
   describeUnreadableAmount,
@@ -574,5 +575,36 @@ describe("part of it was left", () => {
       kind: "statement",
       text: "비빔밥은 일부만 남기신 걸 정확히 계산하기 어려워요. 전체로 얼마나 드셨는지 알려주세요. (예: 반 그릇)",
     });
+  });
+});
+
+describe("the 둘 다 chip", () => {
+  const choose = (allCount?: number) =>
+    describeQuestion({
+      type: "choose_food",
+      partIndex: 0,
+      phraseName: "라면 끓여서 계란",
+      mode: "add",
+      candidates: [
+        { entryId: "a", name: "라면" },
+        { entryId: "b", name: "삶은 달걀" },
+      ],
+      ...(allCount === undefined ? {} : { allCount }),
+    });
+  const labels = (reply: ReturnType<typeof choose>) =>
+    reply.kind === "question" ? reply.options.map((option) => option.label) : [];
+
+  it("sits after the foods and before the way out", () => {
+    expect(labels(choose(2))).toEqual(["라면", "삶은 달걀", "둘 다", "다른 음식이에요", "취소"]);
+    const reply = choose(2);
+    expect(reply.kind === "question" && reply.options[2]?.id).toBe(ALL_OF_THESE);
+  });
+
+  it("says 모두 for more than two", () => {
+    expect(labels(choose(3))).toContain("모두");
+  });
+
+  it("is absent unless the foods are different foods", () => {
+    expect(labels(choose())).toEqual(["라면", "삶은 달걀", "다른 음식이에요", "취소"]);
   });
 });
