@@ -146,10 +146,10 @@ function fraction(numerator: string | undefined, denominator: string | undefined
 
 /**
  * A digit is only an amount on its own. One that ends a slash or a decimal
- * belongs to something longer: without this, "바나나 1/2개" was read as
+ * belongs to something longer ("2+1" is an offer): without this, "바나나 1/2개" was read as
  * "2개" of a food called "바나나 1/" (2026-10-06 feedback).
  */
-const NOT_AFTER_NUMBER = "(?<![0-9./])";
+const NOT_AFTER_NUMBER = "(?<![0-9./+])";
 
 const SLASH_FRACTION = "([0-9]+)[ ]*/[ ]*([0-9]+)";
 const KOREAN_FRACTION = "([0-9]+)[ ]?분의[ ]?([0-9]+)";

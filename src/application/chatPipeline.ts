@@ -55,7 +55,9 @@ export async function runChat(
       command: {
         type: "add",
         sourceText: decided.sourceText,
-        needsConfirmation: decided.needsConfirmation,
+        // Foods the parser cut apart at a bare space ("제육 김치") are shown
+        // before they are stored, like a correction that touches several.
+        needsConfirmation: decided.needsConfirmation || parts.some((part) => part.listed === true),
         parts,
       },
       judgment,

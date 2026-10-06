@@ -7,6 +7,7 @@ import {
   nameCarriesMethod,
   type ModifierKind,
 } from "./modifierPolicy";
+import { parseAmountOnly } from "./quantity";
 import type { FoodEntry } from "./types";
 
 /**
@@ -439,4 +440,71 @@ export function findByName(entries: FoodEntry[], spoken: string): NameSearch {
     score: best.score,
     ...(tied.every((row) => row.generic) ? { generic: true as const } : {}),
   };
+}
+
+/**
+ * "제육 김치", "라면 하나 김밥": foods said one after another with only a
+ * space between them (2026-10-06 feedback). Returns the phrase cut at each
+ * food, each piece keeping the amount said after it, or null when the
+ * phrase is anything but such a list.
+ *
+ * Without this, the foods of one phrase were offered as a single choice —
+ * "제육볶음, 배추김치 중 어떤 건가요?" — and whichever was not picked was
+ * dropped; a counter only one of them publishes ("라면 김밥 두 줄") made the
+ * pick silently.
+ *
+ * Strict on purpose, because a word in front of a food can make it a
+ * different food: the whole phrase must not name one food on its own (참치
+ * 김밥 is 참치김밥), the last food must not be a generic representative (고구마
+ * 케이크), the first word must start a food, and every word between
+ * two foods must be an amount — so "우유 넣은 커피" and "편의점 김밥 라면" are
+ * left as they were. That two foods were meant is still the user's to say:
+ * the caller asks before recording a list it cut.
+ */
+export function splitListedFoods(entries: FoodEntry[], spoken: string): string[] | null {
+  const words = spoken.split(/\s+/).filter((word) => word.length > 0);
+  if (words.length < 2) return null;
+
+  const variants = nameVariants(spoken);
+  if (entries.some((entry) => scoreEntry(entry, variants).score >= MIN_MATCH_SCORE)) return null;
+
+  const mentions = embeddedMentions(entries, spoken);
+  if (mentions.length < 2) return null;
+
+  // "고구마 케이크", "참치 샌드위치": a food in front of a generic
+  // representative names a kind of it, not a second food — the question it
+  // was always asked, which offers 케이크, still fits.
+  const last = mentions.at(-1);
+  if (last !== undefined && [...last.entries].every((entry) => GENERIC_REPRESENTATIVE_IDS.has(entry.id))) {
+    return null;
+  }
+
+  // Where each word starts in the squashed text the mentions are counted in.
+  const starts: number[] = [];
+  let offset = 0;
+  for (const word of words) {
+    starts.push(offset);
+    offset += word.length;
+  }
+
+  const pieces: string[] = [];
+  let next = 0;
+  for (const mention of mentions) {
+    const first = starts.indexOf(mention.start);
+    if (first === -1) return null;
+
+    const between = words.slice(next, first);
+    if (between.length > 0) {
+      const previous = pieces.at(-1);
+      if (previous === undefined || parseAmountOnly(between.join(" ")) === null) return null;
+      pieces[pieces.length - 1] = `${previous} ${between.join(" ")}`;
+    }
+
+    const after = starts.findIndex((start) => start >= mention.end);
+    const last = after === -1 ? words.length : after;
+    pieces.push(words.slice(first, last).join(" "));
+    next = last;
+  }
+
+  return next === words.length ? pieces : null;
 }

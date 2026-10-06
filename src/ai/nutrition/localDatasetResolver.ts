@@ -1,6 +1,6 @@
-import type { ParsedFoodPhrase } from "./foodPhrases";
-import type { Quantity } from "./quantity";
-import { findByName } from "./dataset";
+import { toFoodPhrase, type ParsedFoodPhrase } from "./foodPhrases";
+import { assumedQuantity, type Quantity } from "./quantity";
+import { findByName, splitListedFoods } from "./dataset";
 import {
   isEstimatedServing,
   type FoodEntry,
@@ -201,6 +201,20 @@ export function createLocalDatasetResolver(
       // Not in the dataset. Nothing the user can say will price it.
       if (found.kind === "none") return { status: "unknown", phrase };
 
+      // "제육 김치": two foods, not two readings of one. Each is resolved on
+      // its own, and the amount said at the end stays with the last.
+      if (found.kind === "several") {
+        const listed = splitListedFoods(entries, phrase.name);
+        if (listed !== null) {
+          const pieces = listed.map((piece, index) =>
+            index === listed.length - 1
+              ? { name: piece, quantity: phrase.quantity, sourceText: phrase.sourceText }
+              : (toFoodPhrase(piece) ?? { name: piece, quantity: assumedQuantity(), sourceText: piece }),
+          );
+          return { status: "listed", phrase, pieces };
+        }
+      }
+
       // "큰 계란 두 개": the food is known, but the published weight of one
       // is not a large one's, and no rule scales it. Grams settle it; a count
       // cannot, so the amount is asked rather than the standard size stored.
@@ -219,8 +233,9 @@ export function createLocalDatasetResolver(
         .filter((match): match is NutritionMatch => match !== null)
         .map((match) => ({ ...match, score: found.score }));
 
-      // "음료" reaches seven drinks and only 이온음료 states a glass; "닭가슴살
-      // 김치" names two foods and only the kimchi has a portion. One food
+      // "음료" reaches seven drinks and only 이온음료 states a glass; two
+      // foods the list above could not cut apart ("라면 끓여서 계란 넣고")
+      // may have only one with a portion. One food
       // left standing because the others have no published portion is the
       // dataset choosing, not the user — and for two foods in one phrase it
       // would drop the other without a word. So it is treated exactly as if

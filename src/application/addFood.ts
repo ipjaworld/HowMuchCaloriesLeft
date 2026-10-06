@@ -8,6 +8,8 @@ import {
 import type {
   NutritionMatch,
   NutritionResolver,
+  ParsedFoodPhrase,
+  PhraseResolution,
   UnmeasurableReason,
 } from "@/ai/nutrition/types";
 import type { NewFoodItem } from "./mealRecords";
@@ -29,7 +31,16 @@ import type { NewFoodItem } from "./mealRecords";
  */
 
 /** One food phrase, with whatever the dataset could say about it. */
-export type AddPart =
+export type AddPart = AddPartBody & {
+  /**
+   * Cut from a phrase that listed foods with only a space between them
+   * ("제육 김치"). Such a sentence is shown before it is stored: reading two
+   * foods where one was meant must cost a "no", never a wrong record.
+   */
+  listed?: true;
+};
+
+type AddPartBody =
   | {
       status: "resolved";
       /** The phrase as the user said it, for the reply. */
@@ -178,93 +189,120 @@ export async function resolveAddParts(
   if (whole !== null) return [whole];
 
   const resolved = await Promise.all(
-    segments.map(async ({ text: segment, amountUnresolved }): Promise<AddPart | null> => {
+    segments.map(async ({ text: segment, amountUnresolved }): Promise<Said[]> => {
+      const explicit = toFoodPhrase(segment)?.quantity.assumed === false;
+
       const stated = findStatedCalories(segment);
-      if (stated !== null) return userStatedPart(stated.label, stated.calories, stated.amount);
+      if (stated !== null) {
+        return [{ part: userStatedPart(stated.label, stated.calories, stated.amount), explicit }];
+      }
 
       const phrase = toFoodPhrase(segment);
-      if (phrase === null) return null;
+      if (phrase === null) return [];
 
       const resolution = await resolver.resolve(phrase);
-
-      // Part of it was left in a way no arithmetic settles. The food is
-      // still worth naming — the dataset knows it — but its amount is not
-      // the one said, so it is asked for rather than priced. An unknown
-      // food needs its calories asked for anyway, which covers this too.
-      if (amountUnresolved === true && resolution.status !== "unknown") {
-        const entries =
-          resolution.status === "resolved"
-            ? [resolution.match.entry]
-            : resolution.status === "ambiguous"
-              ? resolution.candidates.map((match) => match.entry)
-              : resolution.entries;
-        const knownUnits = (entries[0]?.servings ?? []).map((serving) => serving.unit);
-        return {
-          status: "unmeasurable",
-          phraseName: phrase.name,
-          entries: entries.map((entry) => ({ id: entry.id, name: entry.name })),
-          reason: "partly_left",
-          ...(knownUnits.length === 0 ? {} : { knownUnits }),
-        };
+      if (resolution.status !== "listed") {
+        return [{ part: partFor(phrase, resolution, amountUnresolved), explicit }];
       }
 
-      switch (resolution.status) {
-        case "resolved":
-          return {
-            status: "resolved",
-            phraseName: phrase.name,
-            item: toFoodItem(resolution.match),
-          };
-
-        case "ambiguous":
-          return {
-            status: "ambiguous",
-            phraseName: phrase.name,
-            candidates: resolution.candidates.map((match) => ({
-              entryId: match.entry.id,
-              name: match.entry.name,
-              item: toFoodItem(match),
-            })),
-            ...(phrase.quantity.assumed ? {} : { saidAmount: phrase.quantity.text }),
-          };
-
-        case "unmeasurable": {
-          const knownUnits = (resolution.entries[0]?.servings ?? []).map(
-            (serving) => serving.unit,
-          );
-          return {
-            status: "unmeasurable",
-            phraseName: phrase.name,
-            entries: resolution.entries.map((entry) => ({
-              id: entry.id,
-              name: entry.name,
-            })),
-            reason: resolution.reason,
-            ...(resolution.unit === undefined ? {} : { unit: resolution.unit }),
-            ...(knownUnits.length === 0 ? {} : { knownUnits }),
-          };
-        }
-
-        case "unknown":
-          // The amount said ("구운 계란 두 개") stays with the food, so the record
-          // made from the user's own figure still says how much it was.
-          return {
-            status: "unknown",
-            phraseName: phrase.name,
-            ...(phrase.quantity.assumed ? {} : { amount: phrase.quantity.text }),
-          };
-      }
+      return Promise.all(
+        resolution.pieces.map(async (piece): Promise<Said> => {
+          const own = await resolver.resolve(piece);
+          // A piece is one food by construction; should it come back as a
+          // list again, it is asked about under its own words, not guessed.
+          const part =
+            own.status === "listed"
+              ? ({ status: "unknown", phraseName: piece.name } as const)
+              : partFor(piece, own, amountUnresolved);
+          return { part: { ...part, listed: true }, explicit: !piece.quantity.assumed };
+        }),
+      );
     }),
   );
 
   return lastSayWins(
-    segments.flatMap((segment, index) => {
-      const part = resolved[index];
-      if (part === undefined || part === null) return [];
-      const explicit = toFoodPhrase(segment.text)?.quantity.assumed === false;
-      return [{ part, clause: segment.clause, explicit }];
-    }),
+    segments.flatMap((segment, index) =>
+      (resolved[index] ?? []).map((said) => ({ ...said, clause: segment.clause })),
+    ),
   );
+}
+
+/** A part, and whether the user said its amount rather than leaving it assumed. */
+type Said = { part: AddPart; explicit: boolean };
+
+/** What one resolved phrase becomes on the wire. */
+function partFor(
+  phrase: ParsedFoodPhrase,
+  resolution: Exclude<PhraseResolution, { status: "listed" }>,
+  amountUnresolved: true | undefined,
+): AddPart {
+  // Part of it was left in a way no arithmetic settles. The food is
+  // still worth naming — the dataset knows it — but its amount is not
+  // the one said, so it is asked for rather than priced. An unknown
+  // food needs its calories asked for anyway, which covers this too.
+  if (amountUnresolved === true && resolution.status !== "unknown") {
+    const entries =
+      resolution.status === "resolved"
+        ? [resolution.match.entry]
+        : resolution.status === "ambiguous"
+          ? resolution.candidates.map((match) => match.entry)
+          : resolution.entries;
+    const knownUnits = (entries[0]?.servings ?? []).map((serving) => serving.unit);
+    return {
+      status: "unmeasurable",
+      phraseName: phrase.name,
+      entries: entries.map((entry) => ({ id: entry.id, name: entry.name })),
+      reason: "partly_left",
+      ...(knownUnits.length === 0 ? {} : { knownUnits }),
+    };
+  }
+
+  switch (resolution.status) {
+    case "resolved":
+      return {
+        status: "resolved",
+        phraseName: phrase.name,
+        item: toFoodItem(resolution.match),
+      };
+
+    case "ambiguous":
+      return {
+        status: "ambiguous",
+        phraseName: phrase.name,
+        candidates: resolution.candidates.map((match) => ({
+          entryId: match.entry.id,
+          name: match.entry.name,
+          item: toFoodItem(match),
+        })),
+        ...(phrase.quantity.assumed ? {} : { saidAmount: phrase.quantity.text }),
+      };
+
+    case "unmeasurable": {
+      const knownUnits = (resolution.entries[0]?.servings ?? []).map(
+        (serving) => serving.unit,
+      );
+      return {
+        status: "unmeasurable",
+        phraseName: phrase.name,
+        entries: resolution.entries.map((entry) => ({
+          id: entry.id,
+          name: entry.name,
+        })),
+        reason: resolution.reason,
+        ...(resolution.unit === undefined ? {} : { unit: resolution.unit }),
+        ...(knownUnits.length === 0 ? {} : { knownUnits }),
+      };
+    }
+
+    case "unknown":
+      // The amount said ("구운 계란 두 개") stays with the food, so the record
+      // made from the user's own figure still says how much it was.
+      return {
+        status: "unknown",
+        phraseName: phrase.name,
+        ...(phrase.quantity.assumed ? {} : { amount: phrase.quantity.text }),
+      };
+  }
 }
 
 /**

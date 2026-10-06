@@ -159,7 +159,13 @@ export type PhraseResolution =
       /** The counter the user said, for `unsupported_unit`. */
       unit?: string;
     }
-  | { status: "unknown"; phrase: ParsedFoodPhrase };
+  | { status: "unknown"; phrase: ParsedFoodPhrase }
+  /**
+   * Several foods said one after another with only a space between them —
+   * "제육 김치". Each piece is its own phrase, to be resolved on its own; the
+   * last carries the amount said at the end of the whole.
+   */
+  | { status: "listed"; phrase: ParsedFoodPhrase; pieces: ParsedFoodPhrase[] };
 
 /**
  * The port. Phase 5 ships a local-dataset implementation; the MFDS OpenAPI

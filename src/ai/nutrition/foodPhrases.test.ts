@@ -74,6 +74,28 @@ describe("several foods", () => {
   });
 });
 
+describe("+ lists foods the way a comma does (2026-10-06 feedback)", () => {
+  it.each(["김밥 + 라면 먹었어", "김밥+라면 먹었어", "김밥 +라면"])("splits %s", (sentence) => {
+    expect(parse(sentence).map((phrase) => phrase.name)).toEqual(["김밥", "라면"]);
+  });
+
+  it("keeps each amount with its own food", () => {
+    expect(parse("햇반 1/2 + 제육 + 김치")).toEqual([
+      { name: "햇반", value: 0.5, unit: null, assumed: false },
+      { name: "제육", value: 1, unit: null, assumed: true },
+      { name: "김치", value: 1, unit: null, assumed: true },
+    ]);
+  });
+
+  it("does not split a shop's offer between two digits", () => {
+    expect(parse("1+1 커피 먹었어").map((phrase) => phrase.name)).toEqual(["1+1 커피"]);
+    // Nor reads the 1 after the + as an amount of a food called "라면 2+".
+    expect(parse("라면 2+1 먹었어")).toEqual([
+      { name: "라면 2+1", value: 1, unit: null, assumed: true },
+    ]);
+  });
+});
+
 describe("framing words are dropped, not treated as food", () => {
   it.each([
     ["점심에 갈비탕 먹음", "갈비탕"],

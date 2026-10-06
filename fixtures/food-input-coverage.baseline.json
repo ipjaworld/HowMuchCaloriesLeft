@@ -883,6 +883,47 @@
       ]
     },
     {
+      "id": "multi-16",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\"",
+        "resolved 라면 (1그릇) ← \"라면\""
+      ]
+    },
+    {
+      "id": "multi-17",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1줄) ← \"김밥\"",
+        "resolved 라면 (1그릇) ← \"라면\""
+      ]
+    },
+    {
+      "id": "multi-18",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 쌀밥 (1/2공기) ← \"쌀밥\"",
+        "resolved 제육볶음 (1인분) ← \"제육\"",
+        "resolved 배추김치 (1인분) ← \"김치\""
+      ]
+    },
+    {
+      "id": "multi-19",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 제육볶음 (1인분) ← \"제육\"",
+        "resolved 배추김치 (1인분) ← \"김치\""
+      ]
+    },
+    {
+      "id": "multi-20",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 라면 (1그릇) ← \"라면\"",
+        "resolved 김밥 (두 줄) ← \"김밥\""
+      ]
+    },
+    {
       "id": "pol-09",
       "verdict": "correct_resolved",
       "actual": [

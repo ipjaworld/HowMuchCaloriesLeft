@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MIN_MATCH_SCORE, findByName, nameVariants, parseFoodEntries } from "./dataset";
 import { parseFoodPhrases } from "./foodPhrases";
+import { koreanFoodResolver } from "./koreanFoods";
 import { caloriesFor, createLocalDatasetResolver, toGrams, narrowByServingUnit } from "./localDatasetResolver";
 import { assumedQuantity } from "./quantity";
 import type { Quantity, Unit } from "./quantity";
@@ -498,10 +499,12 @@ describe("one food left standing because the others have no portion", () => {
   });
 
   it("does not drop the food beside it: 닭가슴살 김치 is not just the kimchi", async () => {
+    // Cut into two foods since 2026-10-06, so the guard is not what keeps
+    // 닭가슴살 any more: it is its own phrase, and asked about on its own.
     const result = await resolve("닭가슴살 김치 먹었어");
-    expect(result.status).toBe("unmeasurable");
-    if (result.status !== "unmeasurable") return;
-    expect(result.entries.map((entry) => entry.name).sort()).toEqual(["김치", "닭가슴살"]);
+    expect(result.status).toBe("listed");
+    if (result.status !== "listed") return;
+    expect(result.pieces.map((piece) => piece.name)).toEqual(["닭가슴살", "김치"]);
   });
 
   it("still asks which when two of them can be priced", async () => {
@@ -512,5 +515,40 @@ describe("one food left standing because the others have no portion", () => {
   it("still records a food named outright", async () => {
     const result = await resolve("이온음료 마셨어");
     expect(result.status).toBe("resolved");
+  });
+});
+
+describe("foods listed with only a space between them (2026-10-06 feedback)", () => {
+  const shipped = async (sentence: string) => {
+    const [phrase] = parseFoodPhrases(sentence);
+    if (phrase === undefined) throw new Error(`no phrase: ${sentence}`);
+    return koreanFoodResolver.resolve(phrase);
+  };
+  const pieces = async (sentence: string) => {
+    const result = await shipped(sentence);
+    if (result.status !== "listed") return result.status;
+    return result.pieces.map((piece) => [piece.name, piece.quantity.text]);
+  };
+
+  it("cuts two foods apart instead of offering them as one choice", async () => {
+    expect(await pieces("제육 김치 먹었어")).toEqual([["제육", ""], ["김치", ""]]);
+    expect(await pieces("라면 김밥 먹었어")).toEqual([["라면", ""], ["김밥", ""]]);
+  });
+
+  it("gives the amount at the end to the last food, and an amount between to the one before", async () => {
+    // Before, 줄 narrowed the choice to 김밥 and 라면 vanished without a word.
+    expect(await pieces("라면 김밥 두 줄 먹었어")).toEqual([["라면", ""], ["김밥", "두 줄"]]);
+    expect(await pieces("라면 하나 김밥 두 줄 먹었어")).toEqual([["라면", "하나"], ["김밥", "두 줄"]]);
+  });
+
+  it.each([
+    ["참치 김밥 먹었어", "a name of its own"],
+    ["그릭 요거트 먹었어", "a spaced name"],
+    ["우유 넣은 커피 마셨어", "an addition between the foods"],
+    ["편의점 김밥 라면 먹었어", "a word before the first food"],
+    ["라면 끓여서 계란 두 개 넣고 먹었어", "a story, not a list"],
+    ["고구마 케이크 먹었어", "a kind of a generic representative"],
+  ])("leaves %s alone — %s", async (sentence) => {
+    expect(await shipped(sentence)).not.toMatchObject({ status: "listed" });
   });
 });

@@ -57,7 +57,15 @@ const LEADING_MARKERS = [
  * needed: the conjunction is 과 after a final consonant (밥과) and 와 after a
  * vowel (커피와). 사 ends in a vowel, so the 과 in 사과 cannot be "and".
  */
-const SEPARATOR = /(이랑|랑|하고|그리고|및|와|과|에(?!서))[ ]+|[,][ ]*/g;
+const SEPARATOR = /(이랑|랑|하고|그리고|및|와|과|에(?!서))[ ]+|[,][ ]*|[ ]*[+][ ]*/g;
+
+/**
+ * "김밥 + 라면" lists two foods the way a comma does (2026-10-06 feedback),
+ * but "1+1" and "2+1" between digits are a shop's offer, not a list.
+ */
+function isOfferPlus(text: string, start: number, end: number): boolean {
+  return /[0-9]/.test(text[start - 1] ?? "") && /[0-9]/.test(text[end] ?? "");
+}
 
 /** Whether a Hangul syllable carries a final consonant (받침). */
 function hasFinalConsonant(syllable: string): boolean | null {
@@ -82,6 +90,9 @@ function splitPieces(text: string): Piece[] {
   for (const match of text.matchAll(SEPARATOR)) {
     const word = match[1];
     if ((word === "과" || word === "와") && !isConjunctionHere(text, match.index, word)) {
+      continue;
+    }
+    if (match[0].trim() === "+" && isOfferPlus(text, match.index, match.index + match[0].length)) {
       continue;
     }
     pieces.push({ text: text.slice(start, match.index), joiner: word ?? "," });

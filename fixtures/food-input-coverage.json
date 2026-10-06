@@ -2293,6 +2293,138 @@
       ]
     },
     {
+      "id": "multi-16",
+      "category": "multi_food",
+      "input": "김밥 + 라면 먹었어",
+      "consumed": true,
+      "why": "+로 나열. 쉼표와 같다 (2026-10-06 피드백).",
+      "foods": [
+        {
+          "said": "김밥",
+          "status": "resolved",
+          "entry": "김밥"
+        },
+        {
+          "said": "라면",
+          "status": "resolved",
+          "entry": "라면"
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
+      "id": "multi-17",
+      "category": "multi_food",
+      "input": "김밥+라면 먹었어",
+      "consumed": true,
+      "why": "띄어 쓰지 않은 +.",
+      "foods": [
+        {
+          "said": "김밥",
+          "status": "resolved",
+          "entry": "김밥"
+        },
+        {
+          "said": "라면",
+          "status": "resolved",
+          "entry": "라면"
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
+      "id": "multi-18",
+      "category": "multi_food",
+      "input": "쌀밥 1/2공기 + 제육 + 김치",
+      "consumed": true,
+      "why": "피드백 원문의 모양. 반 공기는 쌀밥에만, 제육·김치는 1인분.",
+      "foods": [
+        {
+          "said": "쌀밥",
+          "status": "resolved",
+          "entry": "쌀밥",
+          "amount": {
+            "value": 0.5,
+            "unit": "공기"
+          }
+        },
+        {
+          "said": "제육",
+          "status": "resolved",
+          "entry": "제육볶음",
+          "amount": {
+            "value": 1
+          }
+        },
+        {
+          "said": "김치",
+          "status": "resolved",
+          "entry": "배추김치",
+          "amount": {
+            "value": 1
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
+      "id": "multi-19",
+      "category": "multi_food",
+      "input": "제육 김치 먹었어",
+      "consumed": true,
+      "why": "띄어쓰기만으로 나열. 둘 중 하나를 고르게 하면 다른 하나가 빠진다 — 두 음식으로 자르고, 기록 전에 확인한다.",
+      "foods": [
+        {
+          "said": "제육",
+          "status": "resolved",
+          "entry": "제육볶음"
+        },
+        {
+          "said": "김치",
+          "status": "resolved",
+          "entry": "배추김치"
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
+      "id": "multi-20",
+      "category": "multi_food",
+      "input": "라면 김밥 두 줄 먹었어",
+      "consumed": true,
+      "why": "끝의 양은 마지막 음식의 것. 전에는 '줄'을 아는 김밥만 남고 라면이 조용히 빠졌다.",
+      "foods": [
+        {
+          "said": "라면",
+          "status": "resolved",
+          "entry": "라면",
+          "amount": {
+            "value": 1
+          }
+        },
+        {
+          "said": "김밥",
+          "status": "resolved",
+          "entry": "김밥",
+          "amount": {
+            "value": 2,
+            "unit": "줄"
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
       "id": "pol-09",
       "category": "polarity",
       "input": "짜장면 먹으려고 했는데 짬뽕 먹었어",

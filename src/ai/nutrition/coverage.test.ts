@@ -530,10 +530,12 @@ describe("v1 coverage expansion, second round (2026-10-02)", () => {
   });
 
   it("does not drop a food because the one beside it has a portion", async () => {
+    // Since 2026-10-06 the two are cut apart and each asked about on its
+    // own: 닭가슴살 for its weight, the kimchi priced. Neither is lost.
     const result = await resolveOne("닭가슴살 김치 먹었어");
-    expect(result.status).toBe("unmeasurable");
-    if (result.status !== "unmeasurable") return;
-    expect(result.entries.map((entry) => entry.name).sort()).toEqual(["닭가슴살", "배추김치"]);
+    expect(result.status).toBe("listed");
+    if (result.status !== "listed") return;
+    expect(result.pieces.map((piece) => piece.name)).toEqual(["닭가슴살", "김치"]);
   });
 
   it("a food that is sold by weight asks for the weight, not the calories", async () => {
