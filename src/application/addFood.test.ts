@@ -99,6 +99,24 @@ describe("resolved — one sentence, one turn", () => {
     expect(record?.items[0]?.calories).toBe(resolved.item.calories);
   });
 
+  it("prices 1/2, 0.5 and 반 the same — a written half is never 2 (2026-10-06 feedback)", async () => {
+    const priced = async (sentence: string) => {
+      const parts = await resolveAddParts(sentence, koreanFoodResolver);
+      expect(parts).toHaveLength(1);
+      const part = parts[0];
+      if (part?.status !== "resolved") throw new Error(`expected resolved: ${sentence}`);
+      return { name: part.item.name, calories: part.item.calories };
+    };
+
+    for (const [food, unit] of [["바나나", "개"], ["김밥", "줄"], ["쌀밥", "공기"]] as const) {
+      const half = await priced(`${food} 반 ${unit} 먹었어`);
+      expect(await priced(`${food} 1/2${unit} 먹었어`)).toEqual(half);
+      expect(await priced(`${food} 0.5${unit} 먹었어`)).toEqual(half);
+      expect(await priced(`${food} 1/2 먹었어`)).toEqual(half);
+      expect(half.calories).toBeLessThan((await priced(`${food} 1${unit} 먹었어`)).calories);
+    }
+  });
+
   it("gives the record no meal type — none is inferred in this phase", async () => {
     const { repository, records } = fakeRepository();
     await commit(repository, await start("갈비탕 하나 먹었어"));

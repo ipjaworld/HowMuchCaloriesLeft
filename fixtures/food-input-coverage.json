@@ -2558,6 +2558,77 @@
       ]
     },
     {
+      "id": "qty-14",
+      "category": "quantity",
+      "input": "바나나 1/2개 먹었어",
+      "consumed": true,
+      "why": "쓴 분수. 1/2개는 반 개 — '2개'로도, 이름이 '바나나 1/'인 모르는 음식으로도 읽으면 안 된다 (2026-10-06 피드백).",
+      "foods": [
+        {
+          "said": "바나나",
+          "status": "resolved",
+          "entry": "바나나",
+          "amount": {
+            "value": 0.5,
+            "unit": "개"
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
+      "id": "qty-15",
+      "category": "quantity",
+      "input": "김밥 1/2줄이랑 라면 먹었어",
+      "consumed": true,
+      "why": "분수는 그 앞의 음식에만 붙는다. 라면은 1인분.",
+      "foods": [
+        {
+          "said": "김밥",
+          "status": "resolved",
+          "entry": "김밥",
+          "amount": {
+            "value": 0.5,
+            "unit": "줄"
+          }
+        },
+        {
+          "said": "라면",
+          "status": "resolved",
+          "entry": "라면",
+          "amount": {
+            "value": 1
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
+      "id": "qty-16",
+      "category": "quantity",
+      "input": "쌀밥 2분의 1 공기 먹었어",
+      "consumed": true,
+      "why": "한국어 분수 — 분모가 먼저 온다.",
+      "foods": [
+        {
+          "said": "쌀밥",
+          "status": "resolved",
+          "entry": "쌀밥",
+          "amount": {
+            "value": 0.5,
+            "unit": "공기"
+          }
+        }
+      ],
+      "tags": [
+        "feedback_1006"
+      ]
+    },
+    {
       "id": "unk-10",
       "category": "unknown",
       "input": "소고기 200g 먹었어",

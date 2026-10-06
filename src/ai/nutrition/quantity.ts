@@ -130,6 +130,31 @@ function spoken(matched: string): string {
 }
 
 /**
+ * "1/2", "2분의 1": a written fraction. Only a proper one with a small
+ * denominator is an amount — "3/4개" is, "10/3" is a date and "11/2" is not
+ * anything this app should guess at.
+ */
+const MAX_DENOMINATOR = 10;
+
+function fraction(numerator: string | undefined, denominator: string | undefined): number | null {
+  const top = Number(numerator);
+  const bottom = Number(denominator);
+  if (!Number.isInteger(top) || !Number.isInteger(bottom)) return null;
+  if (top < 1 || bottom > MAX_DENOMINATOR || top >= bottom) return null;
+  return top / bottom;
+}
+
+/**
+ * A digit is only an amount on its own. One that ends a slash or a decimal
+ * belongs to something longer: without this, "바나나 1/2개" was read as
+ * "2개" of a food called "바나나 1/" (2026-10-06 feedback).
+ */
+const NOT_AFTER_NUMBER = "(?<![0-9./])";
+
+const SLASH_FRACTION = "([0-9]+)[ ]*/[ ]*([0-9]+)";
+const KOREAN_FRACTION = "([0-9]+)[ ]?분의[ ]?([0-9]+)";
+
+/**
  * Ordered by specificity: "한 그릇 반" has to be tried before "한 그릇",
  * or the trailing 반 is silently dropped and 1.5 becomes 1.
  */
@@ -150,9 +175,45 @@ const PATTERNS: { re: RegExp; read: (m: RegExpMatchArray) => Quantity | null }[]
       };
     },
   },
+  // 1/2개, 1/3 공기 — before the digit patterns, which would take the 2
+  {
+    re: new RegExp(`${NOT_AFTER_NUMBER}${SLASH_FRACTION}[ ]*(${unitPattern})${ONLY}[ ]*$`),
+    read: (m) => {
+      const value = fraction(m[1], m[2]);
+      if (value === null) return null;
+      return { value, unit: asUnit(m[3]), text: spoken(m[0]), assumed: false };
+    },
+  },
+  // 1/2 — of whatever one serving is
+  {
+    re: new RegExp(`${NOT_AFTER_NUMBER}${SLASH_FRACTION}${ONLY}[ ]*$`),
+    read: (m) => {
+      const value = fraction(m[1], m[2]);
+      if (value === null) return null;
+      return { value, unit: null, text: spoken(m[0]), assumed: false };
+    },
+  },
+  // 2분의 1 공기 — the denominator comes first in Korean
+  {
+    re: new RegExp(`${NOT_AFTER_NUMBER}${KOREAN_FRACTION}[ ]*(${unitPattern})${ONLY}[ ]*$`),
+    read: (m) => {
+      const value = fraction(m[2], m[1]);
+      if (value === null) return null;
+      return { value, unit: asUnit(m[3]), text: spoken(m[0]), assumed: false };
+    },
+  },
+  // 2분의 1
+  {
+    re: new RegExp(`${NOT_AFTER_NUMBER}${KOREAN_FRACTION}${ONLY}[ ]*$`),
+    read: (m) => {
+      const value = fraction(m[2], m[1]);
+      if (value === null) return null;
+      return { value, unit: null, text: spoken(m[0]), assumed: false };
+    },
+  },
   // 1.5공기, 200ml, 2개
   {
-    re: new RegExp(`([0-9]+(?:[.][0-9]+)?)[ ]*(${unitPattern})${ONLY}[ ]*$`),
+    re: new RegExp(`${NOT_AFTER_NUMBER}([0-9]+(?:[.][0-9]+)?)[ ]*(${unitPattern})${ONLY}[ ]*$`),
     read: (m) => ({
       value: Number(m[1]),
       unit: asUnit(m[2]),
@@ -200,7 +261,7 @@ const PATTERNS: { re: RegExp; read: (m: RegExpMatchArray) => Quantity | null }[]
   },
   // 2, 3 — a bare digit
   {
-    re: /(\d+(?:\.\d+)?)\s*$/,
+    re: new RegExp(`${NOT_AFTER_NUMBER}([0-9]+(?:[.][0-9]+)?)[ ]*$`),
     read: (m) => ({
       value: Number(m[1]),
       unit: null,

@@ -77,6 +77,51 @@ describe("fractions — people leave food, so these matter", () => {
   });
 });
 
+describe("written fractions — 1/2 is half, never 2 (2026-10-06 feedback)", () => {
+  it.each([
+    ["햇반 1/2", 0.5, null, "1/2"],
+    ["바나나 1/2개", 0.5, "개", "1/2개"],
+    ["밥 1/2공기", 0.5, "공기", "1/2공기"],
+    ["밥 1/2 공기", 0.5, "공기", "1/2 공기"],
+    ["피자 1 / 4 조각", 0.25, "조각", "1 / 4 조각"],
+    ["김밥 2/3줄", 2 / 3, "줄", "2/3줄"],
+    ["라면 1/3", 1 / 3, null, "1/3"],
+    ["햇반1/2", 0.5, null, "1/2"],
+    ["밥 2분의 1 공기", 0.5, "공기", "2분의 1 공기"],
+    ["밥 3분의1", 1 / 3, null, "3분의1"],
+    ["밥 1/2공기만", 0.5, "공기", "1/2공기"],
+  ] as const)("%s → %s %s", (phrase, value, unit, text) => {
+    const match = parseTrailingQuantity(phrase);
+    expect(match?.quantity).toEqual({ value, unit, text, assumed: false });
+  });
+
+  it("leaves the food name whole", () => {
+    expect(parseTrailingQuantity("바나나 1/2개")?.start).toBe("바나나 ".length);
+    expect(parseTrailingQuantity("햇반1/2")?.start).toBe("햇반".length);
+  });
+
+  it.each(["김밥 10/3", "김밥 11/2", "김밥 3/2개", "김밥 0/2", "김밥 1/20", "김밥 1/0개"])(
+    "%s is not an amount, and its last digit is not one either",
+    (phrase) => {
+      expect(parseTrailingQuantity(phrase)).toBeNull();
+    },
+  );
+
+  it("still reads the whole and decimal digits it always did", () => {
+    expect(parse("밥 1.5공기")).toMatchObject({ value: 1.5, unit: "공기" });
+    expect(parse("만두 12")).toMatchObject({ value: 12, unit: null });
+  });
+
+  it.each([
+    ["1/2", 0.5, null],
+    ["1/2개", 0.5, "개"],
+    ["2분의 1", 0.5, null],
+  ] as const)("answers the amount question: %s", (text, value, unit) => {
+    expect(parseAmountOnly(text)).toMatchObject({ value, unit });
+    expect(readAmountAnswer(`${text}이요`)).toMatchObject({ value, unit });
+  });
+});
+
 describe("no quantity", () => {
   it.each(["아메리카노", "갈비탕", "김치찌개"])("%s has none", (phrase) => {
     expect(parseTrailingQuantity(phrase)).toBeNull();

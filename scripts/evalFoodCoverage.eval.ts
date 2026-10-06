@@ -82,7 +82,7 @@ async function main(): Promise<void> {
   );
 
   // Tagged batches, so a set tuned against is never read as a blind one.
-  for (const tag of ["b2_round1", "b2_blind", "b2_review"]) {
+  for (const tag of ["b2_round1", "b2_blind", "b2_review", "feedback_1006"]) {
     const tagged = summarize(results.filter((result) => (result.testCase.tags ?? []).includes(tag)));
     if (tagged.total === 0) continue;
     console.log(

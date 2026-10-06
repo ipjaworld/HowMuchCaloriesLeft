@@ -972,6 +972,28 @@
       ]
     },
     {
+      "id": "qty-14",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 바나나 (1/2개) ← \"바나나\""
+      ]
+    },
+    {
+      "id": "qty-15",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 김밥 (1/2줄) ← \"김밥\"",
+        "resolved 라면 (1그릇) ← \"라면\""
+      ]
+    },
+    {
+      "id": "qty-16",
+      "verdict": "correct_resolved",
+      "actual": [
+        "resolved 쌀밥 (2분의 1 공기) ← \"쌀밥\""
+      ]
+    },
+    {
       "id": "unk-10",
       "verdict": "wrong_ask",
       "actual": [
