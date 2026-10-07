@@ -1,9 +1,5 @@
 import { z } from "zod";
 import {
-  ACTIVITY_LEVELS,
-  GOAL_MODES,
-  PROFILE_BOUNDS,
-  SEXES,
   type DietProfile,
   type DietProfileRepository,
 } from "@/domain/dietProfile";
@@ -14,6 +10,8 @@ import {
   writeJson,
   type KeyValueStorage,
 } from "./storage";
+import { dietProfileSchema } from "./profileSchema";
+export { dietProfileSchema } from "./profileSchema";
 
 /**
  * Body facts, stored in this browser and nowhere else.
@@ -37,19 +35,6 @@ import {
 
 const PROFILE_VERSION = 1;
 const ONBOARDING_VERSION = 1;
-
-const bounded = (field: keyof typeof PROFILE_BOUNDS) =>
-  z.number().min(PROFILE_BOUNDS[field].min).max(PROFILE_BOUNDS[field].max);
-
-export const dietProfileSchema = z.object({
-  weightKg: bounded("weightKg"),
-  heightCm: bounded("heightCm"),
-  age: bounded("age").int(),
-  sex: z.enum(SEXES),
-  activityLevel: z.enum(ACTIVITY_LEVELS),
-  goalMode: z.enum(GOAL_MODES),
-  updatedAt: z.string().refine((value) => !Number.isNaN(new Date(value).getTime())),
-});
 
 /**
  * An envelope of another version is treated as absent, not migrated. There is

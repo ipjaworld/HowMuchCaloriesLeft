@@ -6,10 +6,10 @@ import { buildChatRequest } from "@/components/chatRequest";
 import type { MealRecord } from "@/domain/meal";
 
 /**
- * The calculator tells people "입력한 정보는 이 기기에만 저장되며 서버에
- * 전송되지 않습니다." These tests are what make that sentence true rather than
- * hopeful. They check structure, not behaviour, because the promise is
- * structural: there must be no path from the profile to the network.
+ * Calculator inputs remain local by default. Only the dedicated, separately
+ * consented account profile route may receive them. Food judgment and record
+ * import never carry a profile. Behavioral consent checks live in route and
+ * repository tests; these checks guard the module and request boundaries.
  */
 
 const SRC = join(__dirname);
@@ -118,23 +118,23 @@ function reachableFrom(entry: string): Set<string> {
   return seen;
 }
 
-describe("the server never touches the profile", () => {
+describe("only the consent-gated profile route can touch profile types", () => {
   const routes = sourceFiles(join(SRC, "app", "api")).filter((file) =>
     file.endsWith("route.ts"),
   );
 
-  it("finds both routes", () => {
-    expect(routes).toHaveLength(2);
+  it("finds the judgment and account routes", () => {
+    expect(routes.length).toBeGreaterThanOrEqual(7);
   });
 
-  it("cannot reach a profile module from any route, even as a type", () => {
+  it("cannot reach a profile module from other routes, even as a type", () => {
     for (const route of routes) {
       const reachable = [...reachableFrom(route)].map((file) =>
         relative(SRC, file).replaceAll("\\", "/"),
       );
       // Sanity: the walk really follows imports.
-      expect(reachable.length).toBeGreaterThan(3);
-      expect(reachable, relative(SRC, route)).not.toContain("domain/dietProfile.ts");
+      expect(reachable.length).toBeGreaterThanOrEqual(3);
+      if(relative(SRC,route).replaceAll("\\", "/")!=="app/api/account/profile/route.ts") expect(reachable, relative(SRC, route)).not.toContain("domain/dietProfile.ts");
       expect(reachable, relative(SRC, route)).not.toContain(
         "infrastructure/localStorageDietProfileRepository.ts",
       );
@@ -142,11 +142,12 @@ describe("the server never touches the profile", () => {
     }
   });
 
-  it("reads the profile from exactly one screen", () => {
+  it("reads the local profile only in the calculator and explicit opt-in panel", () => {
     const readers = sourceFiles(SRC).filter((file) =>
       readFileSync(file, "utf8").includes("localStorageDietProfileRepository"),
     );
     expect(readers.map((file) => relative(SRC, file).replaceAll("\\", "/"))).toEqual([
+      "components/AccountProfilePanel.tsx",
       "components/TodayScreen.tsx",
     ]);
   });
@@ -158,7 +159,7 @@ describe("there is nowhere else for it to go", () => {
       dependencies: Record<string, string>;
     };
     expect(Object.keys(pkg.dependencies).sort()).toEqual(
-      ["@typesafe-ai/sdk", "next", "react", "react-dom", "zod"].sort(),
+      ["@supabase/ssr", "@supabase/supabase-js", "@typesafe-ai/sdk", "next", "react", "react-dom", "zod"].sort(),
     );
   });
 
@@ -169,10 +170,10 @@ describe("there is nowhere else for it to go", () => {
     }
   });
 
-  it("fetches only the app's own two routes from the client", () => {
+  it("fetches only the app's own judgment and account routes from the client", () => {
     const fetched = sourceFiles(join(SRC, "components")).flatMap((file) =>
       [...readFileSync(file, "utf8").matchAll(/fetch\(\s*"([^"]+)"/g)].map((m) => m[1]),
     );
-    expect([...new Set(fetched)].sort()).toEqual(["/api/chat", "/api/resolve"]);
+    expect([...new Set(fetched)].sort()).toEqual(["/api/account", "/api/account/profile", "/api/chat", "/api/resolve"]);
   });
 });

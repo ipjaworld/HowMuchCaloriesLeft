@@ -12,6 +12,7 @@ import { createLocalStorageMealRecordRepository } from "@/infrastructure/localSt
 import { describeHistoryDate, describeHistoryDay, describeConversationRetention, describeMissingConversationRecord } from "./historyText";
 import { describeStorageNotice } from "./replyText";
 import { MealList } from "./MealList";
+import { createRemoteRepositories } from "@/infrastructure/remoteRepositories";
 
 type State =
   | { status: "loading" }
@@ -24,17 +25,19 @@ type State =
  * Built to be scanned: the eye runs down the right-hand totals and stops on
  * the few that are set apart. Nothing here grades a day.
  */
-export function HistoryScreen() {
+export function HistoryScreen({accountId=null}:{accountId?:string|null} = {}) {
   const repositories = useMemo(
     () => ({
       meals: createLocalStorageMealRecordRepository(),
       goals: createLocalStorageDailyGoalRepository(),
       conversation: createLocalStorageConversationRepository(),
+      ...(accountId ? createRemoteRepositories(accountId) : {}),
     }),
-    [],
+    [accountId],
   );
   const [state, setState] = useState<State>({ status: "loading" });
   const [openDate, setOpenDate] = useState<string | null>(null);
+  const [loadError,setLoadError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +61,7 @@ export function HistoryScreen() {
       const notice = !conversation.saved ? describeStorageNotice("conversation")
         : conversation.dropped > 0 ? describeStorageNotice("trimmed") : null;
       if (!cancelled) setState({ status: "ready", today, days, records, turns: conversation.turns, notice });
-    })();
+    })().catch(()=>{if(!cancelled)setLoadError(true);});
     return () => {
       cancelled = true;
     };
@@ -77,7 +80,7 @@ export function HistoryScreen() {
       </header>
       {state.status === "ready" && state.notice !== null && <p role="alert" className="px-6 text-sm text-accent">{state.notice}</p>}
 
-      {state.status === "loading" ? (
+      {loadError ? <p role="alert" className="px-6">기록을 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p> : state.status === "loading" ? (
         <p className="px-6 text-sm text-ink-soft">불러오는 중</p>
       ) : state.days.length === 0 ? (
         <p className="px-6 py-4 text-sm break-keep text-ink-soft">

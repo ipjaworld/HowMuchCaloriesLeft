@@ -41,6 +41,14 @@ export const envSchema = z.object({
    */
   TYPESAFE_API_KEY: optionalSecret,
 
+  ACCOUNT_ENABLED: blankAsUnset(z.enum(["off", "on"]).default("off")),
+  SUPABASE_URL: blankAsUnset(z.url().optional()),
+  SUPABASE_PUBLISHABLE_KEY: optionalSecret,
+  APP_ORIGIN: blankAsUnset(z.url().optional()),
+  ACCOUNT_PROVIDERS: blankAsUnset(z.enum(["google", "kakao", "google,kakao"]).default("google,kakao")),
+  PRIVACY_OPERATOR: optionalSecret,
+  PRIVACY_CONTACT_EMAIL: blankAsUnset(z.email().optional()),
+
   /** Vercel sets this itself; request headers cannot enable proxy trust. */
   VERCEL: z.string().optional(),
   /** Unset: a random process-lifetime HMAC secret, matching memory lifetime. */

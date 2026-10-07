@@ -600,21 +600,21 @@ DietProfile = { weightKg, heightCm, age, sex, activityLevel, goalMode, updatedAt
 - 쓰기 전에도 같은 스키마로 검증한다 — 읽을 수 없는 값은 쓰지 않는다
 - 프로필을 지워도 목표는 남는다. 식단 기록이 깨져도 프로필은 남는다
 
-### Privacy — 로컬 전용이라는 약속을 구조로 지킨다
+### Privacy — 기본 로컬 보관과 별도 동의 경계를 구조로 지킨다
 
-화면 문구: "입력한 정보는 이 기기에만 저장되며 서버에 전송되지 않습니다. 다른 기기와 자동으로 공유되지 않습니다."
+계산기 입력은 기본적으로 기기에만 저장한다. 선택 계정 기능은 `ACCOUNT_ENABLED=on`과 필수 설정이 모두 있을 때만 열린다. 신체정보는 별도의 보관 동의를 받아야 `/api/account/profile`로 보낼 수 있다. 음식 판단 API와 기록 합치기에는 포함하지 않는다.
 
 | 약속 | 코드 | 테스트 (`src/privacy.test.ts`) |
 | --- | --- | --- |
-| localStorage에만 | `localStorageDietProfileRepository`만 읽고 쓴다 | 읽는 곳은 `TodayScreen` 하나 |
+| 기본은 기기에만 | `localStorageDietProfileRepository`; 별도 동의 후 `accountProfileRepository` | 읽는 화면은 계산기와 명시적 보관 동의 패널뿐; 철회 후 일반 저장으로 재활성화 불가 |
 | `/api/chat`에 안 보낸다 | 요청 본문은 `buildChatRequest` 한 곳에서, 인자 4개로만 | 키가 정확히 4개 · 서버 스키마가 여분 필드를 버린다 |
-| 서버가 접근하지 않는다 | 프로필 포트를 `domain/repository.ts`가 아니라 `domain/dietProfile.ts`에 둔다 | **두 route에서 import 그래프를 따라가도** 프로필 모듈에 닿지 않는다(타입 import 포함) |
+| 전용 계정 API만 접근 | 프로필 포트를 `domain/dietProfile.ts`에 분리 | `/api/account/profile`을 제외한 모든 route에서 import 그래프가 프로필에 닿지 않는다 |
 | Jev·MFDS에 안 보낸다 | 두 호출 모두 route 안에서만 | 위와 같음 · MFDS는 런타임에 호출 자체가 없다 |
-| analytics 없음 | 의존성 5개 | 의존성 목록 고정 · 추적 코드 패턴 없음 · client의 fetch는 `/api/chat`·`/api/resolve`뿐 |
+| analytics 없음 | 고정 의존성 목록에 Supabase SSR/Auth SDK만 추가 | 추적 코드 패턴 없음 · client의 fetch는 앱의 판단/계정 API만 허용 |
 
 import 그래프 테스트는 실제로 한 번 잡았다 — 프로필 포트를 처음에 공용 `domain/repository.ts`에 뒀더니 `/api/chat` → … → `repository.ts` → `dietProfile.ts` 경로가 생겼다(타입 전용이라 런타임엔 무해했지만). 포트를 옮겼다.
 
-`dailyGoalCalories`는 전과 같이 보낸다. 목표 숫자 하나이고, 그 숫자에 **어떻게** 도달했는지(체중·키·나이)는 기기에 남는다.
+`dailyGoalCalories`는 전과 같이 보낸다. 목표 숫자 하나이고, 그 숫자에 **어떻게** 도달했는지(체중·키·나이)는 판단 요청에 포함하지 않는다. 계정 저장소의 소유권·동의·충돌 규칙은 `docs/account-operations-2026-10-07.md`를 따른다.
 
 ### 온보딩 UX
 

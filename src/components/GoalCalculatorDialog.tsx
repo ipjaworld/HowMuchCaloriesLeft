@@ -26,7 +26,7 @@ import {
 const numberFormat = new Intl.NumberFormat("ko-KR");
 
 export const PRIVACY_NOTICE =
-  "입력한 정보는 이 기기에만 저장되며 서버에 전송되지 않습니다. 다른 기기와 자동으로 공유되지 않습니다.";
+  "입력한 정보는 기본적으로 이 기기에만 저장돼요. 내 계정에서 계산기 정보 보관에 별도로 동의한 경우에만 계정에 저장하고 다른 기기에서 사용해요. 음식 판단에는 보내지 않아요.";
 
 const ACTIVITY_LABELS: Record<ActivityLevel, { label: string; hint: string }> = {
   sedentary: { label: "거의 앉아서 지내요", hint: "운동은 거의 안 해요" },
@@ -228,7 +228,7 @@ function FormStep({
     setIsSaving(true);
     const ok = await onAccept(facts, chosen.mode);
     setIsSaving(false);
-    if (!ok) setError("목표를 저장하지 못했어요. 다시 시도해주세요.");
+    if (!ok) setError("저장을 마치지 못했어요. 목표 또는 계산기 정보를 확인한 뒤 다시 시도해주세요.");
   }
 
   return (

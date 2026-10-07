@@ -7,12 +7,13 @@ import { env } from "@/env";
 import { UsageLimitExceeded } from "@/domain/rateLimit";
 import { usageLimitResponse } from "@/application/usageLimits";
 import { requestIdentity, usageLimits } from "@/infrastructure/serverUsageLimits";
+import { checkAccountUsage } from "@/infrastructure/accountUsageLimits";
 import { chatRequestSchema, toJudgmentInput, type ChatResponse } from "./schema";
 
 /**
  * Judgment, plus the nutrition lookup an add needs.
  *
- * This handler reads no storage, holds no session and changes nothing. It
+ * This handler validates optional sessions only for account usage limits. It
  * turns one sentence plus the state the browser sent into a Command, and the
  * browser decides what to do with it. The API keys live here and nowhere
  * else. What happens between the two is `runChat`.
@@ -43,21 +44,25 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  let finish = (response: Response) => response;
   try {
     const admission = await usageLimits.checkRequest("chat", requestIdentity(request.headers));
     if (!admission.allowed) return usageLimitResponse("rate_limited", admission.retryAfter);
+    const account = await checkAccountUsage(request, "chat");
+    finish = account.finish;
+    if (account.rejection) return account.rejection;
     const response: ChatResponse = await runChat(
       toJudgmentInput(parsed.data),
       parsed.data.chosen,
       { judge, resolver: koreanFoodResolver, candidateJudge },
     );
-    return Response.json(response);
+    return account.finish(Response.json(response));
   } catch (error) {
-    if (error instanceof UsageLimitExceeded) return usageLimitResponse("jev_daily_limit", error.retryAfter);
+    if (error instanceof UsageLimitExceeded) return finish(usageLimitResponse("jev_daily_limit", error.retryAfter));
     // A judgment failure is not a reason to guess. The client says so and the
     // user can try again; nothing was changed either way.
     console.error("[chat] judgment failed", error);
-    return Response.json({ error: "judgment_unavailable" }, { status: 503 });
+    return finish(Response.json({ error: "judgment_unavailable" }, { status: 503 }));
   }
 }
 

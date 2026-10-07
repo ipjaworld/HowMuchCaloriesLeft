@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { makeConversationTurn } from "@/application/conversation";
+import { createRemoteRepositories, AccountStorageError } from "@/infrastructure/remoteRepositories";
+import { createAccountProfileRepository } from "@/infrastructure/accountProfileRepository";
 import type { ConversationTurn } from "@/domain/conversation";
 import { createLocalStorageConversationRepository } from "@/infrastructure/localStorageConversationRepository";
 import { replyText, describeStorageNotice, describeStorageFailure, describeConnectionFailure } from "./replyText";
@@ -111,7 +113,7 @@ type PendingClarification = {
  * storage and fills it in. One frame, no `suppressHydrationWarning`, and
  * nothing above this component has to become a client component.
  */
-export function TodayScreen() {
+export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
   const turnReply = useRef<{ reply: Reply; outcome: ConversationTurn["outcome"] } | null>(null);
   const turnBusy = useRef(false);
@@ -121,10 +123,11 @@ export function TodayScreen() {
       meals: createLocalStorageMealRecordRepository({ onMetadataFailure: () => setStorageNotice(describeStorageNotice("metadata")) }),
       goals: createLocalStorageDailyGoalRepository({ onMetadataFailure: () => setStorageNotice(describeStorageNotice("metadata")) }),
       conversation: createLocalStorageConversationRepository(),
-      // Body facts. Read and written here only; never part of a request.
-      profile: createLocalStorageDietProfileRepository(),
+      ...(accountId ? createRemoteRepositories(accountId) : {}),
+      // Body facts use only the separately consented profile route, never judgment.
+      profile: accountId ? createAccountProfileRepository(createLocalStorageDietProfileRepository(),accountId) : createLocalStorageDietProfileRepository(),
     }),
-    [],
+    [accountId],
   );
 
   const [state, setState] = useState<State>({ status: "loading" });
@@ -192,7 +195,7 @@ export function TodayScreen() {
       }
     }
 
-    void load();
+    void load().catch(() => { if(!cancelled) setStorageNotice("기록을 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요."); });
     return () => {
       cancelled = true;
     };
@@ -215,7 +218,13 @@ export function TodayScreen() {
       const before = await repositories.meals.getAll();
       try {
         await action();
-      } catch {
+      } catch (error) {
+        if(error instanceof AccountStorageError) {
+          await reloadDay();
+          setStorageNotice(error.message);
+          showReply(describeStorageFailure(), "failed");
+          return;
+        }
         await reloadDay();
         showReply(describeStorageFailure(), "failed");
       }
@@ -557,12 +566,18 @@ export function TodayScreen() {
   ): Promise<boolean> {
     if (state.status !== "ready") return false;
 
-    const result = await adoptCalculatedGoal(repositories, {
+    let result;
+    try { result = await adoptCalculatedGoal(repositories, {
       date: state.dateKey,
       facts,
       goalMode,
       now: new Date(),
-    });
+    }); } catch {
+      const savedGoal = await repositories.goals.get(state.dateKey).catch(()=>null);
+      if(savedGoal) setState({...state,calorieTarget:savedGoal.calorieTarget});
+      setStorageNotice("계산기 정보를 저장하지 못했어요. 목표 숫자는 이미 저장됐을 수 있어요. 연결을 확인한 뒤 다시 해 주세요.");
+      return false;
+    }
     if (!result.ok) return false;
 
     setState({ ...state, calorieTarget: result.goal.calorieTarget });
@@ -572,7 +587,10 @@ export function TodayScreen() {
   }
 
   async function handleForgetProfile(): Promise<void> {
-    await repositories.profile.clear();
+    try { await repositories.profile.clear(); } catch {
+      setStorageNotice("계산기 정보를 지우지 못했어요. 연결을 확인한 뒤 다시 해 주세요.");
+      return;
+    }
     setSavedProfile(null);
     closeCalculator();
   }

@@ -6,6 +6,7 @@ import { toFoodItem } from "@/application/addFood";
 import type { NewFoodItem } from "@/application/mealRecords";
 import { usageLimitResponse } from "@/application/usageLimits";
 import { requestIdentity, usageLimits } from "@/infrastructure/serverUsageLimits";
+import { checkAccountUsage } from "@/infrastructure/accountUsageLimits";
 
 /**
  * Pricing a food the user has just told us the size of.
@@ -57,12 +58,14 @@ export async function POST(request: Request): Promise<Response> {
 
   const admission = await usageLimits.checkRequest("resolve", requestIdentity(request.headers));
   if (!admission.allowed) return usageLimitResponse("rate_limited", admission.retryAfter);
+  const account = await checkAccountUsage(request, "resolve");
+  if (account.rejection) return account.rejection;
 
   const entry = KOREAN_FOODS.find(
     (candidate) => candidate.name === parsed.data.foodName,
   );
   if (entry === undefined) {
-    return Response.json({ error: "unknown_entry" }, { status: 404 });
+    return account.finish(Response.json({ error: "unknown_entry" }, { status: 404 }));
   }
 
   // The whole message is the amount, which is the one context where a bare
@@ -70,7 +73,7 @@ export async function POST(request: Request): Promise<Response> {
   const quantity = readAmountAnswer(parsed.data.amountText);
   if (quantity === null) {
     const response: ResolveResponse = { status: "unparseable" };
-    return Response.json(response);
+    return account.finish(Response.json(response));
   }
 
   // "하나" parses too, and for a food with no stated portion it comes straight
@@ -82,5 +85,5 @@ export async function POST(request: Request): Promise<Response> {
       ? { status: "unmeasurable" }
       : { status: "resolved", item: toFoodItem(priced) };
 
-  return Response.json(response);
+  return account.finish(Response.json(response));
 }

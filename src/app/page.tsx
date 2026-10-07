@@ -1,4 +1,6 @@
 import { TodayScreen } from "@/components/TodayScreen";
+import { AccountBoundary } from "@/components/AccountBoundary";
+import { accountConfigured } from "@/infrastructure/accountAuth";
 
 /**
  * Server component: it renders the shell and nothing else. All state lives in
@@ -10,7 +12,7 @@ import { TodayScreen } from "@/components/TodayScreen";
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-[30rem] flex-col bg-surface sm:border-x sm:border-line sm:shadow-[0_0_40px_-24px_rgba(27,25,23,0.35)]">
-      <TodayScreen />
+      {accountConfigured() ? <AccountBoundary /> : <TodayScreen />}
     </main>
   );
 }

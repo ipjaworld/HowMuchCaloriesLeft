@@ -114,7 +114,7 @@ describe("sync metadata and legacy schemas", () => {
     expect(await meals.getAll()).toEqual([]);
     if (removed.status !== "removed") throw new Error("expected removal");
     await restoreFoodItem(meals, [], removed);
-    expect(await meals.getAll()).toEqual([record]);
+    expect(await meals.getAll()).toEqual([{ ...record, updatedAt: new Date(now().getTime() + 1).toISOString() }]);
     expect((await meta.get()).removedRecords).toEqual([]);
   });
 

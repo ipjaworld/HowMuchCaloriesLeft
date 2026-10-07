@@ -207,7 +207,9 @@ describe("undoing a delete", () => {
     expect(await repository.getAll()).toHaveLength(0);
 
     await restoreFoodItem(repository, await repository.getAll(), removed);
-    expect(await repository.getAll()).toEqual([single]);
+    const [restored] = await repository.getAll();
+    expect(restored).toEqual({ ...single, updatedAt: expect.any(String) });
+    expect(Date.parse(restored!.updatedAt)).toBeGreaterThan(Date.parse(single.updatedAt));
   });
 
   it("does not duplicate an item that is already back", async () => {

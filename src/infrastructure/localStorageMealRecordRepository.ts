@@ -57,9 +57,11 @@ export function createLocalStorageMealRecordRepository({
     },
 
     async add(record) {
-      writeAll([...readAll(), record]);
       const meta = readSyncMeta(storage);
-      if (meta.removedRecords.some((entry) => entry.id === record.id)) {
+      const restoring = meta.removedRecords.find((entry) => entry.id === record.id);
+      const restoredAt = restoring ? new Date(Math.max(now().getTime(), Date.parse(restoring.removedAt) + 1)).toISOString() : record.updatedAt;
+      writeAll([...readAll(), { ...record, updatedAt: restoredAt }]);
+      if (restoring) {
         meta.removedRecords = meta.removedRecords.filter((entry) => entry.id !== record.id);
         writeSyncMeta(storage, meta, onMetadataFailure);
       }
