@@ -310,11 +310,17 @@ export function describeAdded(
    * stands on (2026-10-06 feedback: "무엇을 먹고 9kcal였는지 알 수 없음").
    */
   recorded: RecordedFood[] = [],
+  accumulated: { name: string; addedAmount: string; totalAmount: string } | null = null,
 ): Reply {
   const lines =
     recorded.length === 0
       ? ["기록했어요."]
       : [`기록했어요: ${recorded.map(recordedLabel).join(", ")}.`];
+
+  if (accumulated) {
+    lines[0] = `${accumulated.name} ${accumulated.addedAmount}을 추가해 총 ${accumulated.totalAmount}으로 기록했어요.`;
+    lines.push(`추가가 아니라 전체 양을 바꾸려면 "${accumulated.name} ${accumulated.addedAmount}으로 수정해줘"라고 말해주세요.`);
+  }
 
   lines.push(`오늘 ${numberFormat.format(summary.consumedCalories)} kcal 먹었어요.`);
 

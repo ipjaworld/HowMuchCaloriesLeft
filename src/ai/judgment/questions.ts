@@ -22,9 +22,9 @@ export const MAX_REFERENCE_CANDIDATES = 12;
 
 export const INTENT_CRITERIA: Record<Intent, string> = {
   add_food:
-    "The user is reporting food or drink they have already consumed, and a new entry should be created for it.",
+    "The user is reporting food or drink they have already consumed. Repeating a food already in recent_entries is ADDITIONAL consumption, even with a different amount: 제육볶음 50g 먹었어 after 200g means add 50g, not replace 200g. Only explicit correction language changes an existing entry.",
   modify_food:
-    "The user is correcting an entry that already exists in `recent_entries` — a different amount, a different food, a different day or meal. They are not reporting something new.",
+    "The user explicitly corrects an existing entry: 수정, 고쳐, 바꿔, 아니고, or a clear retrospective correction. A matching food name or different amount alone is NOT correction. 제육볶음 50g으로 수정해줘 is correction; 제육볶음 50g 먹었어 is additional consumption.",
   delete_food:
     "The user wants an existing entry taken back or removed, including saying they did not actually have it after all.",
   ask_status:

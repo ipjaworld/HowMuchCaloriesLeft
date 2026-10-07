@@ -1482,9 +1482,9 @@
     },
     {
       "id": "review-18",
-      "verdict": "false_negative",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"아메리카노 한 잔 더\""
+        "resolved 아메리카노 (한 잔) ← \"아메리카노\""
       ]
     },
     {

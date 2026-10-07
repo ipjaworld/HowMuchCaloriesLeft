@@ -260,6 +260,16 @@ export function decideCommand(
         };
   }
 
+  // Repeating a food name is not permission to overwrite it. Plain reports
+  // of another serving win over a model's mistaken correction classification.
+  if (judgment.intent === "modify_food" &&
+      /(?:먹었어(?:요)?|먹음|마셨어(?:요)?|마심)[.!~\s]*$/.test(input.message) &&
+      !/(수정|고쳐|고치|바꿔|바꾸|변경|아니|말고|취소|삭제|잘못|정정|사실|아까|어제|남겼|반만|만\s*먹|먹은\s*거|총\s*\d)/.test(input.message) &&
+      findReferenceMatches(input.message, input.recentItems).length > 0 &&
+      isProbable(judgment.actualConsumptionProbability, NOUL_THRESHOLDS.actualConsumption)) {
+    return { type: "add_candidate", sourceText: input.message, needsConfirmation: false };
+  }
+
   const decision = classifyIntentConfidence(
     judgment.intent,
     judgment.intentConfidence,

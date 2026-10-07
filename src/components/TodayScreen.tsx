@@ -22,6 +22,7 @@ import {
   type Removed,
 } from "@/application/editFood";
 import { addMealRecord } from "@/application/mealRecords";
+import { addConsumption } from "@/application/addConsumption";
 import { planModifyStart } from "@/application/modifyFlow";
 import {
   answerAllOfChoices,
@@ -289,7 +290,7 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
       return;
     }
 
-    await addMealRecord(repositories.meals, {
+    const accumulated = await addConsumption(repositories.meals, {
       sourceText: pending.sourceText,
       items,
       consumedAt: pending.now,
@@ -313,7 +314,7 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
         : [],
     );
 
-    showReply(describeAdded(await reloadDay(), skipped, highVariance, recorded), "added");
+    showReply(describeAdded(await reloadDay(), skipped, highVariance, recorded, accumulated), "added");
   }
 
   /**

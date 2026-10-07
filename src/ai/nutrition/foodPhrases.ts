@@ -454,13 +454,16 @@ function isContext(piece: Piece): boolean {
 }
 
 export function toFoodPhrase(segment: string): ParsedFoodPhrase | null {
-  const match = parseTrailingQuantity(segment);
+  // "50g 더 먹었어" leaves "50g 더" after the eating verb is stripped.
+  // Only strip the adverb when a real trailing quantity can still be read.
+  const measured = segment.replace(/\s+(?:더|추가로)$/, "");
+  const match = parseTrailingQuantity(measured);
 
   if (match === null) {
     return { name: segment, quantity: assumedQuantity(), sourceText: segment };
   }
 
-  const name = segment.slice(0, match.start).trim();
+  const name = measured.slice(0, match.start).trim();
   if (name.length === 0) return null;
 
   return { name, quantity: match.quantity, sourceText: segment };
