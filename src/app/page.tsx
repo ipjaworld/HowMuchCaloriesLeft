@@ -11,7 +11,7 @@ import { accountConfigured } from "@/infrastructure/accountAuth";
  */
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[30rem] flex-col bg-surface sm:border-x sm:border-line sm:shadow-[0_0_40px_-24px_rgba(27,25,23,0.35)]">
+    <main className="app-shell">
       {accountConfigured() ? <AccountBoundary /> : <TodayScreen />}
     </main>
   );

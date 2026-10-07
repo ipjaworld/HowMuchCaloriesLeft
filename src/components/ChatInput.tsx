@@ -46,11 +46,11 @@ export function ChatInput({
   }
 
   return (
-    <div className="sticky bottom-0 bg-surface/95 px-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
+    <div className="sticky bottom-0 bg-surface/95 px-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:rounded-b-[28px] sm:px-10">
       <div className="mb-3 min-h-[0.5rem] space-y-2">
         {lastMessage !== null && (isPending || reply !== null) && (
           <div className="animate-rise flex justify-end">
-            <p className="max-w-[80%] rounded-[1.125rem] rounded-br-md border border-line-strong bg-surface px-3.5 py-2.5 text-[0.875rem] leading-relaxed break-keep text-ink [overflow-wrap:anywhere]">
+            <p className="max-w-[80%] rounded-[1.125rem] rounded-br-md bg-raised px-3.5 py-2.5 text-[0.875rem] leading-relaxed break-keep text-ink [overflow-wrap:anywhere]">
               <span className="sr-only">나: </span>
               {lastMessage}
             </p>
@@ -72,7 +72,7 @@ export function ChatInput({
                     key={option.id}
                     type="button"
                     onClick={() => onChooseOption(option)}
-                    className="h-11 max-w-full truncate rounded-full border border-line-strong bg-surface px-4 text-[0.875rem] text-ink transition-colors hover:bg-raised focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
+                    className="h-11 max-w-full truncate rounded-full bg-raised px-4 text-[0.875rem] text-ink transition-colors hover:bg-raised focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
                   >
                     {option.label}
                   </button>
@@ -98,13 +98,13 @@ export function ChatInput({
           autoComplete="off"
           enterKeyHint="send"
           disabled={isPending}
-          className="h-12 min-w-0 flex-1 rounded-full border border-line-strong bg-raised px-4.5 text-base text-ink transition-colors placeholder:text-ink-soft focus-visible:border-ink focus-visible:bg-surface focus-visible:outline-none disabled:opacity-60"
+          className="h-12 min-w-0 flex-1 rounded-full bg-raised px-4.5 text-base text-ink transition-colors placeholder:text-ink-soft focus-visible:border-ink focus-visible:bg-surface focus-visible:outline-none disabled:opacity-60"
         />
 
         <button
           type="submit"
           disabled={!canSubmit}
-          className="h-12 shrink-0 rounded-full bg-ink px-5 text-[0.875rem] font-medium text-surface transition-opacity focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-25"
+          className="h-12 shrink-0 rounded-full bg-brand px-5 text-[0.875rem] font-medium text-surface transition-opacity focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-25"
         >
           기록
         </button>

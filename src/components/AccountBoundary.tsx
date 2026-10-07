@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { AccountStatus } from "@/domain/account";
 import { TodayScreen } from "./TodayScreen";
 import { HistoryScreen } from "./HistoryScreen";
+import { AppNavigation } from "./AppNavigation";
 export function AccountBoundary({ history = false }: { history?: boolean }) {
   const [status, setStatus] = useState<AccountStatus | null>(null),
     [failed, setFailed] = useState(false);
@@ -37,11 +38,7 @@ export function AccountBoundary({ history = false }: { history?: boolean }) {
   );
   return (
     <>
-      <nav className="px-6 pt-3 text-right text-sm">
-        <Link href="/account">
-          {status.userId ? "내 계정" : "로그인 · 기록 보관"}
-        </Link>
-      </nav>
+      <AppNavigation current={history ? "history" : "today"} signedIn={!!status.userId} />
       {history ? (
         <HistoryScreen
           key={status.userId ?? "local"}

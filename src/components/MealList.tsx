@@ -71,9 +71,9 @@ export function MealList({ records, isLoading = false, onDeleteItem, isBusy = fa
   const [openId, setOpenId] = useState<string | null>(null);
 
   return (
-    <section aria-labelledby="meals-heading" className="px-6">
-      <h2 id="meals-heading" className="sr-only">
-        오늘 먹은 것
+    <section aria-labelledby="meals-heading" className="px-6 sm:px-10">
+      <h2 id="meals-heading" className="mb-5 text-sm font-semibold">
+        {showSourceText ? "먹은 것" : "오늘 먹은 것"}
       </h2>
 
       {isLoading ? (
@@ -83,7 +83,7 @@ export function MealList({ records, isLoading = false, onDeleteItem, isBusy = fa
           아직 기록이 없어요. 아래에 말해주시면 적어둘게요.
         </p>
       ) : (
-        <div className="space-y-6 border-t border-line pt-5">
+        <div className="space-y-6">
           {groups.map((group) => (
             <div key={group.label}>
               <h3 className="text-[0.75rem] font-medium tracking-[0.06em] text-ink-soft">
@@ -103,7 +103,7 @@ export function MealList({ records, isLoading = false, onDeleteItem, isBusy = fa
                     </>
                   );
                   return (
-                    <li key={item.id} className="flex flex-wrap items-baseline gap-x-4">
+                    <li key={item.id} className="flex flex-wrap items-baseline gap-x-4 py-1.5">
                       {basis === null ? (
                         <span className="min-w-0 flex-1 text-[0.9375rem] break-keep text-ink [overflow-wrap:anywhere]">
                           {label}
@@ -116,7 +116,7 @@ export function MealList({ records, isLoading = false, onDeleteItem, isBusy = fa
                           onClick={() => setOpenId(isOpen ? null : item.id)}
                           aria-expanded={isOpen}
                           aria-controls={`basis-${item.id}`}
-                          className="min-w-0 flex-1 rounded-sm text-left text-[0.9375rem] break-keep text-ink [overflow-wrap:anywhere] focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
+                          className="min-h-11 min-w-0 flex-1 rounded-sm text-left text-[0.9375rem] break-keep text-ink [overflow-wrap:anywhere] focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
                         >
                           {label}
                         </button>
@@ -142,9 +142,9 @@ export function MealList({ records, isLoading = false, onDeleteItem, isBusy = fa
                           onClick={() => onDeleteItem(item)}
                           disabled={isBusy}
                           aria-label={`${item.amount === undefined ? item.name : `${item.name} ${item.amount}`} 지우기`}
-                          // 32 px to hit, drawn at 12: easy for a thumb, quiet
+                          // 44 px to hit, drawn at 12: easy for a thumb, quiet
                           // next to the numbers the eye is actually scanning.
-                          className="-my-1.5 -mr-2 flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full text-ink-soft transition-colors hover:bg-raised hover:text-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none disabled:opacity-40"
+                          className="-my-1.5 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-full text-ink-soft transition-colors hover:bg-raised hover:text-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none disabled:opacity-40"
                         >
                           <svg aria-hidden="true" viewBox="0 0 12 12" className="h-3 w-3">
                             <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

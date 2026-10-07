@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AccountProfilePanel } from "./AccountProfilePanel";
 import { AccountRecoveryPanel } from "./AccountRecoveryPanel";
+import { AppNavigation } from "./AppNavigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AccountData, AccountStatus } from "@/domain/account";
 import { createRemoteRepositories } from "@/infrastructure/remoteRepositories";
@@ -131,13 +132,15 @@ export function AccountScreen({
     router.push("/");
     router.refresh();
   }
-  const button =
-    "rounded-xl border border-line px-4 py-3 text-sm disabled:opacity-50";
+  const button = "quiet-button";
   return (
-    <main className="mx-auto min-h-dvh max-w-[30rem] space-y-6 bg-surface p-6">
-      <header className="flex justify-between">
-        <h1 className="text-xl font-semibold">내 계정</h1>
-        <Link href="/">오늘로</Link>
+    <main className="app-shell">
+      <AppNavigation current="account" signedIn={!!userId} />
+      <div className="account-content">
+      <header className="space-y-2">
+        <p className="page-eyebrow">기록과 설정</p>
+        <h1 className="page-title">{userId ? "내 기록을 위한 공간" : "어디서든, 나의 기록"}</h1>
+        <p className="text-sm text-ink-soft">{userId ? "기록 보관과 계정 설정을 한곳에서." : "가볍게 기록하고, 필요할 때 이어서 보세요."}</p>
       </header>
       {notice && (
         <p role="status" className="text-sm">
@@ -155,11 +158,11 @@ export function AccountScreen({
         <p>로그인은 준비 중이에요. 지금처럼 이 기기에 기록할 수 있어요.</p>
       ) : !status.userId ? (
         <>
-          <p className="text-sm">
+          <p className="text-sm text-ink-soft">
             로그인은 선택이에요. 로그인하면 기록을 계정에 보관하고 다른 기기에서
             볼 수 있어요. 이 기기의 기존 기록은 따로 동의한 뒤 합쳐요.
           </p>
-          <form action="/api/auth/start" method="post" className="space-y-4">
+          <form action="/api/auth/start" method="post" className="consent-form">
             <label className="flex gap-2 text-sm">
               <input type="checkbox" name="age" value="yes" required />만 14세
               이상입니다. (필수)
@@ -169,18 +172,18 @@ export function AccountScreen({
               계정 식별정보와 식사·목표·대화 기록의 수집·이용에 동의합니다.
               (필수)
             </label>
-            <p className="text-xs">
+            <p className="text-xs text-ink-soft">
               목적: 로그인 및 기록 보관. 보관: 계정 삭제까지, 대화는 KST 기준
               30일. 동의하지 않아도 로그인 없이 사용할 수 있어요.{" "}
               <Link className="underline" href="/privacy">
                 개인정보처리방침
               </Link>
             </p>
-            <div className="flex gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               {status.providers.map((provider) => (
                 <button
                   key={provider}
-                  className={button}
+                  className="login-provider"
                   type="submit"
                   name="provider"
                   value={provider}
@@ -208,9 +211,9 @@ export function AccountScreen({
         </>
       ) : (
         <>
-          <p className="text-sm">
-            로그인했어요. 지금부터 추가하는 기록은 계정에 보관돼요. 연결이
-            끊기면 저장할 수 없어요.
+          <p className="account-status text-sm">
+            <strong>기록을 계정에 보관하고 있어요</strong>
+            다른 기기에서도 이어서 볼 수 있어요. 저장할 때는 인터넷 연결이 필요해요.
           </p>
           {local && (
             <section className="space-y-3">
@@ -260,15 +263,9 @@ export function AccountScreen({
             <p>카카오에서 연결을 해제하면 이 앱에서 다시 인증해야 해요. 같은 계정에 다른 로그인이 연결되어 있으면 기록은 유지해요.</p>
             <p>카카오만 연결된 계정은 기록을 잠그고 7일간 복구를 기다린 뒤 삭제해요. 필요한 기록은 미리 내보내 주세요.</p>
           </section>}
-          <button
-            className={button}
-            disabled={busy}
-            onClick={() => void perform(() => leave(false))}
-          >
-            로그아웃
-          </button>
-          <section className="space-y-3">
-            <h2 className="font-medium">계정 삭제</h2>
+          <details className="account-secondary">
+            <summary>계정 삭제</summary>
+            <div className="space-y-3">
             <p className="text-sm">
               계정과 계정에 보관한 기록을 삭제해요. 기기 원본은 남아요.
             </p>
@@ -276,7 +273,7 @@ export function AccountScreen({
               <>
                 <p>삭제한 계정 기록은 되돌릴 수 없어요.</p>
                 <button
-                  className={button}
+                  className={`${button} danger-action`}
                   disabled={busy}
                   onClick={() => void perform(() => leave(true))}
                 >
@@ -292,17 +289,21 @@ export function AccountScreen({
               </>
             ) : (
               <button
-                className={button}
+                className={`${button} danger-action`}
                 disabled={busy}
                 onClick={() => setConfirmDelete(true)}
               >
                 계정 삭제하기
               </button>
             )}
-          </section>
+            </div>
+          </details>
         </>
       )}
       {local && !suspended && (
+        <section className="space-y-3">
+        <h2>기록 사본 보관</h2>
+        <p className="text-xs">기록을 JSON 파일로 내려받아요. 파일을 앱으로 다시 가져오는 기능은 아직 지원하지 않아요.</p>
         <button
           className={button}
           disabled={busy}
@@ -310,12 +311,16 @@ export function AccountScreen({
         >
           {status?.userId ? "계정" : "이 기기"} 기록 내보내기 (JSON)
         </button>
+        </section>
       )}
-      <p className="text-xs">
+      <footer className="flex flex-wrap items-center justify-between gap-4 text-xs text-ink-soft">
         <Link href="/privacy" className="underline">
           개인정보처리방침
         </Link>
-      </p>
+        {userId && !suspended && <button className="min-h-11 px-2" disabled={busy}
+          onClick={() => void perform(() => leave(false))}>로그아웃</button>}
+      </footer>
+      </div>
     </main>
   );
 }

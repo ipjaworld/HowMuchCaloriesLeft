@@ -75,7 +75,7 @@ export function AccountProfilePanel({ userId }: { userId: string }) {
         (state.enabled ? (
           <button
             disabled={busy}
-            className="rounded-xl border border-line p-3 text-sm"
+            className="quiet-button"
             onClick={() => void change(false)}
           >
             보관 끄기 · 계정의 계산기 정보 삭제
@@ -89,7 +89,7 @@ export function AccountProfilePanel({ userId }: { userId: string }) {
             </p>
             <button
               disabled={busy}
-              className="rounded-xl border border-line p-3 text-sm"
+              className="quiet-button"
               onClick={() => void change(true)}
             >
               동의하고 켜기
@@ -104,7 +104,7 @@ export function AccountProfilePanel({ userId }: { userId: string }) {
           </>
         ) : (
           <button
-            className="rounded-xl border border-line p-3 text-sm"
+            className="quiet-button"
             onClick={() => setConfirm(true)}
           >
             보관 내용 확인

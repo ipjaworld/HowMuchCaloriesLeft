@@ -69,8 +69,8 @@ export function HistoryScreen({accountId=null}:{accountId?:string|null} = {}) {
 
   return (
     <>
-      <header className="flex items-center justify-between px-6 pt-11 pb-6">
-        <h1 className="text-[1.1875rem] font-semibold">지난 기록</h1>
+      <header className="flex items-center justify-between px-6 pt-9 pb-8 sm:px-10">
+        <h1 className="page-title">지난 기록</h1>
         <Link
           href="/"
           className="text-[0.8125rem] text-ink-soft underline decoration-line-strong underline-offset-4 hover:text-ink"
@@ -87,7 +87,7 @@ export function HistoryScreen({accountId=null}:{accountId?:string|null} = {}) {
           아직 기록이 없어요. 오늘 먹은 걸 말해주시면 여기에 쌓여요.
         </p>
       ) : (
-        <ul className="border-t border-line pb-10">
+        <ul className="space-y-2 px-4 pb-10 sm:px-6">
           {state.days.map((day) => (
             <HistoryRow
               key={day.date}
@@ -129,7 +129,7 @@ function HistoryRow({
     <>
       <span className="flex items-baseline justify-between gap-4">
         <span className={`text-[0.9375rem] font-medium ${isEmpty ? "text-ink-soft" : "text-ink"}`}>
-          {dateLabel}
+          {dateLabel}<span aria-hidden="true" className="ml-2 text-xs text-ink-soft">{isOpen ? "−" : "+"}</span>
         </span>
         {text.figures !== null && (
           <span className="numeric shrink-0 text-[0.9375rem] text-ink">{text.figures}</span>
@@ -145,13 +145,13 @@ function HistoryRow({
   );
 
   return (
-    <li className="border-b border-line">
+    <li className="rounded-2xl bg-raised/60">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}
         aria-controls={panelId}
-        className="block w-full px-6 py-3.5 text-left focus-visible:bg-raised focus-visible:outline-none"
+        className="block w-full rounded-2xl px-5 py-5 text-left focus-visible:bg-raised focus-visible:outline-none"
       >
         {summary}
       </button>
@@ -163,7 +163,7 @@ function HistoryRow({
             {turns.length === 0 ? <p className="text-ink-soft">{describeConversationRetention(day.date, today)}</p> : (
               <ol className="space-y-4">
                 {turns.map((turn) => (
-                  <li key={turn.id} className="space-y-1.5 border-t border-line pt-3">
+                  <li key={turn.id} className="space-y-1.5 rounded-xl bg-surface p-4">
                     <time dateTime={turn.at} className="text-xs text-ink-soft">{clockTimeOf(turn.at)}</time>
                     {turn.user !== null && <p>나: {turn.user}</p>}
                     <p>{turn.reply}</p>

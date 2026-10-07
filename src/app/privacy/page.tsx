@@ -3,8 +3,8 @@ import { env } from "@/env";
 import { accountConfigured } from "@/infrastructure/accountAuth";
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto max-w-[40rem] space-y-6 p-6 text-sm leading-7">
-      <h1 className="text-xl font-semibold">개인정보처리방침</h1>
+    <main className="app-shell space-y-6 px-6 py-10 text-sm leading-7 sm:px-10">
+      <h1 className="page-title">개인정보처리방침</h1>
       <p>시행일: 2026년 10월 7일</p>
       {!accountConfigured() && <p>계정 기능은 현재 준비 중입니다.</p>}
       <p>

@@ -32,11 +32,11 @@ type Props = {
 
 export function TodaySummary({ summary, goalAction, isLoading = false }: Props) {
   return (
-    <section aria-labelledby="today-heading" className="px-6 pt-11 pb-7">
+    <section aria-labelledby="today-heading" className="px-6 pt-9 pb-9 sm:px-10 sm:pt-12">
       <div className="flex items-baseline justify-between">
         <h1
           id="today-heading"
-          className="text-[0.8125rem] font-medium tracking-[0.02em] text-ink-soft"
+          className="text-sm font-medium tracking-[0.02em] text-brand"
         >
           오늘
         </h1>
@@ -63,9 +63,9 @@ export function TodaySummary({ summary, goalAction, isLoading = false }: Props) 
 /** The hero number, in the one size and weight the whole screen is built around. */
 function Figure({ value, unit, tone }: { value: string; unit: string; tone: string }) {
   return (
-    <p className="mt-2.5 flex items-baseline gap-2">
+    <p className="mt-5 flex flex-wrap items-baseline gap-x-2">
       <span
-        className={`numeric text-[4.25rem] leading-[0.92] font-semibold ${tone}`}
+        className={`numeric text-[clamp(3.75rem,16vw,4.75rem)] leading-none font-medium ${tone}`}
       >
         {value}
       </span>
@@ -122,7 +122,7 @@ function WithGoal({
   if (calorieTarget === null || remainingCalories === null) return null;
 
   const remaining = describeRemaining(remainingCalories);
-  const tone = remaining.isOver ? "text-accent" : "text-ink";
+  const tone = remaining.isOver ? "text-accent" : "text-brand";
   const progress =
     calorieTarget > 0 ? Math.min(consumedCalories / calorieTarget, 1) * 100 : 0;
 
@@ -148,7 +148,7 @@ function WithGoal({
       >
         <div
           className={`h-full rounded-full transition-[width] duration-500 ease-out ${
-            remaining.isOver ? "bg-accent-soft" : "bg-ink"
+            remaining.isOver ? "bg-accent-soft" : "bg-brand"
           }`}
           style={{ width: `${progress}%` }}
         />

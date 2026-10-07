@@ -40,7 +40,7 @@ export function AccountRecoveryPanel({ recovery, userId }: { recovery: AccountRe
           이전에 보관한 계산기 정보의 수집·이용과 계정 보관에 다시 동의합니다. (선택)</label>
         <p>키·몸무게·나이·성별·활동량·목표 방식을 기기 간 계산기에 사용하며 철회 또는 계정 삭제까지 보관해요.
           선택하지 않고 복구하면 계정의 계산기 정보는 삭제해요. 기기 원본은 남아요.</p>
-        <button disabled={!consent || busy} className="rounded-xl border border-line px-4 py-3 disabled:opacity-50" onClick={() => void restore()}>
+        <button disabled={!consent || busy} className="quiet-button" onClick={() => void restore()}>
           동의하고 기록 복구
         </button>
       </>}

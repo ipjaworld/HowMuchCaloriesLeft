@@ -170,7 +170,7 @@ function IntroStep({
         <button
           type="button"
           onClick={onChooseManual}
-          className="h-12 rounded-full border border-line-strong px-5 text-[0.9375rem] text-ink transition-colors hover:bg-raised focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
+          className="h-12 rounded-full bg-raised px-5 text-[0.9375rem] text-ink transition-colors hover:bg-raised focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
         >
           직접 입력할게요
         </button>
@@ -258,7 +258,7 @@ function FormStep({
               <label htmlFor={id} className="text-[0.8125rem] text-ink-soft">
                 {FIELD_LABELS[field].label}
               </label>
-              <div className="mt-1.5 flex h-11 items-center rounded-xl border border-line-strong bg-surface px-3 focus-within:border-ink">
+              <div className="mt-1.5 flex h-11 items-center rounded-xl bg-raised px-3 focus-within:ring-2 focus-within:ring-brand">
                 <input
                   id={id}
                   type="text"
@@ -428,12 +428,12 @@ function Choice({
 }) {
   return (
     <label
-      className={`flex min-h-11 items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ink ${
+      className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ink ${
         disabled
-          ? "cursor-not-allowed border-line bg-raised"
+          ? "cursor-not-allowed bg-raised opacity-60"
           : checked
-            ? "cursor-pointer border-ink bg-surface"
-            : "cursor-pointer border-line-strong bg-surface hover:bg-raised"
+            ? "cursor-pointer bg-brand-tint"
+            : "cursor-pointer bg-raised/60 hover:bg-raised"
       }`}
     >
       <input

@@ -5,7 +5,8 @@
  *
  * The palette is warm rather than cold grey: the same layout in pure neutral
  * reads clinical, which is the one impression this app is trying not to make.
- * There is exactly one accent, and it only appears when the goal is passed.
+ * Olive identifies navigation and everyday actions; amber is reserved for
+ * the goal being passed, so the two meanings remain distinct.
  */
 @theme {
   /* Latin comes from Inter; Hangul falls through to the platform face, which
@@ -16,15 +17,17 @@
     var(--font-inter), "Pretendard", ui-sans-serif, system-ui, -apple-system,
     "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 
-  --color-canvas: #f5f4f1;
-  --color-surface: #ffffff;
-  --color-raised: #f7f6f3;
+  --color-canvas: #f3f2eb;
+  --color-surface: #fcfbf7;
+  --color-raised: #efeee5;
+  --color-brand: #46573c;
+  --color-brand-tint: #e8eddf;
 
   --color-line: #eceae5;
   --color-line-strong: #ddd9d1;
 
-  --color-ink: #1b1917;
-  --color-ink-soft: #6b665e;
+  --color-ink: #272d23;
+  --color-ink-soft: #686d60;
 
   --color-accent: #a4550c;
   --color-accent-soft: #e08b2c;
@@ -95,3 +98,43 @@ body {
     animation: blink 1.2s ease-in-out infinite;
   }
 }
+/* Shared, quiet hierarchy: spacing separates sections; fill identifies actions. */
+.app-shell { margin-inline: auto; display: flex; min-height: 100dvh; max-width: 38rem; flex-direction: column; background: var(--color-surface); }
+.app-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 24px 24px 8px; }
+.brand-mark { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: -.025em; }
+.brand-seed { width: 14px; height: 18px; display: inline-block; border-radius: 12px 3px 12px 3px; background: var(--color-brand); transform: rotate(20deg); }
+.nav-link { display: inline-flex; min-height: 44px; align-items: center; padding: 0 13px; border-radius: 99px; font-size: 13px; color: var(--color-ink-soft); }
+.nav-link[aria-current="page"] { background: var(--color-brand-tint); color: var(--color-brand); font-weight: 600; }
+.nav-link:hover { color: var(--color-ink); background: var(--color-raised); }
+:where(button, a, input, select, summary):focus-visible { outline: 2px solid var(--color-brand); outline-offset: 4px; }
+.account-content { padding: 32px 24px 40px; display: grid; gap: 32px; }
+.page-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; color: var(--color-brand); }
+.page-title { font-size: 28px; line-height: 1.35; font-weight: 600; letter-spacing: -.045em; }
+.account-content p { line-height: 1.75; word-break: keep-all; overflow-wrap: anywhere; }
+.account-content section { padding-block: 4px; }
+.account-content h2 { font-size: 16px; font-weight: 600; letter-spacing: -.025em; }
+.account-content section > p { color: var(--color-ink-soft); }
+.quiet-button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; border-radius: 12px; background: var(--color-raised); padding: 10px 16px; font-size: 13px; font-weight: 500; transition: background 150ms; }
+.quiet-button:hover { background: var(--color-brand-tint); }
+.quiet-button:disabled { opacity: .45; }
+.account-status { padding: 20px; border-radius: 20px; background: var(--color-brand-tint); color: var(--color-brand); }
+.account-status strong { display: block; margin-bottom: 6px; font-size: 17px; font-weight: 600; }
+.consent-form { display: grid; gap: 18px; }
+.consent-form label { align-items: flex-start; line-height: 1.65; }
+.consent-form input[type="checkbox"] { width: 18px; height: 18px; margin-top: 3px; flex-shrink: 0; accent-color: var(--color-brand); }
+.login-provider { min-height: 50px; border-radius: 14px; font-size: 14px; font-weight: 600; background: var(--color-raised); }
+.login-provider[value="kakao"] { background: #fee500; color: #191919; }
+.login-provider:hover { filter: brightness(.97); }
+.account-secondary { color: var(--color-ink-soft); font-size: 13px; }
+.account-secondary summary { min-height: 44px; display: flex; align-items: center; justify-content: space-between; list-style: none; }
+.account-secondary summary::-webkit-details-marker { display: none; }
+.account-secondary summary::after { content: '+'; font-size: 20px; }
+.account-secondary[open] summary::after { content: '−'; }
+.account-secondary[open] > div { padding-top: 12px; }
+.danger-action { color: #963e30; }
+@media (min-width: 640px) {
+  .app-shell { margin-block: 24px; min-height: calc(100dvh - 48px); border-radius: 28px; }
+  .app-navigation { padding: 28px 32px 8px; }
+  .account-content { padding: 40px 40px 48px; gap: 36px; }
+}
+@media (max-width: 374px) { .app-navigation { padding-inline: 20px; gap: 4px; } .nav-link { padding-inline: 11px; } }
