@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useId, useRef, useState } from "react";
 
 export function AppNavigation({ current, signedIn = false, accountEnabled = true }: {
-  current: "today" | "history" | "conversations" | "account";
+  current: "today" | "history" | "conversations" | "challenge" | "account";
   signedIn?: boolean;
   accountEnabled?: boolean;
 }) {
@@ -15,6 +15,7 @@ export function AppNavigation({ current, signedIn = false, accountEnabled = true
     { key: "today", href: "/", label: "오늘" },
     { key: "history", href: "/history", label: "식사 기록" },
     { key: "conversations", href: "/conversations", label: "대화 기록" },
+    { key: "challenge", href: "/challenge", label: "월간 기록 챌린지" },
   ];
   function close() { dialog.current?.close(); }
   return (
@@ -38,7 +39,7 @@ export function AppNavigation({ current, signedIn = false, accountEnabled = true
           <nav aria-label="화면 이동" className="mt-10 grid gap-2">
             {entries.map(({ key, href, label }) => (
               <Link key={key} href={href} aria-current={current === key ? "page" : undefined}
-                className="drawer-link" onClick={close}>{label}</Link>
+                className="drawer-link gap-3" onClick={close}>{label}{key === "challenge" && <span className="text-xs font-normal text-ink-soft">준비 중</span>}</Link>
             ))}
           </nav>
           {accountEnabled && <Link href="/account" onClick={close}

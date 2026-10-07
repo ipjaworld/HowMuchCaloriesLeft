@@ -6,7 +6,8 @@ import { TodayScreen } from "./TodayScreen";
 import { HistoryScreen } from "./HistoryScreen";
 import { AppNavigation } from "./AppNavigation";
 import { ConversationScreen } from "./ConversationScreen";
-export function AccountBoundary({ history = false, conversations = false }: { history?: boolean; conversations?: boolean }) {
+import { ChallengeScreen } from "./ChallengeScreen";
+export function AccountBoundary({ history = false, conversations = false, challenge = false }: { history?: boolean; conversations?: boolean; challenge?: boolean }) {
   const [status, setStatus] = useState<AccountStatus | null>(null),
     [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -39,8 +40,8 @@ export function AccountBoundary({ history = false, conversations = false }: { hi
   );
   return (
     <>
-      <AppNavigation current={conversations ? "conversations" : history ? "history" : "today"} signedIn={!!status.userId} />
-      {conversations ? <ConversationScreen key={status.userId ?? "local"} accountId={status.userId} /> : history ? (
+      <AppNavigation current={challenge ? "challenge" : conversations ? "conversations" : history ? "history" : "today"} signedIn={!!status.userId} />
+      {challenge ? <ChallengeScreen /> : conversations ? <ConversationScreen key={status.userId ?? "local"} accountId={status.userId} /> : history ? (
         <HistoryScreen
           key={status.userId ?? "local"}
           accountId={status.userId}

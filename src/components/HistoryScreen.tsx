@@ -13,6 +13,7 @@ import { describeHistoryDate, describeHistoryDay } from "./historyText";
 import { describeStorageNotice } from "./replyText";
 import { MealList } from "./MealList";
 import { createRemoteRepositories } from "@/infrastructure/remoteRepositories";
+import { recordConsistency } from "@/domain/recordConsistency";
 
 type State =
   | { status: "loading" }
@@ -78,7 +79,7 @@ export function HistoryScreen({accountId=null}:{accountId?:string|null} = {}) {
           오늘로
         </Link>
       </header>
-      <Link href="/conversations" className="mx-6 mb-5 inline-flex min-h-11 items-center self-start text-sm text-ink-soft underline underline-offset-4 sm:mx-10">대화 기록 보기</Link>
+      {state.status === "ready" && <ConsistencySummary records={state.records} today={state.today} />}
       {state.status === "ready" && state.notice !== null && <p role="alert" className="px-6 text-sm text-accent">{state.notice}</p>}
 
       {loadError ? <p role="alert" className="px-6">기록을 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p> : state.status === "loading" ? (
@@ -103,6 +104,18 @@ export function HistoryScreen({accountId=null}:{accountId?:string|null} = {}) {
       )}
     </>
   );
+}
+
+function ConsistencySummary({ records, today }: { records: MealRecord[]; today: string }) {
+  const summary = recordConsistency(records, today);
+  return <section aria-label="나의 기록 습관" className="mx-6 mb-8 sm:mx-10">
+    <p className="text-sm font-medium text-brand">이번 달 {summary.month}일 기록했어요</p>
+    <p className="mt-2 text-sm text-ink">현재 {summary.streak}일 연속 · 누적 {summary.total}일</p>
+    <p className="mt-2 text-xs leading-6 text-ink-soft">
+      저장된 식사 날짜 기준이에요. 하루 여러 번 기록해도 하루로 세어요.
+      {!summary.recordedToday && summary.streak > 0 && " 오늘 기록하면 연속 기록을 이어갈 수 있어요."}
+    </p>
+  </section>;
 }
 
 function HistoryRow({
