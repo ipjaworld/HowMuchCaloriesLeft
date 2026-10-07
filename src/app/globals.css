@@ -138,3 +138,24 @@ body {
   .account-content { padding: 40px 40px 48px; gap: 36px; }
 }
 @media (max-width: 374px) { .app-navigation { padding-inline: 20px; gap: 4px; } .nav-link { padding-inline: 11px; } }
+
+/* The conversation viewport scrolls independently of the surrounding app. */
+html:has(.conversation-shell),
+body:has(.conversation-shell) { overflow: hidden; }
+.conversation-shell { height: 100dvh; min-height: 0; overflow: hidden; }
+.conversation-shell > .app-navigation { flex-shrink: 0; }
+.conversation-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  margin: 0 12px max(12px, env(safe-area-inset-bottom));
+  padding-block: 20px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--color-raised) 45%, var(--color-surface));
+}
+@media (min-width: 640px) {
+  .conversation-shell { height: calc(100dvh - 48px); }
+  .conversation-scroll { margin-inline: 20px; margin-bottom: 20px; }
+}

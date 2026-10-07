@@ -24,19 +24,21 @@ export function ConversationScreen({ accountId = null }: { accountId?: string | 
     return () => { cancelled = true; };
   }, [repository]);
   return <>
-    <header className="px-6 pt-9 pb-8 sm:px-10">
+    <header className="shrink-0 px-6 pt-6 pb-4 sm:px-10">
       <div className="flex items-center justify-between gap-4">
         <h1 className="page-title">대화 기록</h1>
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-ink-soft underline underline-offset-4">오늘로</Link>
       </div>
       <p className="mt-3 text-xs leading-relaxed text-ink-soft">최근 30일의 대화예요. 답변 속 숫자는 대화 당시 기준이에요.</p>
     </header>
+    <div role="region" aria-label="대화 내용" tabIndex={0} className="conversation-scroll">
     {failed ? <p role="alert" className="px-6">대화를 불러오지 못했어요. 연결을 확인하고 새로고침해 주세요.</p>
       : !state ? <p role="status" className="px-6 text-sm text-ink-soft">불러오는 중</p>
       : <>
         {state.notice && <p role="alert" className="px-6 text-sm text-accent">{state.notice}</p>}
         <ConversationTranscript turns={state.turns} today={state.today} />
       </>}
+    </div>
   </>;
 }
 

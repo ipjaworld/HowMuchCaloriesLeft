@@ -15,7 +15,6 @@ type Props = {
    */
   lastMessage: string | null;
   isPending: boolean;
-  archived?: boolean;
 };
 
 /**
@@ -33,7 +32,6 @@ export function ChatInput({
   reply,
   lastMessage,
   isPending,
-  archived = false,
 }: Props) {
   const [text, setText] = useState("");
 
@@ -50,8 +48,7 @@ export function ChatInput({
 
   return (
     <div className="sticky bottom-0 bg-surface/95 px-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:rounded-b-[28px] sm:px-10">
-      <div className="flex items-center justify-between text-xs text-ink-soft">
-        <span>{archived && reply ? "이전 대화 · 당시 기준" : ""}</span>
+      <div className="flex justify-end text-xs text-ink-soft">
         <Link href="/conversations" className="inline-flex min-h-11 items-center underline underline-offset-4">대화 기록</Link>
       </div>
       <div className="mb-3 min-h-[0.5rem] space-y-2">
