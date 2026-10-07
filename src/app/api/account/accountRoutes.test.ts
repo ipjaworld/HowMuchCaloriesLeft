@@ -204,21 +204,33 @@ describe("separate calculator consent", () => {
     const read = query({ data: null, error: null });
     mocks.from.mockReturnValue(read);
     expect(
-      (await profile.PUT(request("PUT", { profile: value, revision: 0 })))
+      (await profile.PUT(request("PUT", { profile: value, revision: 0, consentAt: "2026-10-07T00:00:00Z" })))
         .status,
     ).toBe(403);
     expect(read.update).not.toHaveBeenCalled();
   });
   it("reports a concurrent change during withdrawal", async () => {
-    const read = query({ data: { profile: value, revision: 2 }, error: null });
+    const read = query({ data: { profile: value, revision: 2, consent_at: "2026-10-07T00:00:00Z" }, error: null });
     const remove = query({ data: null, error: null });
     mocks.from.mockReturnValueOnce(read).mockReturnValueOnce(remove);
     expect(
       (
         await profile.DELETE(
-          request("DELETE", undefined, { "x-revision": "2" }),
+          request("DELETE", undefined, { "x-revision": "2", "x-consent-at": "2026-10-07T00:00:00Z" }),
         )
       ).status,
     ).toBe(409);
+    expect(remove.eq).toHaveBeenCalledWith("consent_at", "2026-10-07T00:00:00Z");
+  });
+  it.each(["PUT", "DELETE"])("rejects stale %s after withdrawal and re-enabling at the same revision", async (method) => {
+    const read = query({ data: { profile: value, revision: 0, consent_at: "2026-10-07T01:00:00Z" }, error: null });
+    mocks.from.mockReturnValue(read);
+    const oldConsent = "2026-10-07T00:00:00Z";
+    const response = method === "PUT"
+      ? await profile.PUT(request("PUT", { profile: value, revision: 0, consentAt: oldConsent }))
+      : await profile.DELETE(request("DELETE", undefined, { "x-revision": "0", "x-consent-at": oldConsent }));
+    expect(response.status).toBe(409);
+    expect(read.update).not.toHaveBeenCalled();
+    expect(read.delete).not.toHaveBeenCalled();
   });
 });

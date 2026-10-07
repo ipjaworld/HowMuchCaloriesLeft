@@ -1,41 +1,88 @@
-import { beforeEach, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest, NextResponse } from "next/server";
 import { signConsent } from "@/infrastructure/accountConsent";
-const mock = vi.hoisted(() => ({ exchange: vi.fn(), user: vi.fn(), out: vi.fn(), oauth: vi.fn(), upsert: vi.fn() }));
-vi.mock("@/env", () => ({ env: { APP_ORIGIN: "https://app.test", RATE_LIMIT_SECRET: "test-secret", ACCOUNT_PROVIDERS: "google,kakao" } }));
+import { emptyAccountData } from "@/domain/account";
+
+const mocks = vi.hoisted(() => ({
+  signInWithOAuth: vi.fn(), exchangeCodeForSession: vi.fn(), getUser: vi.fn(),
+  signOut: vi.fn(), from: vi.fn(), upsert: vi.fn(),
+}));
+vi.mock("@/env", () => ({ env: {
+  ACCOUNT_PROVIDERS: "google,kakao", APP_ORIGIN: "https://app.test", RATE_LIMIT_SECRET: "test-only-secret",
+} }));
 vi.mock("@/infrastructure/accountAuth", () => ({
   accountConfigured: () => true,
-  sameOrigin: (r: Request) => r.headers.get("origin") === "https://app.test",
-  accountAuth: () => ({ client: { auth: { exchangeCodeForSession: mock.exchange, getUser: mock.user, signOut: mock.out, signInWithOAuth: mock.oauth }, from: () => ({ upsert: mock.upsert }) }, finish: (r: Response) => r }),
+  sameOrigin: (request: Request) => request.headers.get("origin") === "https://app.test",
+  accountAuth: () => ({
+    client: { auth: mocks, from: mocks.from },
+    finish: (response: NextResponse) => {
+      response.headers.set("Cache-Control", "private, no-store");
+      return response;
+    },
+  }),
 }));
-import { GET } from "./callback/route";
 import { POST } from "./start/route";
-beforeEach(() => { vi.clearAllMocks(); mock.exchange.mockResolvedValue({ error: null }); mock.user.mockResolvedValue({ data: { user: { id: "user" } }, error: null }); mock.upsert.mockResolvedValue({ error: null }); mock.out.mockResolvedValue({ error: null }); });
-function callback(consent?: string) { return new NextRequest("https://app.test/api/auth/callback?code=verified-by-sdk", { headers: consent ? { cookie: `hmcl-account-consent=${consent}` } : {} }); }
-it.each([undefined,"forged-consent"])("rejects callback without signed age/consent proof: %s", async proof => {
-  const result = await GET(callback(proof)); expect(result.headers.get("location")).toBe("https://app.test/account?error=login"); expect(mock.exchange).not.toHaveBeenCalled();
+import { GET } from "./callback/route";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.signInWithOAuth.mockResolvedValue({ data: { url: "https://provider.test/authorize" }, error: null });
+  mocks.exchangeCodeForSession.mockResolvedValue({ error: null });
+  mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user" } }, error: null });
+  mocks.signOut.mockResolvedValue({ error: null });
+  mocks.from.mockReturnValue({ upsert: mocks.upsert });
+  mocks.upsert.mockResolvedValue({ error: null });
 });
-it("preserves existing records when an established account signs in again", async () => {
-  const result = await GET(callback(signConsent("test-secret")));
-  expect(mock.upsert.mock.calls[0]?.[1]).toEqual({ onConflict: "user_id", ignoreDuplicates: true });
-  expect(result.headers.get("location")).toBe("https://app.test/account?welcome=1");
-  expect(result.cookies.get("hmcl-account-consent")?.value).toBe("");
-});
-it("clears the session when consent/initial storage cannot be saved", async () => {
-  mock.upsert.mockResolvedValue({ error: { message: "offline" } });
-  expect((await GET(callback(signConsent("test-secret")))).headers.get("location")).toContain("error=login");
-  expect(mock.out).toHaveBeenCalledWith({ scope: "local" });
-});
-it("requires age and consent before starting OAuth", async () => {
-  const form = new URLSearchParams({ provider: "google", age: "yes" });
-  const result = await POST(new NextRequest("https://app.test/api/auth/start", { method: "POST", headers: { origin: "https://app.test" }, body: form }));
-  expect(result.status).toBe(400); expect(mock.oauth).not.toHaveBeenCalled();
-});
-it("starts Kakao with only the nickname scope and a fixed callback", async () => {
-  mock.oauth.mockResolvedValue({ data: { url: "https://provider.test/auth" }, error: null });
-  const body = new URLSearchParams({ provider: "kakao", age: "yes", consent: "yes" });
-  const result = await POST(new NextRequest("https://app.test/api/auth/start", { method: "POST", headers: { origin: "https://app.test" }, body }));
-  expect(result.status).toBe(303);
-  expect(mock.oauth).toHaveBeenCalledWith({ provider: "kakao", options: { redirectTo: "https://app.test/api/auth/callback", skipBrowserRedirect: true, scopes: "profile_nickname" } });
-  expect(result.cookies.get("hmcl-account-consent")?.httpOnly).toBe(true);
+function callback(cookie = signConsent("test-only-secret")) {
+  return new NextRequest("https://app.test/api/auth/callback?code=pkce-code&next=https://evil.test", {
+    headers: cookie ? { cookie: `hmcl-account-consent=${cookie}` } : {},
+  });
+}
+describe("OAuth route boundaries", () => {
+  it.each(["age", "consent"])("requires explicit %s before contacting the provider", async (missing) => {
+    const body = new URLSearchParams({ provider: "google", consent: "yes", age: "yes" });
+    body.delete(missing);
+    const response = await POST(new NextRequest("https://app.test/api/auth/start", {
+      method: "POST", headers: { origin: "https://app.test" },
+      body,
+    }));
+    expect(response.status).toBe(400);
+    expect(mocks.signInWithOAuth).not.toHaveBeenCalled();
+  });
+  it("uses the fixed callback and minimal Kakao scope, and signs an HttpOnly consent cookie", async () => {
+    const response = await POST(new NextRequest("https://app.test/api/auth/start", {
+      method: "POST", headers: { origin: "https://app.test" },
+      body: new URLSearchParams({ provider: "kakao", consent: "yes", age: "yes", next: "https://evil.test" }),
+    }));
+    expect(mocks.signInWithOAuth).toHaveBeenCalledWith({ provider: "kakao", options: {
+      redirectTo: "https://app.test/api/auth/callback", skipBrowserRedirect: true, scopes: "profile_nickname",
+    } });
+    expect(response.status).toBe(303);
+    expect(response.cookies.get("hmcl-account-consent")).toMatchObject({ httpOnly: true, secure: true, sameSite: "lax", maxAge: 900 });
+  });
+  it.each(["", "forged"])("does not exchange a code without valid consent: %s", async (cookie) => {
+    const response = await GET(callback(cookie));
+    expect(response.headers.get("location")).toBe("https://app.test/account?error=login");
+    expect(mocks.exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+  it("never creates or overwrites account records after a failed code exchange", async () => {
+    mocks.exchangeCodeForSession.mockResolvedValue({ error: new Error("invalid code") });
+    await GET(callback());
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
+  it("uses the verified user and preserves existing data on repeated login", async () => {
+    const response = await GET(callback());
+    expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: "verified-user", data: emptyAccountData(),
+    }), { onConflict: "user_id", ignoreDuplicates: true });
+    expect(response.headers.get("location")).toBe("https://app.test/account?welcome=1");
+    expect(response.cookies.get("hmcl-account-consent")?.maxAge).toBe(0);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+  it("clears the new session if account initialization fails", async () => {
+    mocks.upsert.mockResolvedValue({ error: new Error("database unavailable") });
+    const response = await GET(callback());
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(response.headers.get("location")).toBe("https://app.test/account?error=login");
+  });
 });

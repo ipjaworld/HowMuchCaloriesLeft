@@ -40,11 +40,12 @@ export function AccountProfilePanel({ userId }: { userId: string }) {
           "content-type": "application/json",
           "x-account-id": userId,
           "x-revision": String(state.revision),
+          "x-consent-at": state.consentAt ?? "",
         },
         ...(enable ? { body: JSON.stringify({ consent: true, profile }) } : {}),
       });
       if (!response.ok) throw new Error();
-      setState({ enabled: enable, profile, revision: 0 });
+      setState((await response.json()) as AccountProfile);
       setConfirm(false);
       setNotice(
         enable

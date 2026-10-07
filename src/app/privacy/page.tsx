@@ -55,6 +55,28 @@ export default function PrivacyPage() {
         따라 처리될 수 있습니다. 앱의 요청 제한 카운터에는 원본 IP 대신 HMAC
         값을 사용합니다.
       </p>
+      <h2 className="font-semibold">외부 처리와 문의</h2>
+      <p>
+        음식 문장을 판단할 때 필요한 입력을 암호화된 통신으로 TypeSafe AI,
+        Inc.에 전송합니다. TypeSafe는 미국에서 서비스를 운영하며, 입력을 모델
+        학습이나 미세 조정에 사용하지 않는다고 명시합니다. 보존기간은 서비스
+        제공 목적과 법적 의무에 필요한 기간이라는 제공자 기준을 따릅니다.
+        문의는 privacy@typesafe.ai로 할 수 있습니다.{" "}
+        <a className="underline" href="https://typesafe.ai/legal/privacy-policy">
+          TypeSafe 개인정보처리방침
+        </a>
+      </p>
+      <p>
+        Vercel은 미국 및 운영하는 다른 지역에서 요청을 처리할 수 있습니다.
+        문의는 privacy@vercel.com로 할 수 있습니다. Supabase의 계정 데이터
+        저장 리전은 서울이지만 제공자의 운영·지원 처리가 모두 국내에
+        한정된다는 뜻은 아닙니다.{" "}
+        <a className="underline" href="https://vercel.com/legal/privacy-notice">Vercel 안내</a>
+        {" · "}
+        <a className="underline" href="https://supabase.com/legal/customer-resources/data-processing-addendum">
+          Supabase 데이터 처리 안내
+        </a>
+      </p>
       <h2 className="font-semibold">내 정보 관리</h2>
       <p>
         내 계정에서 기록을 JSON으로 내려받거나 계정을 삭제할 수 있습니다.

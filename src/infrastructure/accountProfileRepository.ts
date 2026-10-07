@@ -4,6 +4,7 @@ export type AccountProfile = {
   enabled: boolean;
   profile: DietProfile | null;
   revision: number;
+  consentAt: string | null;
 };
 export function createAccountProfileRepository(
   local: DietProfileRepository,
@@ -32,7 +33,7 @@ export function createAccountProfileRepository(
       const r = await fetch("/api/account/profile", {
         method: "PUT",
         headers: { "content-type": "application/json", "x-account-id": userId },
-        body: JSON.stringify({ profile, revision: p!.revision }),
+        body: JSON.stringify({ profile, revision: p!.revision, consentAt: p!.consentAt }),
       });
       if (!r.ok) throw new AccountStorageError(r.status);
       state = (await r.json()) as AccountProfile;
@@ -45,10 +46,11 @@ export function createAccountProfileRepository(
           headers: {
             "x-account-id": userId,
             "x-revision": String(p!.revision),
+            "x-consent-at": p!.consentAt ?? "",
           },
         });
         if (!r.ok) throw new AccountStorageError(r.status);
-        state = { enabled: false, profile: null, revision: 0 };
+        state = { enabled: false, profile: null, revision: 0, consentAt: null };
       }
       await local.clear();
     },

@@ -40,10 +40,10 @@ describe("separate profile consent", () => {
     const fetcher = vi
       .fn()
       .mockResolvedValueOnce(
-        Response.json({ enabled: true, profile: saved, revision: 3 }),
+        Response.json({ enabled: true, profile: saved, revision: 3, consentAt: "2026-10-07T00:00:00Z" }),
       )
       .mockResolvedValueOnce(
-        Response.json({ enabled: true, profile, revision: 4 }),
+        Response.json({ enabled: true, profile, revision: 4, consentAt: "2026-10-07T00:00:00Z" }),
       );
     vi.stubGlobal("fetch", fetcher);
     const storage = local(),
@@ -56,6 +56,7 @@ describe("separate profile consent", () => {
     expect(JSON.parse(fetcher.mock.calls[1]?.[1].body)).toEqual({
       profile,
       revision: 3,
+      consentAt: "2026-10-07T00:00:00Z",
     });
   });
   it("does not silently write locally after consent is withdrawn on another device", async () => {
