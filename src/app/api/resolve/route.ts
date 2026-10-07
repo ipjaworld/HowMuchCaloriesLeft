@@ -4,6 +4,8 @@ import { caloriesFor } from "@/ai/nutrition/localDatasetResolver";
 import { readAmountAnswer } from "@/ai/nutrition/quantity";
 import { toFoodItem } from "@/application/addFood";
 import type { NewFoodItem } from "@/application/mealRecords";
+import { usageLimitResponse } from "@/application/usageLimits";
+import { requestIdentity, usageLimits } from "@/infrastructure/serverUsageLimits";
 
 /**
  * Pricing a food the user has just told us the size of.
@@ -52,6 +54,9 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsed.success) {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
+
+  const admission = await usageLimits.checkRequest("resolve", requestIdentity(request.headers));
+  if (!admission.allowed) return usageLimitResponse("rate_limited", admission.retryAfter);
 
   const entry = KOREAN_FOODS.find(
     (candidate) => candidate.name === parsed.data.foodName,

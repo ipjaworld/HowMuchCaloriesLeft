@@ -9,8 +9,8 @@ import type { Judge } from "./types";
  * Without a key the app is fully usable on the mock — that is a supported
  * state, not a degraded one, so this does not warn or throw.
  */
-export function createJudge(apiKey: string | undefined): Judge {
-  return apiKey === undefined ? createMockJudge() : createJevJudge({ apiKey });
+export function createJudge(apiKey: string | undefined, beforeCall?: () => Promise<void>): Judge {
+  return apiKey === undefined ? createMockJudge() : createJevJudge({ apiKey, beforeCall });
 }
 
 export { createJevJudge } from "./jevJudge";

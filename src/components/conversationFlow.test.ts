@@ -78,6 +78,46 @@ beforeEach(async () => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("one persisted turn per Today action", () => {
+  it.each(["rate_limited", "jev_daily_limit"])("does not persist a %s response and retains pending confirmation", async (error) => {
+    await send(add([resolved], true));
+    const before = storage.snapshot();
+    fetchMock.mockResolvedValueOnce(Response.json({ error }, { status: 429 }));
+    chat().onSubmit("다른 음식 먹었어"); await settle();
+    expect(chat().reply?.text).toContain("요청이 많아요");
+    expect(chat().reply?.kind).toBe("question");
+    expect(storage.snapshot()).toEqual(before);
+    await choose("yes", "네");
+    expect(records()).toHaveLength(1);
+    expect(turns()).toHaveLength(2);
+  });
+
+  it("keeps a quantity question after resolve 429 and accepts a retry", async () => {
+    await send(add([{ status: "unmeasurable", phraseName: "커피", entries: [{ id: "coffee", name: "커피" }], reason: "missing_serving" }]));
+    const before = storage.snapshot();
+    fetchMock.mockResolvedValueOnce(Response.json({ error: "rate_limited" }, { status: 429 }));
+    chat().onSubmit("200ml"); await settle();
+    expect(storage.snapshot()).toEqual(before);
+    expect(chat().reply?.text).toContain("요청이 많아요");
+    fetchMock.mockResolvedValueOnce(Response.json({ status: "resolved", item: food }));
+    chat().onSubmit("200ml"); await settle();
+    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe("/api/resolve");
+    expect(records()).toHaveLength(1);
+  });
+
+  it("restores modification target choices after a limited resend", async () => {
+    await send(add());
+    const item = records()[0]!.items[0]!;
+    await send({ type: "clarify", reason: "unknown_target", intent: "modify_food", candidates: [{ id: item.id, name: item.name }] }, "커피 18kcal로 고쳐줘");
+    const before = storage.snapshot();
+    fetchMock.mockResolvedValueOnce(Response.json({ error: "rate_limited" }, { status: 429 }));
+    await choose(item.id, "커피");
+    expect(storage.snapshot()).toEqual(before);
+    expect(chat().reply?.kind).toBe("question");
+    fetchMock.mockResolvedValueOnce(Response.json({ command: { type: "modify_candidate", targetId: item.id, sourceText: "커피", needsConfirmation: false, parts: [{ ...resolved, item: { ...food, calories: 18 } }] } }));
+    await choose(item.id, "커피");
+    expect(records()[0]?.items[0]?.calories).toBe(18);
+  });
+
   it("records an add with meal ids and exactly the displayed reply", async () => {
     await send(add(), "커피 먹었어");
     expect(turns()).toHaveLength(1);

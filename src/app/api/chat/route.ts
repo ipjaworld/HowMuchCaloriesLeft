@@ -4,6 +4,9 @@ import { withLocalRouter } from "@/ai/local/routing";
 import { koreanFoodResolver } from "@/ai/nutrition/koreanFoods";
 import { runChat } from "@/application/chatPipeline";
 import { env } from "@/env";
+import { UsageLimitExceeded } from "@/domain/rateLimit";
+import { usageLimitResponse } from "@/application/usageLimits";
+import { requestIdentity, usageLimits } from "@/infrastructure/serverUsageLimits";
 import { chatRequestSchema, toJudgmentInput, type ChatResponse } from "./schema";
 
 /**
@@ -18,11 +21,11 @@ import { chatRequestSchema, toJudgmentInput, type ChatResponse } from "./schema"
 // The judge is stateless and cheap to keep; rebuilding a client per request
 // would throw away connection reuse for nothing. The local router wraps it
 // only in development and only when asked — see `docs/local-llm.md`.
-const judge = withLocalRouter(createJudge(env.TYPESAFE_API_KEY), env);
+const judge = withLocalRouter(createJudge(env.TYPESAFE_API_KEY, usageLimits.beforeJevCall), env);
 
 // The per-food filter (Phase 8): off unless asked for, and never without a
 // real key. See `candidateJudgeFor`.
-const candidateJudge = candidateJudgeFor(env);
+const candidateJudge = candidateJudgeFor(env, usageLimits.beforeJevCall);
 
 export async function POST(request: Request): Promise<Response> {
   let body: unknown;
@@ -41,6 +44,8 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
+    const admission = await usageLimits.checkRequest("chat", requestIdentity(request.headers));
+    if (!admission.allowed) return usageLimitResponse("rate_limited", admission.retryAfter);
     const response: ChatResponse = await runChat(
       toJudgmentInput(parsed.data),
       parsed.data.chosen,
@@ -48,6 +53,7 @@ export async function POST(request: Request): Promise<Response> {
     );
     return Response.json(response);
   } catch (error) {
+    if (error instanceof UsageLimitExceeded) return usageLimitResponse("jev_daily_limit", error.retryAfter);
     // A judgment failure is not a reason to guess. The client says so and the
     // user can try again; nothing was changed either way.
     console.error("[chat] judgment failed", error);

@@ -1,6 +1,7 @@
 import { NOUL_THRESHOLDS } from "@/ai/judgment/confidence";
 import type { CandidateJudge } from "@/ai/judgment/candidateJudge";
 import type { AddPart } from "./addFood";
+import { UsageLimitExceeded } from "@/domain/rateLimit";
 
 /**
  * Drops questions about things the user did not eat.
@@ -70,6 +71,8 @@ export async function filterUneatenQuestions(
     const { parts: kept, dropped } = dropUneatenQuestions(parts, eaten);
     return { parts: kept, report: { status: "applied", asked: questions.length, dropped } };
   } catch (error) {
+    // Our budget is an explicit stop, not a reason to silently skip judgment.
+    if (error instanceof UsageLimitExceeded) throw error;
     // Timeout, rate limit, malformed answer: ask everything, as before.
     return {
       parts,

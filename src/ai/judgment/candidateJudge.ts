@@ -55,6 +55,7 @@ export type CandidateJudgeOptions = {
    */
   timeoutMs: number;
   onCall?: (telemetry: CandidateCallTelemetry) => void;
+  beforeCall?: () => Promise<void>;
 };
 
 export type CandidateJudgeEnv = {
@@ -68,11 +69,12 @@ export type CandidateJudgeEnv = {
  * is switched on *and* there is a real key: the mock judge has nothing to
  * judge phrases with, and guessing would be worse than asking.
  */
-export function candidateJudgeFor(env: CandidateJudgeEnv): CandidateJudge | null {
+export function candidateJudgeFor(env: CandidateJudgeEnv, beforeCall?: () => Promise<void>): CandidateJudge | null {
   if (env.FOOD_CANDIDATE_FILTER !== "on" || env.TYPESAFE_API_KEY === undefined) return null;
   return createJevCandidateJudge({
     apiKey: env.TYPESAFE_API_KEY,
     timeoutMs: env.FOOD_CANDIDATE_TIMEOUT_MS,
+    beforeCall,
   });
 }
 
@@ -81,6 +83,7 @@ export function createJevCandidateJudge({
   apiKey,
   timeoutMs,
   onCall,
+  beforeCall,
 }: CandidateJudgeOptions): CandidateJudge {
   const typeSafe = client ?? new TypeSafeClient({ ...(apiKey === undefined ? {} : { apiKey }) });
 
@@ -97,6 +100,7 @@ export function createJevCandidateJudge({
       }
 
       const startedAt = Date.now();
+      await beforeCall?.();
       const result = await typeSafe.systemOne(
         { state: { message, food_candidates: foodCandidates }, questions },
         { timeout: timeoutMs, retry: { maxRetries: 0 } },

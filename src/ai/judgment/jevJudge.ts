@@ -61,6 +61,7 @@ export type JevJudgeOptions = {
   model?: string;
   /** Called once per judgement. Only the eval passes this. */
   onCall?: (telemetry: JevCallTelemetry) => void;
+  beforeCall?: () => Promise<void>;
 };
 
 export function createJevJudge({
@@ -68,6 +69,7 @@ export function createJevJudge({
   apiKey,
   model,
   onCall,
+  beforeCall,
 }: JevJudgeOptions = {}): Judge {
   // The SDK refuses to run in a browser unless explicitly allowed, which is
   // the behaviour we want: this only ever constructs on the server.
@@ -96,7 +98,10 @@ export function createJevJudge({
       }
 
       const startedAt = Date.now();
-      const result = await typeSafe.systemOne({ state, questions });
+      await beforeCall?.();
+      // One admitted attempt is one HTTP call. Hidden SDK retries must not
+      // exceed the daily budget (failed attempts still consume their slot).
+      const result = await typeSafe.systemOne({ state, questions }, { retry: { maxRetries: 0 } });
       onCall?.({
         model: result.model,
         inputTokens: result.usage.input_tokens,

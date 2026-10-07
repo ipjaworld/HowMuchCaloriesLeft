@@ -6,6 +6,7 @@ import { resolveAddParts, type AddPart } from "./addFood";
 import { dropUneatenQuestions, filterUneatenQuestions } from "./candidateFilter";
 import { runChat } from "./chatPipeline";
 import { describePart } from "./foodCoverage";
+import { UsageLimitExceeded } from "@/domain/rateLimit";
 
 const resolved = (name: string): AddPart => ({
   status: "resolved",
@@ -139,13 +140,12 @@ describe("runChat with the filter", () => {
     expect(on.candidateFilter?.status).toBe("applied");
   });
 
-  it("does not wait for the filter to decide a non-add", async () => {
-    const result = await runChat(input("갈비탕 칼로리 높아?"), undefined, {
+  it("propagates the candidate usage cap even for a non-add", async () => {
+    await expect(runChat(input("갈비탕 칼로리 높아?"), undefined, {
       judge: fixedJudge(judgment("other")),
       resolver: koreanFoodResolver,
-      candidateJudge: { judgeEaten: () => new Promise(() => {}) },
-    });
-    expect(result.command).toEqual({ type: "ignore", reason: "off_topic" });
+      candidateJudge: { judgeEaten: () => Promise.reject(new UsageLimitExceeded(60)) },
+    })).rejects.toBeInstanceOf(UsageLimitExceeded);
   });
 
   it("carries the extra food of a mixed correction, and asks before applying it", async () => {

@@ -41,6 +41,22 @@ export const envSchema = z.object({
    */
   TYPESAFE_API_KEY: optionalSecret,
 
+  /** Vercel sets this itself; request headers cannot enable proxy trust. */
+  VERCEL: z.string().optional(),
+  /** Unset: a random process-lifetime HMAC secret, matching memory lifetime. */
+  RATE_LIMIT_SECRET: optionalSecret,
+  // Provisional beta limits: a meal usually takes one chat request, with
+  // selections handled locally and quantity follow-ups using resolve. Leave
+  // room for corrections and shared household IPs. These are abuse limits,
+  // not a derivation of the provider's separate API quota.
+  RATE_LIMIT_CHAT_PER_MINUTE: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(20)),
+  RATE_LIMIT_CHAT_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(200)),
+  RATE_LIMIT_RESOLVE_PER_MINUTE: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(60)),
+  RATE_LIMIT_RESOLVE_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(600)),
+  // Provisional: 100 beta users × 20 paid attempts/day, including optional
+  // per-food judgment. Counts attempts, not tokens or guaranteed spend.
+  JEV_CALLS_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(2000)),
+
   /**
    * Anthropic — LLM *fallback* parser only, for food name + quantity
    * extraction when the local dataset and Jev candidate selection both come up

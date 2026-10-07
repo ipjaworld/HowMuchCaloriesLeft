@@ -40,17 +40,19 @@ export async function runChat(
   chosen: ChosenTarget | undefined,
   deps: ChatDeps,
 ): Promise<ChatResult> {
-  // Started first and not awaited: it runs while the judge thinks. It never
-  // rejects — a failed filter keeps every part.
+  // Started first: it runs while the judge thinks. Only the explicit usage
+  // cap rejects; ordinary filter failures keep the original parts.
   const filtered: Promise<FilteredParts> = resolveAddParts(input.message, deps.resolver).then(
     (parts) => filterUneatenQuestions(input.message, parts, deps.candidateJudge),
   );
 
-  const judgment = await deps.judge.judge(input);
+  // Observe both promises even for non-add intents: a candidate budget stop
+  // must reach the route, and a failed main judge must not orphan the filter.
+  const [judgment, filteredParts] = await Promise.all([deps.judge.judge(input), filtered]);
   const decided = decideCommand(judgment, input, chosen);
 
   if (decided.type === "add_candidate") {
-    const { parts, report } = await filtered;
+    const { parts, report } = filteredParts;
     return {
       command: {
         type: "add",

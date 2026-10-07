@@ -63,6 +63,13 @@ export type Reply =
 /** Both the bubble and the transcript use exactly this text. */
 export function replyText(reply: Reply): string { return reply.text; }
 
+export function describeUsageLimit(previous: Reply | null = null): Reply {
+  const text = "요청이 많아요. 잠시 후 다시 해 주세요.";
+  return previous?.kind === "question"
+    ? { ...previous, text }
+    : { kind: "statement", text };
+}
+
 export function describeStorageNotice(kind: "conversation" | "trimmed" | "metadata"): string {
   if (kind === "trimmed") return "저장 공간이 부족해 오래된 대화 일부를 지웠어요.";
   if (kind === "metadata") return "변경은 저장했지만 변경 시각을 보관하지 못했어요.";

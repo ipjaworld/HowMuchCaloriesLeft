@@ -53,6 +53,7 @@ import { MealList } from "./MealList";
 import { TodaySummary } from "./TodaySummary";
 import {
   describeAddFailure,
+  describeUsageLimit,
   describeAdded,
   describeAlreadyLogged,
   describeAskAmount,
@@ -114,6 +115,7 @@ export function TodayScreen() {
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
   const turnReply = useRef<{ reply: Reply; outcome: ConversationTurn["outcome"] } | null>(null);
   const turnBusy = useRef(false);
+  const turnLimited = useRef(false);
   const repositories = useMemo(
     () => ({
       meals: createLocalStorageMealRecordRepository({ onMetadataFailure: () => setStorageNotice(describeStorageNotice("metadata")) }),
@@ -208,6 +210,7 @@ export function TodayScreen() {
     setStorageNotice(null);
     setLastMessage(user);
     turnReply.current = null;
+    turnLimited.current = false;
     try {
       const before = await repositories.meals.getAll();
       try {
@@ -215,6 +218,13 @@ export function TodayScreen() {
       } catch {
         await reloadDay();
         showReply(describeStorageFailure(), "failed");
+      }
+      if (turnLimited.current) {
+        setPendingAdd(pendingAdd);
+        setClarification(clarification);
+        setLastRemoved(lastRemoved);
+        setReply(describeUsageLimit(reply));
+        return;
       }
       // This boundary owns the whole turn, including persistence and rapid
       // repeated taps. Intermediate questions are not extra turns.
@@ -459,6 +469,10 @@ export function TodayScreen() {
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        turnLimited.current = true;
+        return true;
+      }
       showReply(describeAddFailure(), "failed");
       return true;
     }
@@ -620,6 +634,10 @@ export function TodayScreen() {
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          turnLimited.current = true;
+          return;
+        }
         showReply(describeAddFailure(), "failed");
         return;
       }
