@@ -48,6 +48,7 @@ import { createLocalStorageDailyGoalRepository } from "@/infrastructure/localSto
 import { createLocalStorageDietProfileRepository } from "@/infrastructure/localStorageDietProfileRepository";
 import { createLocalStorageMealRecordRepository } from "@/infrastructure/localStorageMealRecordRepository";
 import { ChatInput } from "./ChatInput";
+import { latestExchange } from "./conversationView";
 import { buildChatRequest } from "./chatRequest";
 import { GoalCalculatorDialog, type CalculatorStep } from "./GoalCalculatorDialog";
 import { GoalEditor } from "./GoalEditor";
@@ -137,6 +138,7 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
     useState<PendingClarification | null>(null);
   /** What the user last said, shown as their side of the exchange. */
   const [lastMessage, setLastMessage] = useState<string | null>(null);
+  const [archived, setArchived] = useState(false);
   /** The last delete, for as long as its 되돌리기 is on screen. */
   const [lastRemoved, setLastRemoved] = useState<Removed | null>(null);
   /**
@@ -165,11 +167,12 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
       // Computed here, not during render: on the server this would be the
       // server's timezone, which is not the user's day.
       const dateKey = todayKey();
-      const [records, goal, profile, promptSeen] = await Promise.all([
+      const [records, goal, profile, promptSeen, conversation] = await Promise.all([
         repositories.meals.getByDate(dateKey),
         repositories.goals.get(dateKey),
         repositories.profile.get(),
         repositories.profile.hasSeenPrompt(),
+        repositories.conversation.getAll(),
       ]);
 
       if (cancelled) return;
@@ -180,6 +183,14 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
         calorieTarget: goal?.calorieTarget ?? null,
       });
       setSavedProfile(profile);
+      const latest = latestExchange(conversation.turns, dateKey);
+      if (latest) {
+        setLastMessage(latest.user);
+        setReply({ kind: "statement", text: latest.reply });
+        setArchived(true);
+      }
+      if (!conversation.saved) setStorageNotice(describeStorageNotice("conversation"));
+      else if (conversation.dropped > 0) setStorageNotice(describeStorageNotice("trimmed"));
 
       // First visit only: no goal, no profile, and the question never
       // answered. Anyone already using the app with a typed goal is not
@@ -212,6 +223,7 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
     setIsPending(true);
     setStorageNotice(null);
     setLastMessage(user);
+    setArchived(false);
     turnReply.current = null;
     turnLimited.current = false;
     try {
@@ -904,6 +916,7 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
         onChooseOption={(option) => void runTurn(option.id === UNDO_DELETE ? null : option.label, () => handleChooseOption(option))}
         reply={reply}
         lastMessage={lastMessage}
+        archived={archived}
         // Also blocked while the day is still being read: until then `records`
         // is empty, and a delete or a status question answered against an
         // empty day is a wrong answer rather than a slow one.

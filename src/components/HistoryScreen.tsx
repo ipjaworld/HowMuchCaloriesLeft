@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { todayKey, dateKeyOf, clockTimeOf } from "@/domain/date";
+import { todayKey, dateKeyOf } from "@/domain/date";
 import type { ConversationTurn } from "@/domain/conversation";
 import type { MealRecord } from "@/domain/meal";
 import { summarizeHistory, summarizeHistoryDay, effectiveGoal, type DayHistory } from "@/domain/history";
 import { createLocalStorageConversationRepository } from "@/infrastructure/localStorageConversationRepository";
 import { createLocalStorageDailyGoalRepository } from "@/infrastructure/localStorageDailyGoalRepository";
 import { createLocalStorageMealRecordRepository } from "@/infrastructure/localStorageMealRecordRepository";
-import { describeHistoryDate, describeHistoryDay, describeConversationRetention, describeMissingConversationRecord } from "./historyText";
+import { describeHistoryDate, describeHistoryDay } from "./historyText";
 import { describeStorageNotice } from "./replyText";
 import { MealList } from "./MealList";
 import { createRemoteRepositories } from "@/infrastructure/remoteRepositories";
@@ -78,6 +78,7 @@ export function HistoryScreen({accountId=null}:{accountId?:string|null} = {}) {
           오늘로
         </Link>
       </header>
+      <Link href="/conversations" className="mx-6 mb-5 inline-flex min-h-11 items-center self-start text-sm text-ink-soft underline underline-offset-4 sm:mx-10">대화 기록 보기</Link>
       {state.status === "ready" && state.notice !== null && <p role="alert" className="px-6 text-sm text-accent">{state.notice}</p>}
 
       {loadError ? <p role="alert" className="px-6">기록을 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p> : state.status === "loading" ? (
@@ -94,7 +95,6 @@ export function HistoryScreen({accountId=null}:{accountId?:string|null} = {}) {
               day={day}
               today={state.today}
               turns={state.turns.filter((turn) => dateKeyOf(turn.at) === day.date)}
-              records={state.records}
               isOpen={openDate === day.date}
               onToggle={() => setOpenDate(openDate === day.date ? null : day.date)}
             />
@@ -109,14 +109,12 @@ function HistoryRow({
   day,
   today,
   turns,
-  records,
   isOpen,
   onToggle,
 }: {
   day: DayHistory;
   today: string;
   turns: ConversationTurn[];
-  records: MealRecord[];
   isOpen: boolean;
   onToggle: () => void;
 }) {
@@ -158,29 +156,9 @@ function HistoryRow({
       {isOpen && (
         <div id={panelId} className="pb-4">
           {day.records.length > 0 && <MealList records={day.records} showSourceText />}
-          <section aria-label="그날의 대화" className="mt-5 space-y-4 px-6 text-sm [overflow-wrap:anywhere]">
-            <h3 className="font-medium">대화</h3>
-            {turns.length === 0 ? <p className="text-ink-soft">{describeConversationRetention(day.date, today)}</p> : (
-              <ol className="space-y-4">
-                {turns.map((turn) => (
-                  <li key={turn.id} className="space-y-1.5 rounded-xl bg-surface p-4">
-                    <time dateTime={turn.at} className="text-xs text-ink-soft">{clockTimeOf(turn.at)}</time>
-                    {turn.user !== null && <p>나: {turn.user}</p>}
-                    <p>{turn.reply}</p>
-                    {turn.recordIds.length > 0 && (
-                      <div className="text-xs text-ink-soft">
-                        <p>연결된 현재 기록</p>
-                        {turn.recordIds.map((id) => {
-                          const record = records.find((entry) => entry.id === id);
-                          return <p key={id}>{record === undefined ? describeMissingConversationRecord() : record.items.map((item) => `${item.name}${item.amount === undefined ? "" : ` ${item.amount}`} ${item.caloriesEstimated ? "~" : ""}${item.calories} kcal`).join(", ")}</p>;
-                        })}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
+          <Link href="/conversations" className="mx-6 mt-4 inline-flex min-h-11 items-center text-sm text-ink-soft underline underline-offset-4">
+            대화 기록 보기{turns.length > 0 ? ` · 이날 ${turns.length}건` : ""}
+          </Link>
         </div>
       )}
     </li>
