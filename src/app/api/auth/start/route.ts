@@ -26,7 +26,9 @@ export async function POST(request: NextRequest) {
     options: {
       redirectTo: new URL("/api/auth/callback", env.APP_ORIGIN!).href,
       skipBrowserRedirect: true,
-      ...(provider === "kakao" ? { scopes: "profile_nickname" } : {}),
+      // `scopes` appends to Kakao's default email/image permissions.
+      // Override the provider's scope to request only our configured consent item.
+      ...(provider === "kakao" ? { queryParams: { scope: "profile_nickname" } } : {}),
     },
   });
   if (error || !data.url)

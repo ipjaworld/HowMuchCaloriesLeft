@@ -31,6 +31,8 @@
 
 ## 검증
 
+- 실제 카카오 로그인 시 `KOE205`/`invalid_scope: account_email`을 확인해 수정했다. Supabase의 `options.scopes`는 기본 이메일·이미지 권한에 추가되므로, 카카오에만 `queryParams: { scope: "profile_nickname" }`으로 요청 권한을 지정한다. 수정 후 로컬 앱 POST 303 → 실제 Supabase 302 → 카카오 URL의 scope가 `profile_nickname` 하나인 것과 두 콜백 주소를 확인했다. OAuth 테스트 11개 및 production build 통과. 사용자 본인 인증 이후의 가입 완료는 별도 확인이 필요하다.
+
 - `pnpm typecheck`, `pnpm lint`, `pnpm test`: 58개 파일 1,564개 테스트 통과(계정 작업 전 52개 파일 1,518개). `pnpm build`는 제한된 네트워크의 Google Fonts 다운로드 실패 후 네트워크 허용 재실행에서 통과했다.
 - 3202 브라우저: 동의 체크 없는 로그인 제출 차단, 공개 스위치 off의 준비 중 화면, on의 선택 로그인 화면, 비로그인 목표 2,000 + 커피 9 kcal 기록 → 1,991 kcal 남음 → 히스토리 원문/대화/연결 기록 표시를 확인했다. 콘솔 오류/경고 없음.
 - Supabase 보안 advisor: 지적 사항 없음.

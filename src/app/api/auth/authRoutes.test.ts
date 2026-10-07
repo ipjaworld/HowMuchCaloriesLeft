@@ -74,7 +74,7 @@ describe("OAuth route boundaries", () => {
       body: new URLSearchParams({ provider: "kakao", consent: "yes", age: "yes", next: "https://evil.test" }),
     }));
     expect(mocks.signInWithOAuth).toHaveBeenCalledWith({ provider: "kakao", options: {
-      redirectTo: "https://app.test/api/auth/callback", skipBrowserRedirect: true, scopes: "profile_nickname",
+      redirectTo: "https://app.test/api/auth/callback", skipBrowserRedirect: true, queryParams: { scope: "profile_nickname" },
     } });
     expect(response.status).toBe(303);
     expect(response.cookies.get("hmcl-account-consent")).toMatchObject({ httpOnly: true, secure: true, sameSite: "lax", maxAge: 900 });
