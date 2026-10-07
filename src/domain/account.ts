@@ -16,8 +16,14 @@ export const emptyAccountData = (): AccountData => ({
   meta: { removedRecords: [], goalSetAt: {} },
 });
 export type AccountSnapshot = { data: AccountData; revision: number };
+export type AccountRecovery =
+  | { state: "active" }
+  | { state: "pending" }
+  | { state: "recoverable" | "expired"; disconnectedAt: string; deleteAfter: string };
 export type AccountStatus = {
   configured: boolean;
   userId: string | null;
   providers: ("google" | "kakao")[];
+  recovery?: AccountRecovery;
+  recoveryEnabled?: boolean;
 };

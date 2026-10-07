@@ -7,6 +7,7 @@ import {
 import { dietProfileSchema } from "@/infrastructure/profileSchema";
 import { ACCOUNT_POLICY_VERSION } from "@/domain/account";
 import { z } from "zod";
+import { readAccountRecovery } from "@/infrastructure/accountRecovery";
 const enable = z
   .object({ consent: z.literal(true), profile: dietProfileSchema.nullable() })
   .strict();
@@ -32,6 +33,9 @@ async function handle(request: NextRequest) {
   if (error || !user) return fail("unauthorized", 401);
   if (request.headers.get("x-account-id") !== user.id)
     return fail("account_changed", 409);
+  try {
+    if ((await readAccountRecovery(client)).state !== "active") return fail("account_suspended", 423);
+  } catch { return fail("unavailable", 503); }
   const { data: row, error: readError } = await client
     .from("account_profiles")
     .select("profile,revision,consent_at")

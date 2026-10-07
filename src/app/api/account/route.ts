@@ -5,6 +5,8 @@ import {
   sameOrigin,
 } from "@/infrastructure/accountAuth";
 import { env } from "@/env";
+import { AccountSessionExpiredError, readAccountRecovery } from "@/infrastructure/accountRecovery";
+import type { AccountRecovery } from "@/domain/account";
 export async function GET(request: NextRequest) {
   if (!accountConfigured())
     return NextResponse.json(
@@ -23,11 +25,25 @@ export async function GET(request: NextRequest) {
     error.status !== 403
   )
     return finish(NextResponse.json({ error: "unavailable" }, { status: 503 }));
+  let recovery: AccountRecovery = { state: "active" };
+  if (user) {
+    try { recovery = await readAccountRecovery(client); }
+    catch (error) {
+      if (error instanceof AccountSessionExpiredError) {
+        await client.auth.signOut({ scope: "local" });
+        return finish(NextResponse.json({ configured: true, userId: null,
+          providers: env.ACCOUNT_PROVIDERS.split(","), recoveryEnabled: true }));
+      }
+      return finish(NextResponse.json({ error: "unavailable" }, { status: 503 }));
+    }
+  }
   return finish(
     NextResponse.json({
       configured: true,
       userId: user?.id ?? null,
       providers: env.ACCOUNT_PROVIDERS.split(","),
+      recovery,
+      recoveryEnabled: env.ACCOUNT_RECOVERY_ENABLED === "on",
     }),
   );
 }

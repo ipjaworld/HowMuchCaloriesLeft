@@ -6,15 +6,17 @@ import { emptyAccountData } from "@/domain/account";
 const mocks = vi.hoisted(() => ({
   signInWithOAuth: vi.fn(), exchangeCodeForSession: vi.fn(), getUser: vi.fn(),
   signOut: vi.fn(), from: vi.fn(), upsert: vi.fn(),
+  rpc: vi.fn(), recoveryEnabled: false,
 }));
 vi.mock("@/env", () => ({ env: {
   ACCOUNT_PROVIDERS: "google,kakao", APP_ORIGIN: "https://app.test", RATE_LIMIT_SECRET: "test-only-secret",
+  get ACCOUNT_RECOVERY_ENABLED() { return mocks.recoveryEnabled ? "on" : "off"; },
 } }));
 vi.mock("@/infrastructure/accountAuth", () => ({
   accountConfigured: () => true,
   sameOrigin: (request: Request) => request.headers.get("origin") === "https://app.test",
   accountAuth: () => ({
-    client: { auth: mocks, from: mocks.from },
+    client: { auth: mocks, from: mocks.from, rpc: mocks.rpc },
     finish: (response: NextResponse) => {
       response.headers.set("Cache-Control", "private, no-store");
       return response;
@@ -26,6 +28,7 @@ import { GET } from "./callback/route";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.recoveryEnabled = false;
   mocks.signInWithOAuth.mockResolvedValue({ data: { url: "https://provider.test/authorize" }, error: null });
   mocks.exchangeCodeForSession.mockResolvedValue({ error: null });
   mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user" } }, error: null });
@@ -39,6 +42,22 @@ function callback(cookie = signConsent("test-only-secret")) {
   });
 }
 describe("OAuth route boundaries", () => {
+  it.each(["recoverable", "expired"])("routes a %s account to recovery without creating or reading records", async (state) => {
+    mocks.recoveryEnabled = true;
+    mocks.rpc.mockResolvedValue({ data: { state, disconnectedAt: "2026-10-07T00:00:00Z", deleteAfter: "2026-10-14T00:00:00Z" }, error: null });
+    const response = await GET(callback());
+    expect(response.headers.get("location")).toBe("https://app.test/account");
+    expect(mocks.upsert).not.toHaveBeenCalled();
+    expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+  it("does not initialize an account if recovery status is unavailable", async () => {
+    mocks.recoveryEnabled = true;
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: "offline" } });
+    const response = await GET(callback());
+    expect(response.headers.get("location")).toContain("error=login");
+    expect(mocks.upsert).not.toHaveBeenCalled();
+    expect(mocks.signOut).toHaveBeenCalled();
+  });
   it.each(["age", "consent"])("requires explicit %s before contacting the provider", async (missing) => {
     const body = new URLSearchParams({ provider: "google", consent: "yes", age: "yes" });
     body.delete(missing);

@@ -42,6 +42,8 @@ export const envSchema = z.object({
   TYPESAFE_API_KEY: optionalSecret,
 
   ACCOUNT_ENABLED: blankAsUnset(z.enum(["off", "on"]).default("off")),
+  // Enable only after the recovery migration and retention policy are ready.
+  ACCOUNT_RECOVERY_ENABLED: blankAsUnset(z.enum(["off", "on"]).default("off")),
   SUPABASE_URL: blankAsUnset(z.url().optional()),
   SUPABASE_PUBLISHABLE_KEY: optionalSecret,
   APP_ORIGIN: blankAsUnset(z.url().optional()),

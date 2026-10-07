@@ -4,6 +4,7 @@ import { env } from "@/env";
 import { usageLimitResponse } from "@/application/usageLimits";
 import { accountAuth, accountConfigured } from "./accountAuth";
 import { usageLimits } from "./serverUsageLimits";
+import { readAccountRecovery } from "./accountRecovery";
 
 /** Additional account bucket; the caller always checks its IP bucket first. */
 export async function checkAccountUsage(
@@ -35,6 +36,13 @@ export async function checkAccountUsage(
     };
   }
   if (!user) return { rejection: null, finish };
+  try {
+    if ((await readAccountRecovery(client)).state !== "active") {
+      return { rejection: finish(Response.json({ error: "judgment_unavailable" }, { status: 503 })), finish };
+    }
+  } catch {
+    return { rejection: finish(Response.json({ error: "judgment_unavailable" }, { status: 503 })), finish };
+  }
   const identity = createHmac("sha256", env.RATE_LIMIT_SECRET!)
     .update(`account:${user.id}`)
     .digest("hex");

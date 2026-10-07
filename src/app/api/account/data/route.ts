@@ -11,6 +11,7 @@ import {
 import { mutateAccountData } from "@/application/accountMutation";
 import { retainedTurns } from "@/domain/conversation";
 import { todayKey } from "@/domain/date";
+import { readAccountRecovery } from "@/infrastructure/accountRecovery";
 
 async function handle(request: NextRequest, write: boolean) {
   if (!accountConfigured())
@@ -27,6 +28,9 @@ async function handle(request: NextRequest, write: boolean) {
   if (authError || !user) return fail("unauthorized", 401);
   if (request.headers.get("x-account-id") !== user.id)
     return fail("account_changed", 409);
+  try {
+    if ((await readAccountRecovery(client)).state !== "active") return fail("account_suspended", 423);
+  } catch { return fail("unavailable", 503); }
   const { data: row, error } = await client
     .from("account_data")
     .select("data,revision")

@@ -29,6 +29,12 @@ export function AccountBoundary({ history = false }: { history?: boolean }) {
       </p>
     );
   if (!status) return <p className="p-6 text-sm">불러오는 중</p>;
+  if (status.recovery && status.recovery.state !== "active") return (
+    <main className="space-y-4 p-6 text-sm">
+      <p>카카오 연결이 해제되어 계정 기록을 잠갔어요. 내 계정에서 복구 가능 여부를 확인해 주세요.</p>
+      <Link href="/account" className="underline">내 계정으로</Link>
+    </main>
+  );
   return (
     <>
       <nav className="px-6 pt-3 text-right text-sm">

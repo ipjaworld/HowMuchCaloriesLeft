@@ -41,7 +41,7 @@
 ## 공개 전 남은 운영 확인
 
 1. Google·카카오 실제 가입 → 콜백 → 계정 읽기 → 로그아웃을 완료하고 결과를 아래에 기록한다. Google 게시 상태 및 테스트 사용자 정책도 확인한다.
-2. 카카오 외부 연결 해제 코드와 마이그레이션은 아래와 같이 준비했다. 운영 DB 적용은 자동 승인 검토가 거절하여 보류했다. Edge Function 배포·카카오 웹훅 활성화도 아직 하지 않았다.
+2. 카카오 외부 연결 해제 코드를 7일 복구 유예 정책으로 수정했다. 코드와 로컬 PostgreSQL 검증은 완료했지만 보관 근거 확인 전 운영 DB 적용·Edge Function 배포·카카오 웹훅 활성화는 하지 않았다.
 3. 개인정보처리방침의 위탁/국외 이전 국가·연락처·이전 시점 및 방법·제공자 내부 로그/백업 보존기간을 계약과 실제 설정으로 확정한다. 서울 DB만으로 모든 처리가 국내라고 단정하지 않는다. 운영자: 이건하, 문의: this_is_laugh@naver.com.
 4. 현재 앱 별도 백업은 없다. 공급자의 내부 복제/운영 백업과 로그가 즉시 모두 삭제된다고 약속하지 않는다. 무료 플랜의 비활성 정지와 백업 제약을 고려해 정식 운영 전 복구 방법을 결정한다.
 5. 요청 제한은 여전히 인스턴스별 메모리다. 계정별 제한도 Vercel 인스턴스 간 공유되지 않는다. Jev 2,000회는 전체 과금 보장이 아니며 공유 카운터 도입 전 공개 규모를 제한해야 한다.
@@ -68,15 +68,22 @@ Vercel production에 `ACCOUNT_ENABLED=off`, `SUPABASE_URL`, `SUPABASE_PUBLISHABL
 
 ### 카카오 연결 해제: 코드 준비, 운영 미적용
 
-준비 파일은 `supabase/functions/kakao-unlink/{index.js,handler.ts}`와 `supabase/migrations/20261007040148_kakao_unlink_cleanup.sql`이다. **이 마이그레이션을 적용했다고 보고하면 안 된다.** 자동 승인 검토가 영구 삭제 범위의 구체적인 승인이 없다는 이유로 실행을 거절했다. 사용자에게 정확한 범위를 확인하는 질문을 보냈으며, 답변 전 우회 적용하지 않는다.
+준비 파일은 `supabase/functions/kakao-unlink/{index.js,handler.ts}`와 `supabase/migrations/20261007040148_kakao_unlink_cleanup.sql`이다. **이 마이그레이션을 적용했다고 보고하면 안 된다.** 이전 즉시 삭제안은 자동 승인 검토에서 거절되었고, 이후 사용자가 7일 복구 유예 방향의 코드 변경을 요청했다. 미적용 파일을 새 정책으로 수정했으며 운영 DB, Edge Function, 카카오 웹훅은 변경하지 않았다. 기존 즉시 삭제 질문에 대한 응답을 새 정책 활성화 승인으로 재사용하지 않는다.
 
 - 요청은 POST form만 받고 대표 어드민 키의 `KakaoAK` 헤더, 앱 ID `1599886`, 회원번호와 이벤트 종류를 검증한다. 원문·회원번호·인증키를 로그에 남기지 않는다. 2 KB 본문 제한과 중복 파라미터 거절을 둔다.
 - `KAKAO_UNLINK_ADMIN_KEY`는 전용 프로젝트의 Edge Function secrets에 저장 완료했다. Vercel/클라이언트/파일에는 복사하지 않았다. 실행 코드는 Supabase가 주입하는 서버 키로 서비스 역할 전용 RPC를 호출한다.
-- 카카오만 연결된 계정은 사용자와 FK로 연결된 기록·프로필·세션을 삭제한다. 다른 로그인도 연결된 계정은 카카오 identity와 세션만 제거하고 기록은 유지한다. 나머지 로그인 제공자 목록을 갱신한다.
-- 삭제 실패는 비공개 작업 행에 identity/user UUID와 SQLSTATE만 남기고 매분 재시도한다. 성공한 행은 즉시 제거한다. 재시도는 최초 수신 때의 identity UUID에 묶여 있어 다른 새 identity를 대상으로 하지 않는다.
+- 카카오만 연결된 계정은 즉시 기록 접근을 차단하고 **알림 수신부터 168시간** 유예한다. 카카오 identity를 남겨 같은 제공자 회원번호의 재인증이 원래 계정으로 돌아오게 한다. 카카오 제공 정보·계정 식별정보를 유예 보관할 수 있는 근거 확인 전에는 활성화하지 않는다. 다른 로그인도 연결된 계정은 카카오 identity와 세션만 제거하고 기록은 유지한다. 나머지 로그인 제공자 목록을 갱신한다.
+- 첫 접수는 비공개 큐에 영속 저장하고 즉시 RLS에서 차단한다. 매분 처리 작업이 세션을 취소하고 유예 또는 연결 해제를 반영한다. 실패 시 identity/user UUID와 SQLSTATE만 남겨 재시도한다. 성공한 작업 행은 제거하며 유예 상태는 별도 비공개 행에 보관한다. 유예 중 중복 알림은 최초 기한을 연장하지 않는다.
+- 복구는 새 세션과 원래 카카오 identity의 연결 해제 이후 로그인 시각을 검증한다. 이메일 일치로 복구하지 않는다. OAuth 콜백은 기록을 초기화하거나 복구하지 않고 복구 화면으로 보낸다. 화면에서 기록 수집·이용에 다시 동의해야 caller-bound RPC로 원자 복구한다. 계산기 정보는 별도 재동의가 없으면 복구 시 삭제한다는 내용을 표시한다.
+- 유예 동안 기록 읽기·쓰기·합치기·내보내기와 로그인 상태 AI 요청을 차단한다. 기기 원본은 변경하지 않는다. 기한 경과 후 cron 실행이 늦어져도 복구는 거절한다. 매분 만료 작업이 계정과 연결 기록을 파기한다. 직접 선택한 계정 삭제는 유예 없이 즉시 처리한다. 대화의 30일 정리는 유예 중에도 유지한다.
+- 원본 연결 해제 webhook에는 고유 이벤트 ID/발생 시각이 없으므로, **복구 완료 후** 뒤늦게 같은 알림이 도착하면 새로운 해제와 완전히 구분할 수 없다. 이런 경우 접근을 다시 차단하는 쪽으로 처리한다. 정확한 중복 식별이 필요하면 Kakao SSF 이벤트 도입을 검토한다.
 - 계정/프로필 RLS에 활성 세션 확인을 추가하도록 준비했다. 세션 취소 후 아직 만료되지 않은 JWT나 삭제 대기 계정으로 읽고 쓰지 못하게 한다.
 - 카카오 연결 해제 웹훅은 내부 오류에도 3초 내 200을 요구하며 재전송을 제공하지 않는다. RPC 타임아웃은 2초다. DB에 최초 접수 자체가 실패하면 영속 재시도가 불가능하므로 `KAKAO_UNLINK_DELIVERY_FAILED` 운영 오류를 남긴다. 이것을 삭제 성공으로 해석하면 안 된다. 운영 장애 시 카카오의 연결 상태와 DB를 대조하는 수동 복구가 필요하다. [카카오 웹훅 정책](https://developers.kakao.com/docs/ko/getting-started/callback)
-- 승인 후 순서: migration 적용 → rollback 가능한 DB fixture로 단일/다중 로그인·다른 사용자 보존·중복 이벤트·취소된 세션·일반 사용자 RPC 거절 검사 → Edge Function 배포(custom auth이므로 verify_jwt=false) → 카카오 POST URL 등록 → 카카오 웹훅 테스트 → 보안 advisor 확인. 현재 HTTP 처리 단위 테스트 11개만 완료했으며 DB/실제 webhook 검증은 미완료다.
+- 운영 활성화 순서: 보관 근거·동의 문구 확정 → migration 적용(기본 off) → 실제 Supabase 스키마에서 격리 fixture 검증 및 advisor → 앱 `ACCOUNT_RECOVERY_ENABLED=on` 배포 → DB `private.account_lifecycle_settings.enabled=true` → Edge Function 배포(custom auth이므로 verify_jwt=false) → 카카오 POST URL 등록 → 실제 인증·해제·복구 검증. 정책 스위치를 켜기 전에는 webhook을 등록하지 않는다.
+- 앱의 `ACCOUNT_RECOVERY_ENABLED`는 기본 off다. DB 설정도 기본 false이며 webhook 접수·큐 처리·기한 후 삭제가 실행되지 않는다. 이미 유예 중인 계정의 RLS 차단은 스위치를 꺼도 유지한다. `.env.local`·`.env.example`과 Vercel 환경 변수는 수정하지 않았다.
+- 운영 DB 대신 PGlite 0.5.8의 일회성 메모리 PostgreSQL에서 `supabase/tests/account-recovery.mjs`로 14개 SQL 검사를 통과했다. 실제 RLS/권한/함수/삭제 cascade를 검사하며 Auth 테이블은 최소 fixture, cron 스케줄 등록만 stub이다. 실제 OAuth·Supabase cron·병렬 트랜잭션 검증을 대신하지 않는다. 앱 의존성에는 테스트 도구를 추가하지 않았다.
+- 복구 변경 검증: `pnpm typecheck`, `pnpm lint`(경고 없음), `pnpm test`(60개 파일/1,595개), `pnpm build` 통과. 이전 59개/1,579개에서 복구 API·콜백 분기·세션 취소·유예 중 프로필 로컬 대체 방지 검사를 추가했다.
+- SQL 검사 재현: 임시 디렉터리에 `npm install --prefix <temp-path> --no-save --ignore-scripts @electric-sql/pglite@0.5.8` 후 `node supabase/tests/account-recovery.mjs <temp-path>/node_modules/@electric-sql/pglite/dist/index.js`. 외부 연결이나 실제 사용자·키 없이 실행한다.
 - 적용 후 오류 확인 SQL: `select count(*) as pending, min(received_at) as oldest, max(attempts) as attempts from private.kakao_unlink_jobs;`. 대기 행이 지속되면 `last_error_code`와 cron 실행 결과를 확인한다. 사용자의 UUID나 원문을 운영 보고에 출력하지 않는다.
 
 ### 공급자 계약 확인 결과와 공개 제한

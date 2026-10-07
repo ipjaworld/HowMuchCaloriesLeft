@@ -174,6 +174,6 @@ describe("there is nowhere else for it to go", () => {
     const fetched = sourceFiles(join(SRC, "components")).flatMap((file) =>
       [...readFileSync(file, "utf8").matchAll(/fetch\(\s*"([^"]+)"/g)].map((m) => m[1]),
     );
-    expect([...new Set(fetched)].sort()).toEqual(["/api/account", "/api/account/profile", "/api/chat", "/api/resolve"]);
+    expect([...new Set(fetched)].sort()).toEqual(["/api/account", "/api/account/profile", "/api/account/recovery", "/api/chat", "/api/resolve"]);
   });
 });

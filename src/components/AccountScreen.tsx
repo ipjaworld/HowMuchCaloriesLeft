@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AccountProfilePanel } from "./AccountProfilePanel";
+import { AccountRecoveryPanel } from "./AccountRecoveryPanel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AccountData, AccountStatus } from "@/domain/account";
 import { createRemoteRepositories } from "@/infrastructure/remoteRepositories";
@@ -24,6 +25,7 @@ export function AccountScreen({
     [confirmImport, setConfirmImport] = useState(false),
     [confirmDelete, setConfirmDelete] = useState(false);
   const userId = status?.userId;
+  const suspended = !!status?.recovery && status.recovery.state !== "active";
   const remote = useMemo(
     () => (userId ? createRemoteRepositories(userId) : null),
     [userId],
@@ -187,7 +189,22 @@ export function AccountScreen({
                 </button>
               ))}
             </div>
+            {status.recoveryEnabled && <p className="text-xs">
+              카카오만 연결된 계정에서 연결을 해제하면 기록 접근을 막고 7일 동안 복구를 기다린 뒤 삭제해요.
+              그 안에 같은 카카오 계정으로 다시 인증하고 동의하면 복구할 수 있어요.
+            </p>}
           </form>
+        </>
+      ) : suspended && status.recovery ? (
+        <>
+          <AccountRecoveryPanel recovery={status.recovery} userId={status.userId} />
+          <button className={button} disabled={busy} onClick={() => void perform(() => leave(false))}>로그아웃 · 다시 로그인</button>
+          <p className="text-sm">복구 대신 계정과 계정 기록을 지금 영구 삭제할 수도 있어요. 기기 원본은 남아요.</p>
+          {confirmDelete ? <>
+            <p>삭제하면 7일 유예 없이 모든 계정 기록을 즉시 삭제하며 되돌릴 수 없어요.</p>
+            <button className={button} disabled={busy} onClick={() => void perform(() => leave(true))}>계정과 기록 모두 삭제</button>
+            <button className={button} disabled={busy} onClick={() => setConfirmDelete(false)}>취소</button>
+          </> : <button className={button} disabled={busy} onClick={() => setConfirmDelete(true)}>계정·기록 삭제</button>}
         </>
       ) : (
         <>
@@ -238,6 +255,11 @@ export function AccountScreen({
             </section>
           )}
           <AccountProfilePanel userId={status.userId} />
+          {status.recoveryEnabled && <section className="space-y-2 text-sm">
+            <h2 className="font-medium">카카오 연결</h2>
+            <p>카카오에서 연결을 해제하면 이 앱에서 다시 인증해야 해요. 같은 계정에 다른 로그인이 연결되어 있으면 기록은 유지해요.</p>
+            <p>카카오만 연결된 계정은 기록을 잠그고 7일간 복구를 기다린 뒤 삭제해요. 필요한 기록은 미리 내보내 주세요.</p>
+          </section>}
           <button
             className={button}
             disabled={busy}
@@ -280,7 +302,7 @@ export function AccountScreen({
           </section>
         </>
       )}
-      {local && (
+      {local && !suspended && (
         <button
           className={button}
           disabled={busy}
