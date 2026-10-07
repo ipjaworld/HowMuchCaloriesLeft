@@ -14,8 +14,10 @@ import { createLocalStorageSyncMetaRepository } from "@/infrastructure/localStor
 
 export function AccountScreen({
   loginFailed = false,
+  welcome = false,
 }: {
   loginFailed?: boolean;
+  welcome?: boolean;
 }) {
   const router = useRouter();
   const lock = useRef(false);
@@ -134,16 +136,23 @@ export function AccountScreen({
   }
   const button = "quiet-button";
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${userId && !suspended ? "account-shell" : ""}`}>
       <AppNavigation current="account" signedIn={!!userId} />
-      <div className="account-content">
-      <header className="space-y-2">
-        <p className="page-eyebrow">기록과 설정</p>
-        <h1 className="page-title">{userId ? "내 기록을 위한 공간" : "어디서든, 나의 기록"}</h1>
-        <p className="text-sm text-ink-soft">{userId ? "기록 보관과 계정 설정을 한곳에서." : "가볍게 기록하고, 필요할 때 이어서 보세요."}</p>
+      <div className={`account-content ${userId && !suspended ? "account-workspace" : ""}`}>
+      <header className="account-hero">
+        <div>
+          <p className="page-eyebrow">{userId && !suspended ? "나의 기록 공간" : "기록과 설정"}</p>
+          <h1 className="page-title">{userId && !suspended ? (welcome ? <>반가워요.<br />오늘의 기록을 이어가세요.</> : <>나의 기록,<br />어디서든 이어서.</>) : "어디서든, 나의 기록"}</h1>
+          <p className="mt-4 text-sm text-ink-soft">{userId && !suspended ? "식사와 목표를 계정에 보관하고 있어요. 다른 기기에서도 이어서 볼 수 있어요." : "가볍게 기록하고, 필요할 때 이어서 보세요."}</p>
+          {userId && !suspended && <p className="mt-2 text-xs text-ink-soft">저장할 때는 인터넷 연결이 필요해요.</p>}
+        </div>
+        {userId && !suspended && <div className="account-hero-actions">
+          <Link href="/" className="account-primary">오늘 기록하기 <span aria-hidden="true">↗</span></Link>
+          <Link href="/history" className="inline-flex min-h-11 items-center justify-center text-sm text-brand">내 기록 보기</Link>
+        </div>}
       </header>
       {notice && (
-        <p role="status" className="text-sm">
+        <p role="status" className="account-notice text-sm">
           {notice}
         </p>
       )}
@@ -211,12 +220,9 @@ export function AccountScreen({
         </>
       ) : (
         <>
-          <p className="account-status text-sm">
-            <strong>기록을 계정에 보관하고 있어요</strong>
-            다른 기기에서도 이어서 볼 수 있어요. 저장할 때는 인터넷 연결이 필요해요.
-          </p>
+          <div className="account-section-heading"><h2>필요한 설정만, 가볍게</h2><p>기존 기록과 계산기 정보를 관리해요.</p></div>
           {local && (
-            <section className="space-y-3">
+            <section className="account-setting space-y-3">
               <h2 className="font-medium">이 기기 기록 합치기</h2>
               <p className="text-sm">
                 식사 {local.records.length}개 · 목표 {local.goals.length}개 ·
@@ -263,6 +269,25 @@ export function AccountScreen({
             <p>카카오에서 연결을 해제하면 이 앱에서 다시 인증해야 해요. 같은 계정에 다른 로그인이 연결되어 있으면 기록은 유지해요.</p>
             <p>카카오만 연결된 계정은 기록을 잠그고 7일간 복구를 기다린 뒤 삭제해요. 필요한 기록은 미리 내보내 주세요.</p>
           </section>}
+
+        </>
+      )}
+      {local && !suspended && (
+        <details className="account-secondary account-export">
+        <summary>기록 사본 내보내기</summary>
+        <div className="space-y-3">
+        <p className="text-xs">기록을 JSON 파일로 내려받아요. 파일을 앱으로 다시 가져오는 기능은 아직 지원하지 않아요.</p>
+        <button
+          className={button}
+          disabled={busy}
+          onClick={() => void perform(exportData)}
+        >
+          {status?.userId ? "계정" : "이 기기"} 기록 내보내기 (JSON)
+        </button>
+        </div>
+        </details>
+      )}
+      {userId && !suspended && (
           <details className="account-secondary">
             <summary>계정 삭제</summary>
             <div className="space-y-3">
@@ -298,20 +323,6 @@ export function AccountScreen({
             )}
             </div>
           </details>
-        </>
-      )}
-      {local && !suspended && (
-        <section className="space-y-3">
-        <h2>기록 사본 보관</h2>
-        <p className="text-xs">기록을 JSON 파일로 내려받아요. 파일을 앱으로 다시 가져오는 기능은 아직 지원하지 않아요.</p>
-        <button
-          className={button}
-          disabled={busy}
-          onClick={() => void perform(exportData)}
-        >
-          {status?.userId ? "계정" : "이 기기"} 기록 내보내기 (JSON)
-        </button>
-        </section>
       )}
       <footer className="flex flex-wrap items-center justify-between gap-4 text-xs text-ink-soft">
         <Link href="/privacy" className="underline">

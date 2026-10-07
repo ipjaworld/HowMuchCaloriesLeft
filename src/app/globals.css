@@ -171,3 +171,28 @@ body:has(.conversation-shell) { overflow: hidden; }
   .conversation-shell { height: calc(100dvh - 48px); }
   .conversation-scroll { margin-inline: 20px; margin-bottom: 20px; }
 }
+
+/* Account pages have room to breathe; the calculator keeps its compact shell. */
+.account-hero .page-title { margin-top: 12px; }
+.account-shell { max-width: 64rem; }
+.account-workspace { gap: 24px; padding-top: 24px; }
+.account-workspace .account-hero { display: grid; gap: 24px; padding-bottom: 24px; }
+.account-workspace .account-hero .page-title { font-size: clamp(28px, 4vw, 40px); line-height: 1.3; letter-spacing: -.055em; }
+.account-hero-actions { display: grid; align-content: center; gap: 6px; }
+.account-primary { display: inline-flex; align-items: center; justify-content: space-between; gap: 32px; min-height: 52px; padding: 14px 20px; border-radius: 14px; background: var(--color-brand); color: var(--color-surface); font-size: 15px; font-weight: 600; }
+.account-primary:hover { background: var(--color-ink); }
+.account-notice { padding: 16px 20px; border-radius: 14px; background: var(--color-brand-tint); color: var(--color-brand); }
+.account-section-heading h2 { font-size: 16px; font-weight: 600; }
+.account-section-heading p { margin-top: 4px; font-size: 13px; color: var(--color-ink-soft); }
+.account-workspace section.account-setting { padding: 24px; border-radius: 20px; background: var(--color-raised); }
+.account-setting .quiet-button { background: var(--color-surface); margin-top: 8px; }
+.account-setting .quiet-button:hover { background: var(--color-brand-tint); }
+.account-workspace > .account-secondary { padding-inline: 4px; }
+.account-workspace > footer { padding-top: 8px; }
+@media (min-width: 800px) {
+  .account-shell { width: calc(100% - 64px); }
+  .account-workspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; padding: 28px 48px 32px; gap: 24px; }
+  .account-workspace > :not(.account-setting) { grid-column: 1 / -1; }
+  .account-workspace .account-hero { grid-template-columns: minmax(0, 1fr) 190px; gap: 40px; padding-bottom: 16px; }
+  .account-workspace section.account-setting { height: 100%; }
+}

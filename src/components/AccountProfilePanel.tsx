@@ -60,10 +60,13 @@ export function AccountProfilePanel({ userId }: { userId: string }) {
     }
   }
   return (
-    <section className="space-y-3">
-      <h2 className="font-medium">계산기 정보 보관 (선택)</h2>
+    <section className="account-setting space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-medium">계산기 정보 보관</h2>
+        <span className="text-xs text-brand">{state ? state.enabled ? "보관 중" : "선택 · 꺼짐" : "확인 중"}</span>
+      </div>
       <p className="text-sm">
-        기본은 꺼져 있어요. 켜면 키·몸무게·나이·성별·활동량·목표 방식을 계정에
+        켜면 키·몸무게·나이·성별·활동량·목표 방식을 계정에
         보관하고 다른 기기의 계산기에서도 사용해요. 음식 판단에는 보내지 않아요.
       </p>
       {notice && (
