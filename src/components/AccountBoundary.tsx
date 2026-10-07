@@ -39,7 +39,7 @@ export function AccountBoundary({ history = false, conversations = false }: { hi
   );
   return (
     <>
-      <AppNavigation current={history || conversations ? "history" : "today"} signedIn={!!status.userId} />
+      <AppNavigation current={conversations ? "conversations" : history ? "history" : "today"} signedIn={!!status.userId} />
       {conversations ? <ConversationScreen key={status.userId ?? "local"} accountId={status.userId} /> : history ? (
         <HistoryScreen
           key={status.userId ?? "local"}

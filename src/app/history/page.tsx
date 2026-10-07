@@ -1,3 +1,4 @@
+import { AppNavigation } from "@/components/AppNavigation";
 import type { Metadata } from "next";
 import { HistoryScreen } from "@/components/HistoryScreen";
 import { AccountBoundary } from "@/components/AccountBoundary";
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 export default function HistoryPage() {
   return (
     <main className="app-shell">
-      {accountConfigured() ? <AccountBoundary history /> : <HistoryScreen />}
+      {accountConfigured() ? <AccountBoundary history /> : <><AppNavigation current="history" accountEnabled={false} /><HistoryScreen /></>}
     </main>
   );
 }

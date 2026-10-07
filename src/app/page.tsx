@@ -1,3 +1,4 @@
+import { AppNavigation } from "@/components/AppNavigation";
 import { TodayScreen } from "@/components/TodayScreen";
 import { AccountBoundary } from "@/components/AccountBoundary";
 import { accountConfigured } from "@/infrastructure/accountAuth";
@@ -12,7 +13,7 @@ import { accountConfigured } from "@/infrastructure/accountAuth";
 export default function Home() {
   return (
     <main className="app-shell">
-      {accountConfigured() ? <AccountBoundary /> : <TodayScreen />}
+      {accountConfigured() ? <AccountBoundary /> : <><AppNavigation current="today" accountEnabled={false} /><TodayScreen /></>}
     </main>
   );
 }
