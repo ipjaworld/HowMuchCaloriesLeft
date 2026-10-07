@@ -26,12 +26,17 @@ const nullStorage: KeyValueStorage = {
 export function getBrowserStorage(): KeyValueStorage {
   try {
     if (typeof window === "undefined") return nullStorage;
-    const probe = "__hmcl_probe__";
-    window.localStorage.setItem(probe, "1");
-    window.localStorage.removeItem(probe);
+    // Do not probe with a write: a full quota must still allow reads and
+    // conversation compaction to reclaim its own space.
     return window.localStorage;
   } catch {
-    return nullStorage;
+    // A blocked browser must not pretend that writes persisted (SSR still
+    // uses nullStorage above). Reads can continue to fall back to empty.
+    return {
+      getItem: () => null,
+      setItem: () => { throw new Error("Storage unavailable"); },
+      removeItem: () => { throw new Error("Storage unavailable"); },
+    };
   }
 }
 
@@ -67,6 +72,8 @@ export function writeJson(
 }
 
 export const STORAGE_KEYS = {
+  conversation: "hmcl.v1.conversation",
+  syncMeta: "hmcl.v1.syncMeta",
   mealRecords: "hmcl.v1.mealRecords",
   dailyGoals: "hmcl.v1.dailyGoals",
   /** Body facts for the calorie calculator. Never leaves this browser. */

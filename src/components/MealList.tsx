@@ -57,6 +57,7 @@ type Props = {
   onDeleteItem?: (item: FoodItem) => void;
   /** Disables the × while another change is in flight. */
   isBusy?: boolean;
+  showSourceText?: boolean;
 };
 
 /**
@@ -64,7 +65,7 @@ type Props = {
  * "kcal" on every line — the figure above already established the unit, and
  * the number alone is what the eye is scanning for.
  */
-export function MealList({ records, isLoading = false, onDeleteItem, isBusy = false }: Props) {
+export function MealList({ records, isLoading = false, onDeleteItem, isBusy = false, showSourceText = false }: Props) {
   const groups = isLoading ? [] : groupItems(records);
   // One row's basis open at a time: it is a glance, not a report.
   const [openId, setOpenId] = useState<string | null>(null);
@@ -156,6 +157,11 @@ export function MealList({ records, isLoading = false, onDeleteItem, isBusy = fa
                           className="mt-0.5 basis-full text-[0.75rem] break-keep text-ink-soft"
                         >
                           {basis}
+                        </p>
+                      )}
+                      {showSourceText && (
+                        <p className="basis-full text-xs text-ink-soft [overflow-wrap:anywhere]">
+                          입력: {records.find((record) => record.items.some((entry) => entry.id === item.id))?.sourceText}
                         </p>
                       )}
                     </li>

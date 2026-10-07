@@ -2,6 +2,7 @@ import { dateKeyOf } from "@/domain/date";
 import type { MealRecord } from "@/domain/meal";
 import type { MealRecordRepository } from "@/domain/repository";
 import { mealRecordSchema, parseValidEntries } from "./schemas";
+import { readSyncMeta, writeSyncMeta } from "./localStorageSyncMetaRepository";
 import {
   STORAGE_KEYS,
   STORAGE_VERSION,
@@ -15,6 +16,7 @@ type Options = {
   storage?: KeyValueStorage;
   /** Injectable so tests can assert on `updatedAt` without racing the clock. */
   now?: () => Date;
+  onMetadataFailure?: () => void;
 };
 
 /**
@@ -25,6 +27,7 @@ type Options = {
 export function createLocalStorageMealRecordRepository({
   storage = getBrowserStorage(),
   now = () => new Date(),
+  onMetadataFailure,
 }: Options = {}): MealRecordRepository {
   function readAll(): MealRecord[] {
     return parseValidEntries(
@@ -35,10 +38,11 @@ export function createLocalStorageMealRecordRepository({
   }
 
   function writeAll(records: MealRecord[]): void {
-    writeJson(storage, STORAGE_KEYS.mealRecords, {
+    const saved = writeJson(storage, STORAGE_KEYS.mealRecords, {
       version: STORAGE_VERSION,
       records,
     });
+    if (!saved) throw new Error("Meal storage write failed");
   }
 
   return {
@@ -54,6 +58,11 @@ export function createLocalStorageMealRecordRepository({
 
     async add(record) {
       writeAll([...readAll(), record]);
+      const meta = readSyncMeta(storage);
+      if (meta.removedRecords.some((entry) => entry.id === record.id)) {
+        meta.removedRecords = meta.removedRecords.filter((entry) => entry.id !== record.id);
+        writeSyncMeta(storage, meta, onMetadataFailure);
+      }
     },
 
     async update(id, input) {
@@ -67,7 +76,12 @@ export function createLocalStorageMealRecordRepository({
     },
 
     async remove(id) {
-      writeAll(readAll().filter((record) => record.id !== id));
+      const records = readAll();
+      if (!records.some((record) => record.id === id)) return;
+      writeAll(records.filter((record) => record.id !== id));
+      const meta = readSyncMeta(storage);
+      meta.removedRecords = [...meta.removedRecords.filter((entry) => entry.id !== id), { id, removedAt: now().toISOString() }];
+      writeSyncMeta(storage, meta, onMetadataFailure);
     },
   };
 }

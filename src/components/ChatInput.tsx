@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ClarifyOption, Reply } from "./replyText";
+import { replyText, type ClarifyOption, type Reply } from "./replyText";
 
 type Props = {
   onSubmit: (message: string) => void;
@@ -62,7 +62,7 @@ export function ChatInput({
         {!isPending && reply !== null && (
           <div className="animate-rise" role="status">
             <p className="inline-block max-w-[88%] rounded-[1.125rem] rounded-bl-md bg-ink px-3.5 py-2.5 text-[0.875rem] leading-relaxed break-keep text-surface [overflow-wrap:anywhere]">
-              {reply.text}
+              {replyText(reply)}
             </p>
 
             {reply.kind === "question" && (

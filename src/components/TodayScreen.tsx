@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { makeConversationTurn } from "@/application/conversation";
+import type { ConversationTurn } from "@/domain/conversation";
+import { createLocalStorageConversationRepository } from "@/infrastructure/localStorageConversationRepository";
+import { replyText, describeStorageNotice, describeStorageFailure, describeConnectionFailure } from "./replyText";
 import type { Intent } from "@/ai/judgment/types";
 import { readAmountAnswer } from "@/ai/nutrition/quantity";
 import { readCalorieAnswer } from "@/ai/nutrition/statedCalories";
@@ -107,10 +111,14 @@ type PendingClarification = {
  * nothing above this component has to become a client component.
  */
 export function TodayScreen() {
+  const [storageNotice, setStorageNotice] = useState<string | null>(null);
+  const turnReply = useRef<{ reply: Reply; outcome: ConversationTurn["outcome"] } | null>(null);
+  const turnBusy = useRef(false);
   const repositories = useMemo(
     () => ({
-      meals: createLocalStorageMealRecordRepository(),
-      goals: createLocalStorageDailyGoalRepository(),
+      meals: createLocalStorageMealRecordRepository({ onMetadataFailure: () => setStorageNotice(describeStorageNotice("metadata")) }),
+      goals: createLocalStorageDailyGoalRepository({ onMetadataFailure: () => setStorageNotice(describeStorageNotice("metadata")) }),
+      conversation: createLocalStorageConversationRepository(),
       // Body facts. Read and written here only; never part of a request.
       profile: createLocalStorageDietProfileRepository(),
     }),
@@ -188,6 +196,46 @@ export function TodayScreen() {
     };
   }, [repositories]);
 
+  function showReply(next: Reply | null, outcome: ConversationTurn["outcome"] = "asked") {
+    turnReply.current = next === null ? null : { reply: next, outcome };
+    setReply(next);
+  }
+
+  async function runTurn(user: string | null, action: () => Promise<void>) {
+    if (turnBusy.current || state.status !== "ready") return;
+    turnBusy.current = true;
+    setIsPending(true);
+    setStorageNotice(null);
+    setLastMessage(user);
+    turnReply.current = null;
+    try {
+      const before = await repositories.meals.getAll();
+      try {
+        await action();
+      } catch {
+        await reloadDay();
+        showReply(describeStorageFailure(), "failed");
+      }
+      // This boundary owns the whole turn, including persistence and rapid
+      // repeated taps. Intermediate questions are not extra turns.
+      const result = turnReply.current as { reply: Reply; outcome: ConversationTurn["outcome"] } | null;
+      if (result !== null) {
+        const after = await repositories.meals.getAll();
+        const turn = makeConversationTurn({ user, reply: replyText(result.reply), outcome: result.outcome }, before, after);
+        try {
+          const saved = await repositories.conversation.append(turn);
+          if (!saved.saved) setStorageNotice(describeStorageNotice("conversation"));
+          else if (saved.dropped > 0) setStorageNotice(describeStorageNotice("trimmed"));
+        } catch {
+          setStorageNotice(describeStorageNotice("conversation"));
+        }
+      }
+    } finally {
+      turnBusy.current = false;
+      setIsPending(false);
+    }
+  }
+
   const isLoading = state.status === "loading";
   const records = state.status === "ready" ? state.records : [];
   const summary = summarizeDay(
@@ -209,7 +257,7 @@ export function TodayScreen() {
       .map((part) => part.phraseName);
 
     if (items.length === 0) {
-      setReply(describeNothingAdded(pending.parts));
+      showReply(describeNothingAdded(pending.parts), "nothing_added");
       return;
     }
 
@@ -237,7 +285,7 @@ export function TodayScreen() {
         : [],
     );
 
-    setReply(describeAdded(await reloadDay(), skipped, highVariance, recorded));
+    showReply(describeAdded(await reloadDay(), skipped, highVariance, recorded), "added");
   }
 
   /**
@@ -266,7 +314,7 @@ export function TodayScreen() {
   function askAmountFor(itemId: string): void {
     const found = locateItem(records, itemId);
     if (found === null) {
-      setReply(describeTargetGone());
+      showReply(describeTargetGone(), "failed");
       return;
     }
 
@@ -284,7 +332,7 @@ export function TodayScreen() {
         },
       ],
     });
-    setReply(describeAskAmount(found.item.name));
+    showReply(describeAskAmount(found.item.name));
   }
 
   /** Takes one logged food off the day. */
@@ -292,12 +340,12 @@ export function TodayScreen() {
     const result = await removeFoodItem(repositories.meals, records, targetId);
 
     if (result.status === "not_found") {
-      setReply(describeTargetGone());
+      showReply(describeTargetGone(), "failed");
       return;
     }
 
     setLastRemoved(result);
-    setReply(describeDeleted(result.item, await reloadDay()));
+    showReply(describeDeleted(result.item, await reloadDay()), "removed");
   }
 
   /**
@@ -310,17 +358,13 @@ export function TodayScreen() {
     setPendingAdd(null);
     setClarification(null);
     setIsPending(true);
-    try {
-      await applyDelete(itemId);
-    } finally {
-      setIsPending(false);
-    }
+    await applyDelete(itemId);
   }
 
   async function undoDelete(removed: Removed): Promise<void> {
-    setLastRemoved(null);
     await restoreFoodItem(repositories.meals, records, removed);
-    setReply(describeRestored(removed.item, await reloadDay()));
+    setLastRemoved(null);
+    showReply(describeRestored(removed.item, await reloadDay()), "restored");
   }
 
   /**
@@ -336,7 +380,7 @@ export function TodayScreen() {
     // The correction itself was skipped; what the sentence added still stands.
     if (replacement === null) {
       if (additions.length === 0) {
-        setReply(describeNothingAdded(pending.parts));
+        showReply(describeNothingAdded(pending.parts), "nothing_added");
         return;
       }
       await commitAdd({ ...pending, target: undefined, parts: pending.parts.filter((_, index) => !isModifyPart(pending, index)) });
@@ -352,7 +396,7 @@ export function TodayScreen() {
     );
 
     if (result.status === "not_found") {
-      setReply(describeTargetGone());
+      showReply(describeTargetGone(), "failed");
       return;
     }
 
@@ -365,8 +409,8 @@ export function TodayScreen() {
     }
 
     const summaryAfter = await reloadDay();
-    setReply(
-      describeModified(before ?? replacement, replacement, summaryAfter, additions, skipped),
+    showReply(
+      describeModified(before ?? replacement, replacement, summaryAfter, additions, skipped), "modified",
     );
   }
 
@@ -383,7 +427,7 @@ export function TodayScreen() {
 
     const question = nextQuestion(pending);
     setPendingAdd(pending);
-    if (question !== null) setReply(describeQuestion(question));
+    if (question !== null) showReply(describeQuestion(question));
   }
 
   /**
@@ -400,7 +444,7 @@ export function TodayScreen() {
 
     // "몰라" has no amount but is still about the question, so it stands.
     if (isSkipMessage(amountText)) {
-      setReply(describeUnreadableAmount());
+      showReply(describeUnreadableAmount());
       return true;
     }
     if (readAmountAnswer(amountText) === null) return false;
@@ -415,14 +459,14 @@ export function TodayScreen() {
     });
 
     if (!response.ok) {
-      setReply(describeAddFailure());
+      showReply(describeAddFailure(), "failed");
       return true;
     }
 
     const result = (await response.json()) as ResolveResponse;
     if (result.status !== "resolved") {
       // Still pending: the question stands, so the user can try again.
-      setReply(describeUnreadableAmount());
+      showReply(describeUnreadableAmount());
       return true;
     }
 
@@ -453,7 +497,7 @@ export function TodayScreen() {
 
     if (answer.status === "wrong_unit" || !isValidCalorieValue(answer.calories)) {
       // Still pending: the question stands.
-      setReply(describeCaloriesWanted());
+      showReply(describeCaloriesWanted());
       return true;
     }
 
@@ -525,7 +569,7 @@ export function TodayScreen() {
    */
   async function handleMessage(message: string, chosen?: ChosenTarget) {
     setIsPending(true);
-    setReply(null);
+    showReply(null);
     // A re-send after a pick keeps the pick as what was said.
     if (chosen === undefined) setLastMessage(message);
     // A new sentence replaces the reply that carried 되돌리기.
@@ -538,7 +582,7 @@ export function TodayScreen() {
         if (isCancelMessage(message)) {
           const mode = pendingAdd.target === undefined ? "add" : "modify";
           setPendingAdd(null);
-          setReply(describeCancelled(mode));
+          showReply(describeCancelled(mode), "cancelled");
           return;
         }
 
@@ -576,10 +620,7 @@ export function TodayScreen() {
       });
 
       if (!response.ok) {
-        setReply({
-          kind: "statement",
-          text: "지금은 답하기 어려워요. 잠시 후 다시 시도해주세요.",
-        });
+        showReply(describeAddFailure(), "failed");
         return;
       }
 
@@ -610,7 +651,7 @@ export function TodayScreen() {
         return;
       }
 
-      setReply(describeCommand(command, summary));
+      showReply(describeCommand(command, summary), command.type === "clarify" ? "asked" : command.type === "ignore" ? "nothing_added" : "answered");
 
       if (command.type === "clarify" && command.candidates !== undefined) {
         setClarification({
@@ -619,13 +660,9 @@ export function TodayScreen() {
           sourceText: message,
         });
       }
-    } catch {
-      setReply({
-        kind: "statement",
-        text: "연결이 안 되네요. 잠시 후 다시 시도해주세요.",
-      });
-    } finally {
-      setIsPending(false);
+    } catch (error) {
+      if (error instanceof TypeError) showReply(describeConnectionFailure(), "failed");
+      else throw error;
     }
   }
 
@@ -646,13 +683,13 @@ export function TodayScreen() {
 
     switch (start.kind) {
       case "gone":
-        setReply(describeTargetGone());
+        showReply(describeTargetGone(), "failed");
         return;
       case "add_instead":
         await startAdd(sourceText, start.parts, true);
         return;
       case "already_logged":
-        setReply(describeAlreadyLogged(start.item));
+        showReply(describeAlreadyLogged(start.item), "answered");
         return;
       case "ask_amount":
         askAmountFor(start.itemId);
@@ -685,7 +722,7 @@ export function TodayScreen() {
     // a confident report goes on to ask for calories: a sentence the judge
     // half-believed was about food is not worth a follow-up question.
     if (needsConfirmation && isAllUnknown(parts)) {
-      setReply(describeNothingAdded(parts));
+      showReply(describeNothingAdded(parts), "nothing_added");
       return;
     }
 
@@ -693,12 +730,12 @@ export function TodayScreen() {
   }
 
   /** Answered on the client — a confirmation is not worth a second round trip. */
-  function handleChooseOption(option: ClarifyOption) {
+  async function handleChooseOption(option: ClarifyOption) {
     // Picking a chip is the user's turn: it reads as what they said.
     setLastMessage(option.label);
 
     if (option.id === UNDO_DELETE) {
-      if (lastRemoved !== null) void undoDelete(lastRemoved);
+      if (lastRemoved !== null) await undoDelete(lastRemoved);
       return;
     }
 
@@ -710,10 +747,10 @@ export function TodayScreen() {
 
       if (question?.type === "confirm_add") {
         if (option.id === "yes") {
-          void advance(confirmAdd(pendingAdd));
+          await advance(confirmAdd(pendingAdd));
         } else {
           setPendingAdd(null);
-          setReply(describeCancelled(question.mode));
+          showReply(describeCancelled(question.mode), "cancelled");
         }
         return;
       }
@@ -721,10 +758,10 @@ export function TodayScreen() {
       if (question?.type === "choose_food") {
         if (option.id === CANCEL_PENDING) {
           setPendingAdd(null);
-          setReply(describeCancelled(pendingAdd.target === undefined ? "add" : "modify"));
+          showReply(describeCancelled(pendingAdd.target === undefined ? "add" : "modify"), "cancelled");
           return;
         }
-        void advance(
+        await advance(
           option.id === OTHER_FOOD
             ? answerNoneOfChoices(pendingAdd, question.partIndex)
             : option.id === ALL_OF_THESE
@@ -736,17 +773,17 @@ export function TodayScreen() {
 
       if (question?.type === "provide_calories") {
         if (option.id === "skip") {
-          void advance(skipUnknown(pendingAdd, question.partIndex));
+          await advance(skipUnknown(pendingAdd, question.partIndex));
         } else {
           setPendingAdd(null);
-          setReply(describeCancelled("add"));
+          showReply(describeCancelled("add"), "cancelled");
         }
         return;
       }
     }
 
     if (option.id === "no") {
-      setReply({ kind: "statement", text: "알겠어요. 그대로 둘게요." });
+      showReply(describeCancelled("modify"), "cancelled");
       setClarification(null);
       return;
     }
@@ -757,7 +794,7 @@ export function TodayScreen() {
     // added: a correction that found no entry is not a new meal.
     if (option.id === NONE_OF_THESE && (intent === "modify_food" || intent === "delete_food")) {
       setClarification(null);
-      setReply(describeNoneOfThese(intent));
+      showReply(describeNoneOfThese(intent), "cancelled");
       return;
     }
 
@@ -775,7 +812,7 @@ export function TodayScreen() {
         setClarification(null);
 
         if (intent === "delete_food") {
-          void applyDelete(chosen.id);
+          await applyDelete(chosen.id);
           return;
         }
 
@@ -784,15 +821,15 @@ export function TodayScreen() {
         // then the amount is the one thing still missing.
         const sourceText = clarification?.sourceText;
         if (option.id !== "yes" && sourceText !== undefined) {
-          void handleMessage(sourceText, { targetId: chosen.id, intent: "modify_food" });
+          await handleMessage(sourceText, { targetId: chosen.id, intent: "modify_food" });
           return;
         }
-        void askAmountFor(chosen.id);
+        askAmountFor(chosen.id);
         return;
       }
     }
 
-    setReply(describeTargetGone());
+    showReply(describeTargetGone(), "failed");
     setClarification(null);
   }
 
@@ -819,14 +856,16 @@ export function TodayScreen() {
         <MealList
           records={records}
           isLoading={isLoading}
-          onDeleteItem={(item) => void handleDeleteItem(item.id)}
+          onDeleteItem={(item) => void runTurn(null, () => handleDeleteItem(item.id))}
           isBusy={isPending}
         />
       </div>
 
+      {storageNotice !== null && <p role="alert" className="px-6 py-2 text-sm text-accent">{storageNotice}</p>}
+
       <ChatInput
-        onSubmit={(message) => void handleMessage(message)}
-        onChooseOption={handleChooseOption}
+        onSubmit={(message) => void runTurn(message, () => handleMessage(message))}
+        onChooseOption={(option) => void runTurn(option.id === UNDO_DELETE ? null : option.label, () => handleChooseOption(option))}
         reply={reply}
         lastMessage={lastMessage}
         // Also blocked while the day is still being read: until then `records`

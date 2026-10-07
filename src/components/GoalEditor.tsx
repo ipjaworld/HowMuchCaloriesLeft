@@ -8,6 +8,7 @@ const numberFormat = new Intl.NumberFormat("ko-KR");
 type GoalError = Extract<SetDailyGoalResult, { ok: false }>["reason"];
 
 const MESSAGES: Record<GoalError, string> = {
+  storage_failed: "목표를 저장하지 못했어요. 다시 시도해주세요.",
   not_a_number: "숫자만 입력해주세요.",
   out_of_range: `${numberFormat.format(DAILY_GOAL_RANGE.min)} ~ ${numberFormat.format(DAILY_GOAL_RANGE.max)} 사이로 입력해주세요.`,
   invalid_date: "날짜를 다시 확인해주세요.",

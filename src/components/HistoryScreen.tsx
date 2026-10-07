@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { todayKey } from "@/domain/date";
-import { summarizeHistory, type DayHistory } from "@/domain/history";
+import { todayKey, dateKeyOf, clockTimeOf } from "@/domain/date";
+import type { ConversationTurn } from "@/domain/conversation";
+import type { MealRecord } from "@/domain/meal";
+import { summarizeHistory, summarizeHistoryDay, effectiveGoal, type DayHistory } from "@/domain/history";
+import { createLocalStorageConversationRepository } from "@/infrastructure/localStorageConversationRepository";
 import { createLocalStorageDailyGoalRepository } from "@/infrastructure/localStorageDailyGoalRepository";
 import { createLocalStorageMealRecordRepository } from "@/infrastructure/localStorageMealRecordRepository";
-import { describeHistoryDate, describeHistoryDay } from "./historyText";
+import { describeHistoryDate, describeHistoryDay, describeConversationRetention, describeMissingConversationRecord } from "./historyText";
+import { describeStorageNotice } from "./replyText";
 import { MealList } from "./MealList";
 
 type State =
   | { status: "loading" }
-  | { status: "ready"; today: string; days: DayHistory[] };
+  | { status: "ready"; today: string; days: DayHistory[]; records: MealRecord[]; turns: ConversationTurn[]; notice: string | null };
 
 /**
  * Past days, newest first: one line of figures per day, and the day's own
@@ -25,6 +29,7 @@ export function HistoryScreen() {
     () => ({
       meals: createLocalStorageMealRecordRepository(),
       goals: createLocalStorageDailyGoalRepository(),
+      conversation: createLocalStorageConversationRepository(),
     }),
     [],
   );
@@ -35,12 +40,24 @@ export function HistoryScreen() {
     let cancelled = false;
     void (async () => {
       const today = todayKey();
+      const [records, goals, conversation] = await Promise.all([
+        repositories.meals.getAll(), repositories.goals.getAll(), repositories.conversation.getAll(),
+      ]);
       const days = summarizeHistory(
-        await repositories.meals.getAll(),
-        await repositories.goals.getAll(),
+        records,
+        goals,
         today,
       );
-      if (!cancelled) setState({ status: "ready", today, days });
+      for (const turn of conversation.turns) {
+        const date = dateKeyOf(turn.at);
+        if (date !== null && !days.some((day) => day.date === date)) {
+          days.push(summarizeHistoryDay(date, [], effectiveGoal(goals, date)?.calorieTarget ?? null));
+        }
+      }
+      days.sort((a, b) => b.date.localeCompare(a.date));
+      const notice = !conversation.saved ? describeStorageNotice("conversation")
+        : conversation.dropped > 0 ? describeStorageNotice("trimmed") : null;
+      if (!cancelled) setState({ status: "ready", today, days, records, turns: conversation.turns, notice });
     })();
     return () => {
       cancelled = true;
@@ -58,6 +75,7 @@ export function HistoryScreen() {
           오늘로
         </Link>
       </header>
+      {state.status === "ready" && state.notice !== null && <p role="alert" className="px-6 text-sm text-accent">{state.notice}</p>}
 
       {state.status === "loading" ? (
         <p className="px-6 text-sm text-ink-soft">불러오는 중</p>
@@ -72,6 +90,8 @@ export function HistoryScreen() {
               key={day.date}
               day={day}
               today={state.today}
+              turns={state.turns.filter((turn) => dateKeyOf(turn.at) === day.date)}
+              records={state.records}
               isOpen={openDate === day.date}
               onToggle={() => setOpenDate(openDate === day.date ? null : day.date)}
             />
@@ -85,11 +105,15 @@ export function HistoryScreen() {
 function HistoryRow({
   day,
   today,
+  turns,
+  records,
   isOpen,
   onToggle,
 }: {
   day: DayHistory;
   today: string;
+  turns: ConversationTurn[];
+  records: MealRecord[];
   isOpen: boolean;
   onToggle: () => void;
 }) {
@@ -117,10 +141,6 @@ function HistoryRow({
     </>
   );
 
-  if (isEmpty) {
-    return <li className="block border-b border-line px-6 py-3.5">{summary}</li>;
-  }
-
   return (
     <li className="border-b border-line">
       <button
@@ -134,7 +154,30 @@ function HistoryRow({
       </button>
       {isOpen && (
         <div id={panelId} className="pb-4">
-          <MealList records={day.records} />
+          {day.records.length > 0 && <MealList records={day.records} showSourceText />}
+          <section aria-label="그날의 대화" className="mt-5 space-y-4 px-6 text-sm [overflow-wrap:anywhere]">
+            <h3 className="font-medium">대화</h3>
+            {turns.length === 0 ? <p className="text-ink-soft">{describeConversationRetention(day.date, today)}</p> : (
+              <ol className="space-y-4">
+                {turns.map((turn) => (
+                  <li key={turn.id} className="space-y-1.5 border-t border-line pt-3">
+                    <time dateTime={turn.at} className="text-xs text-ink-soft">{clockTimeOf(turn.at)}</time>
+                    {turn.user !== null && <p>나: {turn.user}</p>}
+                    <p>{turn.reply}</p>
+                    {turn.recordIds.length > 0 && (
+                      <div className="text-xs text-ink-soft">
+                        <p>연결된 현재 기록</p>
+                        {turn.recordIds.map((id) => {
+                          const record = records.find((entry) => entry.id === id);
+                          return <p key={id}>{record === undefined ? describeMissingConversationRecord() : record.items.map((item) => `${item.name}${item.amount === undefined ? "" : ` ${item.amount}`} ${item.caloriesEstimated ? "~" : ""}${item.calories} kcal`).join(", ")}</p>;
+                        })}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
         </div>
       )}
     </li>

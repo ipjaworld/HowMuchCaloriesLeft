@@ -14,7 +14,7 @@ import type { DailyGoalRepository } from "@/domain/repository";
  */
 export type SetDailyGoalResult =
   | { ok: true; goal: DailyGoal }
-  | { ok: false; reason: "not_a_number" | "out_of_range" | "invalid_date" };
+  | { ok: false; reason: "not_a_number" | "out_of_range" | "invalid_date" | "storage_failed" };
 
 export const DAILY_GOAL_RANGE = {
   min: MIN_DAILY_GOAL_CALORIES,
@@ -36,7 +36,11 @@ export async function setDailyGoal(
   }
 
   const goal: DailyGoal = { date, calorieTarget };
-  await repository.set(goal);
+  try {
+    await repository.set(goal);
+  } catch {
+    return { ok: false, reason: "storage_failed" };
+  }
   return { ok: true, goal };
 }
 

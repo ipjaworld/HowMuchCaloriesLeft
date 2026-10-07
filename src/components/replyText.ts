@@ -60,6 +60,23 @@ export type Reply =
   | { kind: "statement"; text: string }
   | { kind: "question"; text: string; options: ClarifyOption[] };
 
+/** Both the bubble and the transcript use exactly this text. */
+export function replyText(reply: Reply): string { return reply.text; }
+
+export function describeStorageNotice(kind: "conversation" | "trimmed" | "metadata"): string {
+  if (kind === "trimmed") return "저장 공간이 부족해 오래된 대화 일부를 지웠어요.";
+  if (kind === "metadata") return "변경은 저장했지만 변경 시각을 보관하지 못했어요.";
+  return "대화 기록을 보관하지 못했어요. 식사 기록은 목록에서 확인해주세요.";
+}
+
+export function describeStorageFailure(): Reply {
+  return { kind: "statement", text: "변경을 모두 저장하지 못했어요. 현재 기록을 확인해주세요." };
+}
+
+export function describeConnectionFailure(): Reply {
+  return { kind: "statement", text: "연결이 안 되네요. 잠시 후 다시 시도해주세요." };
+}
+
 function describeStatus(summary: DailySummary): string {
   if (summary.remainingCalories === null) {
     return "목표를 정하면 알려드릴게요.";

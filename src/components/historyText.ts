@@ -1,5 +1,14 @@
 import { addDays } from "@/domain/date";
 import type { DayHistory } from "@/domain/history";
+import { isConversationDate } from "@/domain/conversation";
+
+export function describeConversationRetention(date: string, today: string): string {
+  return isConversationDate(date, today) ? "아직 보관된 대화가 없어요." : "대화는 30일까지 보관해요.";
+}
+
+export function describeMissingConversationRecord(): string {
+  return "이 기록은 현재 목록에 없어요. 당시 내용은 위 답장에서 확인할 수 있어요.";
+}
 
 /**
  * How a past day reads. The domain says `difference: -372, outcome: "under"`;

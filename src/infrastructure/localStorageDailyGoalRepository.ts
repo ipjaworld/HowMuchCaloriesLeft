@@ -3,6 +3,7 @@ import { effectiveGoal } from "@/domain/history";
 import type { DailyGoal } from "@/domain/meal";
 import type { DailyGoalRepository } from "@/domain/repository";
 import { dailyGoalSchema, parseValidEntries } from "./schemas";
+import { readSyncMeta, writeSyncMeta } from "./localStorageSyncMetaRepository";
 import {
   STORAGE_KEYS,
   STORAGE_VERSION,
@@ -14,6 +15,8 @@ import {
 
 type Options = {
   storage?: KeyValueStorage;
+  now?: () => Date;
+  onMetadataFailure?: () => void;
 };
 
 /**
@@ -24,6 +27,8 @@ type Options = {
  */
 export function createLocalStorageDailyGoalRepository({
   storage = getBrowserStorage(),
+  now = () => new Date(),
+  onMetadataFailure,
 }: Options = {}): DailyGoalRepository {
   function readAll(): DailyGoal[] {
     return parseValidEntries(
@@ -51,10 +56,14 @@ export function createLocalStorageDailyGoalRepository({
       goals.push(goal);
       goals.sort((a, b) => compareDateKeys(a.date, b.date));
 
-      writeJson(storage, STORAGE_KEYS.dailyGoals, {
+      const saved = writeJson(storage, STORAGE_KEYS.dailyGoals, {
         version: STORAGE_VERSION,
         goals,
       });
+      if (!saved) throw new Error("Goal storage write failed");
+      const meta = readSyncMeta(storage);
+      meta.goalSetAt[goal.date] = now().toISOString();
+      writeSyncMeta(storage, meta, onMetadataFailure);
     },
   };
 }
