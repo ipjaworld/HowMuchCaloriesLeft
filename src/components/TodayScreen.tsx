@@ -591,6 +591,9 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
     }
     if (!result.ok) return false;
 
+    // Reset the inline editor's local open state once the calculated goal is saved.
+    setManualGoalRequested(false);
+    setManualGoalKey((count) => count + 1);
     setState({ ...state, calorieTarget: result.goal.calorieTarget });
     setSavedProfile(result.profile);
     setCalculator(null);
