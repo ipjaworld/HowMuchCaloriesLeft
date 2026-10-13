@@ -3,7 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 import { parseAmountOnly } from "@/ai/nutrition/quantity";
 import type { NutritionResolver } from "@/ai/nutrition/types";
-import { resolveAddParts, type AddPart } from "./addFood";
+import { recordEstimates, resolveAddParts, type AddPart } from "./addFood";
 
 /**
  * The food-input coverage corpus, and how one run of the add pipeline is
@@ -449,7 +449,9 @@ export function evaluateCase(testCase: CoverageCase, parts: AddPart[]): CaseResu
 /**
  * Runs every case through the production add pipeline, exactly as the chat
  * route does once a sentence has been judged an add: `resolveAddParts` over
- * the given resolver. Nothing is reimplemented here.
+ * the given resolver, then `recordEstimates` (record first, report after —
+ * 2026-10-13). Nothing is reimplemented here. The eaten-or-not filter between
+ * the two needs Jev and is not run, as below.
  *
  * What this does *not* cover is the step before — Jev's intent and
  * consumption judgment. A case tagged `jev_may_guard` may be stopped there
@@ -461,7 +463,7 @@ export async function runCoverage(
 ): Promise<{ result: CaseResult; parts: AddPart[] }[]> {
   return Promise.all(
     cases.map(async (testCase) => {
-      const parts = await resolveAddParts(testCase.input, resolver);
+      const parts = recordEstimates(await resolveAddParts(testCase.input, resolver));
       return { result: evaluateCase(testCase, parts), parts };
     }),
   );

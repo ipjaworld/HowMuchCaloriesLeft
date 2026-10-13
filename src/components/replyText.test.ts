@@ -213,6 +213,50 @@ describe("the add pipeline's sentences", () => {
     );
   });
 
+  it("reports the size it took for a counter, and how to change it (2026-10-13)", () => {
+    const reply = describeAdded(summary(), [], [], [
+      {
+        name: "샤인머스캣",
+        amount: "5알",
+        calories: 40,
+        caloriesEstimated: true,
+        portionGuess: { kind: "unit", unit: "알", grams: 12, measure: "g" },
+      },
+    ]);
+    expect(reply.text).toBe(
+      "기록했어요: 샤인머스캣 5알 ~40 kcal. 오늘 1,580 kcal 먹었어요. 520 kcal 남았어요. " +
+        "샤인머스캣 1알은 약 12g으로 잡았어요. " +
+        '양이 다르면 "샤인머스캣 150g으로 고쳐줘"처럼 말해주세요.',
+    );
+  });
+
+  it("folds an unsaid amount into the guessed size rather than saying it twice", () => {
+    const reply = describeAdded(summary(), [], [], [
+      {
+        name: "콜라",
+        amount: "1캔",
+        calories: 135,
+        caloriesEstimated: true,
+        amountAssumed: true,
+        portionGuess: { kind: "unit", unit: "캔", grams: 355, measure: "mL" },
+      },
+    ]);
+    expect(reply.text).toContain("콜라는 양을 말하지 않아 1캔(약 355mL)으로 잡았어요.");
+    expect(reply.text).not.toContain("기본량");
+  });
+
+  it.each([
+    [{ kind: "weight", grams: 100 } as const, "브로콜리는 무게 정보가 없어 100g으로 잡았어요."],
+    [{ kind: "weight", grams: 100, said: "3개" } as const, "브로콜리 3개의 무게를 몰라 100g으로 잡았어요."],
+    [{ kind: "portion", said: "5개", portion: "1인분" } as const, "브로콜리 5개의 무게를 몰라 1인분으로 잡았어요."],
+    [{ kind: "size" } as const, "브로콜리는 크기를 반영하지 않고 보통 크기로 잡았어요."],
+  ])("says what it took: %o", (portionGuess, sentence) => {
+    const reply = describeAdded(summary(), [], [], [
+      { name: "브로콜리", amount: "100g", calories: 26, caloriesEstimated: true, portionGuess },
+    ]);
+    expect(reply.text).toContain(sentence);
+  });
+
   it("says nothing about a default amount when every amount was said", () => {
     const reply = describeAdded(summary(), [], [], [
       { name: "김밥", amount: "반 줄", calories: 161, caloriesEstimated: false },
@@ -323,7 +367,8 @@ describe("the add pipeline's sentences", () => {
     ]);
 
     expect(missingPortion.text).toContain("찾았어요");
-    expect(missingPortion.text).toContain("ml");
+    // "g이나 ml로" read as nonsense for fruit (2026-10-13); one example unit.
+    expect(missingPortion.text).toContain("g으로");
     expect(missingPortion.text).not.toContain("정보가 없");
 
     expect(notInDataset.text).toContain("정보가 없어요");

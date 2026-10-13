@@ -86,26 +86,33 @@ describe("a food we know but cannot weigh is not a food we do not know", () => {
   // no egg weight or cup size, but `servingReferences.ts` now supplies a
   // published one — see `coverage.test.ts`. What is left here has no source.
 
-  it("will not price a 삼각김밥 by the piece", async () => {
-    // MFDS gives a 200 g weight for this row, which is not one triangle, and
-    // nothing public prints a per-piece weight, so it asks.
-    const result = await resolveOne("삼각김밥 하나 먹었어");
-    expect(result.status).toBe("unmeasurable");
+  // Until 2026-10-13 these asked for grams: nothing public prints a 삼각김밥,
+  // a pack of chicken breast, a yoghurt cup or a can. The app now records
+  // first and reports after, so each carries an `assumed` size, and the note
+  // says plainly that it has no source.
+  it("prices a 삼각김밥, a pack of chicken breast, a yoghurt cup and a can at an assumed size", async () => {
+    for (const sentence of ["삼각김밥 하나 먹었어", "닭가슴살 1팩 먹었어", "요거트 1개 먹었어", "콜라 한 캔 마셨어"]) {
+      const result = await resolveOne(sentence);
+      expect(result.status, sentence).toBe("resolved");
+      if (result.status !== "resolved") continue;
+      expect(result.match.estimated, sentence).toBe(true);
+      expect(result.match.portionNote, sentence).toContain("앱 추정값(출처 없음)");
+      expect(result.match.serving?.basis).toMatchObject({ kind: "assumed" });
+    }
   });
 
-  it("will not price a pack of chicken breast — packs are not one size", async () => {
-    const result = await resolveOne("닭가슴살 1팩 먹었어");
+  it("prices a fried egg from the printed egg weight, not an assumption", async () => {
+    const result = await resolveOne("계란후라이 1개 먹었어");
+    expect(result.status).toBe("resolved");
+    if (result.status !== "resolved") return;
+    expect(result.match.serving?.basis).toMatchObject({ kind: "reference" });
+  });
+
+  it("still reports a food with no size at all as unmeasurable — the add layer estimates it", async () => {
+    const result = await resolveOne("브로콜리 먹었어");
     expect(result.status).toBe("unmeasurable");
     if (result.status !== "unmeasurable") return;
     expect(result.reason).toBe("missing_serving");
-    expect(result.entries[0]?.name).toBe("닭가슴살");
-  });
-
-  it("will not price a yoghurt cup, a fried egg or a can by the piece", async () => {
-    for (const sentence of ["요거트 1개 먹었어", "계란후라이 1개 먹었어", "콜라 한 캔 마셨어"]) {
-      const result = await resolveOne(sentence);
-      expect(result.status, sentence).toBe("unmeasurable");
-    }
   });
 
   it("prices those same foods once the user names a weight", async () => {

@@ -18,9 +18,9 @@
     },
     {
       "id": "clean-03",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unmeasurable 그릭요거트 [missing_serving] ← \"그릭 요거트\""
+        "resolved 그릭요거트 (1개) ← \"그릭 요거트\""
       ]
     },
     {
@@ -123,9 +123,9 @@
     },
     {
       "id": "narr-02",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unmeasurable 그릭요거트 [missing_serving] ← \"운동 끝나고 그릭 요거트\""
+        "resolved 그릭요거트 (하나) ← \"운동 끝나고 그릭 요거트\""
       ]
     },
     {
@@ -697,9 +697,9 @@
     },
     {
       "id": "unk-02",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unmeasurable 치킨 [unsupported_unit] ← \"치킨\""
+        "resolved 치킨 (한 마리) ← \"치킨\""
       ]
     },
     {
@@ -761,10 +761,10 @@
     },
     {
       "id": "unkmix-02",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
         "resolved 치킨 (1인분) ← \"치킨\"",
-        "unmeasurable 콜라 [missing_serving] ← \"콜라\""
+        "resolved 콜라 (1캔) ← \"콜라\""
       ]
     },
     {
@@ -1052,9 +1052,9 @@
     },
     {
       "id": "qty-13",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unmeasurable 치킨 [unsupported_unit] ← \"치킨\""
+        "resolved 치킨 (반 마리) ← \"치킨\""
       ]
     },
     {
@@ -1088,16 +1088,16 @@
     },
     {
       "id": "unk-11",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unmeasurable 순두부 [missing_serving] ← \"순두부\""
+        "resolved 순두부 (1봉지) ← \"순두부\""
       ]
     },
     {
       "id": "unk-12",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unmeasurable 망고 [missing_serving] ← \"망고\""
+        "resolved 망고 (1개) ← \"망고\""
       ]
     },
     {
@@ -1125,10 +1125,10 @@
     },
     {
       "id": "unkmix-09",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unmeasurable 망고 [missing_serving] ← \"망고\"",
-        "unmeasurable 떠먹는 요거트 [missing_serving] ← \"요거트\""
+        "resolved 망고 (1개) ← \"망고\"",
+        "resolved 떠먹는 요거트 (1개) ← \"요거트\""
       ]
     },
     {
@@ -1296,7 +1296,7 @@
       "id": "blind-21",
       "verdict": "correct_ask",
       "actual": [
-        "ambiguous 쌀밥|현미밥|잡곡밥|김밥|참치김밥|치즈김밥|유부초밥|불고기덮밥|잡채밥|비빔밥|볶음밥|김치볶음밥|제육덮밥|순대국밥|육회비빔밥|콩나물밥|회덮밥|새우볶음밥|계란볶음밥|소고기볶음밥|참치볶음밥|낙지덮밥|오징어덮밥|장어덮밥|참치덮밥|닭고기덮밥|초밥|김치김밥|소고기김밥|돈가스김밥|야채김밥|콩나물국밥|소고기국밥|돼지국밥|굴국밥|돌솥비빔밥|짬뽕밥|잡탕밥|보리밥|국밥|채소볶음밥|해물볶음밥|주먹밥|연어초밥 ← \"밥\"",
+        "ambiguous 쌀밥|현미밥|잡곡밥|김밥|참치김밥|치즈김밥|유부초밥|불고기덮밥|잡채밥|비빔밥|볶음밥|김치볶음밥|제육덮밥|삼각김밥 (참치마요)|순대국밥|육회비빔밥|콩나물밥|회덮밥|새우볶음밥|계란볶음밥|소고기볶음밥|참치볶음밥|낙지덮밥|오징어덮밥|장어덮밥|참치덮밥|닭고기덮밥|초밥|김치김밥|소고기김밥|돈가스김밥|야채김밥|콩나물국밥|소고기국밥|돼지국밥|굴국밥|돌솥비빔밥|짬뽕밥|잡탕밥|보리밥|국밥|채소볶음밥|해물볶음밥|주먹밥|연어초밥 ← \"밥\"",
         "resolved 아메리카노 (1잔) ← \"커피\""
       ]
     },

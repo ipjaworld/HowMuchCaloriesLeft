@@ -5,7 +5,10 @@ import {
   findStatedCalories,
   statesATotal,
 } from "@/ai/nutrition/statedCalories";
+import { caloriesFor } from "@/ai/nutrition/localDatasetResolver";
+import type { Quantity } from "@/ai/nutrition/quantity";
 import type {
+  FoodEntry,
   NutritionMatch,
   NutritionResolver,
   FoodVariant,
@@ -57,6 +60,12 @@ type AddPartBody =
        * Not stored — the reply says which, and how to change it.
        */
       variantAssumed?: FoodVariant;
+      /**
+       * The portion is the app's own guess, not a published size. Not stored
+       * apart from the item's `portionNote` — the reply says what was taken,
+       * once, so the user can correct it in a word.
+       */
+      portionGuess?: PortionGuess;
     }
   | {
       status: "ambiguous";
@@ -91,6 +100,13 @@ type AddPartBody =
        * ("인분"), so the question can offer them as well as grams.
        */
       knownUnits?: string[];
+      /**
+       * What gets recorded if the food survives the eaten-or-not filter: the
+       * app records first and reports after (2026-10-13), so a known food is
+       * not held back over its size. Absent when there is nothing honest to
+       * record — several foods matched, or part of it was left.
+       */
+      estimate?: { item: NewFoodItem; guess: PortionGuess };
     }
   | {
       status: "unknown";
@@ -107,6 +123,22 @@ type AddPartBody =
    * Kept rather than dropped so the reply can still say what was left out.
    */
   | { status: "skipped"; phraseName: string };
+
+/**
+ * A portion the app took on its own, so the reply can say exactly what.
+ *
+ *   unit     a counter at the app's own working size: 샤인머스캣 1알 = 12 g
+ *   weight   no portion of the food is known at all: 100 g, the amount MFDS
+ *            states energy for
+ *   portion  the counter said has no size for this food ("만두 5개" against a
+ *            food published per 인분), so one of its own portions is used
+ *   size     "큰 계란 두 개": the standard size, since nothing scales it
+ */
+export type PortionGuess =
+  | { kind: "unit"; unit: string; grams: number; measure: "g" | "mL" }
+  | { kind: "weight"; grams: number; said?: string }
+  | { kind: "portion"; said: string; portion: string }
+  | { kind: "size" };
 
 export type AddCandidate = {
   /** The dataset entry id, which is the MFDS food code. */
@@ -298,11 +330,13 @@ function partFor(
   }
 
   switch (resolution.status) {
-    case "resolved":
+    case "resolved": {
+      const guess = assumedUnitGuess(resolution.match);
       return {
         status: "resolved",
         phraseName: phrase.name,
         item: toFoodItem(resolution.match),
+        ...(guess === undefined ? {} : { portionGuess: guess }),
         // A pack is the natural unit of a brand's product, and the reply's
         // first line already says "1봉지" — no "기본량" sentence for it.
         ...(phrase.quantity.assumed && resolution.match.entry.brand !== true
@@ -310,6 +344,7 @@ function partFor(
           : {}),
         ...variantAssumed(phrase.name, resolution.match.entry.variant),
       };
+    }
 
     case "ambiguous":
       return {
@@ -327,6 +362,10 @@ function partFor(
       const knownUnits = (resolution.entries[0]?.servings ?? []).map(
         (serving) => serving.unit,
       );
+      const estimate =
+        resolution.entries.length === 1 && resolution.entries[0] !== undefined
+          ? estimateFor(phrase.quantity, resolution.entries[0], resolution.reason)
+          : undefined;
       return {
         status: "unmeasurable",
         phraseName: phrase.name,
@@ -337,6 +376,7 @@ function partFor(
         reason: resolution.reason,
         ...(resolution.unit === undefined ? {} : { unit: resolution.unit }),
         ...(knownUnits.length === 0 ? {} : { knownUnits }),
+        ...(estimate === undefined ? {} : { estimate }),
       };
     }
 
@@ -349,6 +389,97 @@ function partFor(
         ...(phrase.quantity.assumed ? {} : { amount: phrase.quantity.text }),
       };
   }
+}
+
+/** The app's own size for a counter, when that is what the match stood on. */
+function assumedUnitGuess(match: NutritionMatch): PortionGuess | undefined {
+  const serving = match.serving;
+  if (serving?.basis === undefined || serving.basis.kind !== "assumed") return undefined;
+  return {
+    kind: "unit",
+    unit: serving.unit,
+    grams: serving.grams,
+    measure: serving.basis.measure ?? "g",
+  };
+}
+
+/** The flat weight recorded for a food with no portion at all. */
+const FALLBACK_GRAMS = 100;
+
+/**
+ * What to record for a known food whose amount as said cannot be weighed.
+ *
+ * The energy is still the row's; only the portion is taken, in this order:
+ *
+ *   - "큰 계란 두 개": the count at the standard size, which the resolver
+ *     refused only because nothing scales "큰";
+ *   - a counter the food has no size for: one of the food's own portions;
+ *   - no portion at all: 100 g, the amount MFDS states energy for.
+ *
+ * The amount stored is what was recorded ("1인분", "100g"), never the
+ * user's words for something else — the list must read as what it counts.
+ */
+function estimateFor(
+  quantity: Quantity,
+  entry: FoodEntry,
+  reason: UnmeasurableReason,
+): { item: NewFoodItem; guess: PortionGuess } | undefined {
+  if (reason === "partly_left") return undefined;
+
+  const take = (match: NutritionMatch | null, note: string, guess: PortionGuess) =>
+    match === null
+      ? undefined
+      : {
+          item: { ...toFoodItem(match), caloriesEstimated: true, portionNote: `${note} · 앱 추정값(출처 없음)` },
+          guess,
+        };
+
+  const servings = entry.servings ?? [];
+  if (reason === "missing_serving" && servings.length > 0) {
+    const sized = caloriesFor(quantity, entry);
+    if (sized !== null) {
+      return take(sized, "크기를 반영하지 않은 보통 크기 기준", { kind: "size" });
+    }
+  }
+
+  const natural = servings[0];
+  if (natural !== undefined) {
+    const one: Quantity = { value: 1, unit: natural.unit as Quantity["unit"], text: `1${natural.unit}`, assumed: false };
+    return take(caloriesFor(one, entry), `${quantity.text} 대신 1${natural.unit} 기준`, {
+      kind: "portion",
+      said: quantity.text,
+      portion: `1${natural.unit}`,
+    });
+  }
+
+  const flat: Quantity = { value: FALLBACK_GRAMS, unit: "g", text: `${FALLBACK_GRAMS}g`, assumed: false };
+  return take(caloriesFor(flat, entry), `무게 정보가 없어 ${FALLBACK_GRAMS}g 기준`, {
+    kind: "weight",
+    grams: FALLBACK_GRAMS,
+    ...(quantity.assumed || quantity.text.length === 0 ? {} : { said: quantity.text }),
+  });
+}
+
+/**
+ * Records first, reports after: every amount question that has an estimate
+ * becomes a record of it.
+ *
+ * Runs *after* the eaten-or-not filter, never inside `resolveAddParts`. An
+ * unmeasurable part is a question until then, so Jev still judges whether
+ * the food was eaten at all; only a food that survives that is recorded on a
+ * guessed size. AI judges, code calculates.
+ */
+export function recordEstimates(parts: AddPart[]): AddPart[] {
+  return parts.map((part) => {
+    if (part.status !== "unmeasurable" || part.estimate === undefined) return part;
+    return {
+      status: "resolved",
+      phraseName: part.phraseName,
+      item: part.estimate.item,
+      portionGuess: part.estimate.guess,
+      ...(part.listed === true ? { listed: true as const } : {}),
+    };
+  });
 }
 
 /**

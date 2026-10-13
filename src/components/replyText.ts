@@ -1,5 +1,5 @@
 import { cleanFoodLabel } from "@/ai/nutrition/statedCalories";
-import type { AddPart } from "@/application/addFood";
+import type { AddPart, PortionGuess } from "@/application/addFood";
 import type { Command } from "@/application/commands";
 import type { PendingQuestion } from "@/application/pendingAdd";
 import type { DailySummary } from "@/domain/calories";
@@ -339,10 +339,26 @@ export function describeAdded(
 
   // Said only when it happened: the amount is the one thing the user can
   // fix in a word, and an assumed one is where a figure most often goes wrong.
-  const assumed = [...new Set(recorded.filter((food) => food.amountAssumed).map((food) => food.name))];
+  // A food whose size the app guessed says so in its own sentence below,
+  // which already covers an unsaid amount.
+  const assumed = [
+    ...new Set(
+      recorded
+        .filter((food) => food.amountAssumed && food.portionGuess === undefined)
+        .map((food) => food.name),
+    ),
+  ];
   if (assumed.length > 0) {
     const names = listNames(assumed);
     lines.push(`${names}${topicParticle(assumed.at(-1) ?? names)} 양을 말하지 않아 기본량으로 계산했어요.`);
+  }
+
+  // Recorded first, reported now: the size the app took, and the sentence
+  // that changes it — the "…로 고쳐줘" form read as a correction.
+  const guessed = recorded.filter((food) => food.portionGuess !== undefined);
+  if (guessed.length > 0) {
+    for (const food of guessed) lines.push(portionGuessLine(food));
+    lines.push(`양이 다르면 "${guessed[0]?.name ?? ""} 150g으로 고쳐줘"처럼 말해주세요.`);
   }
 
   // A product's kind is said like its amount: once, after the fact, with
@@ -383,7 +399,35 @@ export type RecordedFood = {
   amountAssumed?: boolean;
   /** The kind a bare product name was taken as (포카칩 → 오리지널). */
   variantAssumed?: { brand: string; label: string; example: string };
+  /** The portion was the app's own guess; the reply says which. */
+  portionGuess?: PortionGuess;
 };
+
+/** "샤인머스캣 1알은 약 12g으로 잡았어요." — what the app took, plainly. */
+function portionGuessLine(food: RecordedFood): string {
+  const { name } = food;
+  const guess = food.portionGuess;
+  switch (guess?.kind) {
+    case "unit": {
+      // Read aloud: 그램으로, 밀리리터로.
+      const size = `약 ${numberFormat.format(guess.grams)}${guess.measure}${guess.measure === "g" ? "으로" : "로"}`;
+      const portion = `1${guess.unit}`;
+      return food.amountAssumed
+        ? `${name}${topicParticle(name)} 양을 말하지 않아 ${portion}(약 ${numberFormat.format(guess.grams)}${guess.measure})${directionParticle(guess.unit)} 잡았어요.`
+        : `${name} ${portion}${topicParticle(guess.unit)} ${size} 잡았어요.`;
+    }
+    case "weight":
+      return guess.said === undefined
+        ? `${name}${topicParticle(name)} 무게 정보가 없어 ${guess.grams}g으로 잡았어요.`
+        : `${name} ${guess.said}의 무게를 몰라 ${guess.grams}g으로 잡았어요.`;
+    case "portion":
+      return `${name} ${guess.said}의 무게를 몰라 ${guess.portion}${directionParticle(guess.portion)} 잡았어요.`;
+    case "size":
+      return `${name}${topicParticle(name)} 크기를 반영하지 않고 보통 크기로 잡았어요.`;
+    case undefined:
+      return "";
+  }
+}
 
 /** "제육볶음 1인분 ~488 kcal": the same ~ the list uses for an estimate. */
 function recordedLabel(food: RecordedFood): string {
@@ -574,7 +618,7 @@ export function describeQuestion(question: PendingQuestion): Reply {
 
   return {
     kind: "statement",
-    text: `${name}${topicParticle(name)} 찾았어요. 얼마나 드셨는지 g이나 ml로 알려주세요.`,
+    text: `${name}${topicParticle(name)} 찾았어요. 얼마나 드셨는지 g으로 알려주세요. (예: 150g)`,
   };
 }
 

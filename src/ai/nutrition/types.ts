@@ -6,7 +6,9 @@ import type { ParsedFoodPhrase } from "./foodPhrases";
  * The rule this whole layer exists to enforce: calorie figures are *looked
  * up*, never generated. Nothing here — and nothing that calls it — is
  * allowed to invent a number for a food. When the data does not know a food,
- * the answer is "unknown", and the app asks.
+ * the answer is "unknown", and the app asks. When it knows the food but not
+ * the size of the portion, the portion may be estimated — always labelled,
+ * always correctable — but the energy per gram is still the dataset's.
  */
 
 /**
@@ -25,6 +27,12 @@ import type { ParsedFoodPhrase } from "./foodPhrases";
  *   typical    a documented typical size where no measure is published for
  *              this food itself — a café cup taken from MFDS's own café rows.
  *              Also always estimated.
+ *   assumed    the app's own working size, with no source behind it — one
+ *              샤인머스캣 알 taken as 12 g. Exists because the app records
+ *              first and reports after (2026-10-13 decision): a labelled
+ *              guess the user can correct beats a question that asks them to
+ *              weigh fruit. Always estimated, and the reply says the size it
+ *              assumed.
  *
  * None of these produce a calorie figure. They turn a human unit into grams;
  * the energy still comes from the MFDS row.
@@ -32,7 +40,7 @@ import type { ParsedFoodPhrase } from "./foodPhrases";
 export type ServingBasis =
   | { kind: "mfds" }
   | {
-      kind: "reference" | "typical";
+      kind: "reference" | "typical" | "assumed";
       note: string;
       citation: string;
       /** The source measures a volume (a cup, a carton); read as grams at 1 g/mL. */
@@ -110,6 +118,8 @@ export type NutritionMatch = {
    * an unfamiliar counter, or millilitres read as grams.
    */
   estimated: boolean;
+  /** The portion the amount was converted through, when it was a counter. */
+  serving?: Serving;
   /**
    * Why the portion is an estimate, when it came from a reference rather than
    * the MFDS row: "1개 50g 기준 · 당뇨병 식품교환표". Carried onto the stored

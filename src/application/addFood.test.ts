@@ -6,6 +6,7 @@ import {
   isSettled,
   itemsOf,
   resolveAddParts,
+  recordEstimates,
   preferTargetFood,
   isSameAs,
   isUnreadCorrectionOf,
@@ -232,20 +233,21 @@ describe("둘 다 — every food the phrase named was eaten (2026-10-06 user dec
 describe("unmeasurable — the record waits for an amount", () => {
   it("asks for a weight, and stores nothing until given one", async () => {
     const { repository, add, records } = fakeRepository();
-    // A pack of chicken breast has no published weight, so it waits for one.
-    const pending = await start("닭가슴살 1팩 먹었어");
+    // Broccoli has no portion at all. What the pending flow sees before
+    // `recordEstimates` — which is also all a modify ever sees.
+    const pending = await start("브로콜리 먹었어");
 
     const question = nextQuestion(pending);
     expect(question?.type).toBe("provide_quantity");
     if (question?.type !== "provide_quantity") return;
     expect(question.reason).toBe("missing_serving");
-    expect(question.entries[0]?.name).toBe("닭가슴살");
+    expect(question.entries[0]?.name).toBe("브로콜리");
 
     expect(add).toHaveBeenCalledTimes(0);
 
     // What /api/resolve returns for "120g".
     const answered = answerQuantity(pending, question.partIndex, {
-      name: "닭가슴살",
+      name: "브로콜리",
       amount: "120g",
       calories: 152,
       caloriesEstimated: false,
@@ -256,6 +258,70 @@ describe("unmeasurable — the record waits for an amount", () => {
 
     expect(add).toHaveBeenCalledTimes(1);
     expect(records[0]?.items[0]?.calories).toBe(152);
+  });
+});
+
+describe("record first, report after (2026-10-13)", () => {
+  const estimated = async (sentence: string) => recordEstimates(await resolveAddParts(sentence, koreanFoodResolver));
+
+  it("records a food with no size at all at 100 g, labelled, instead of asking", async () => {
+    const parts = await estimated("브로콜리 먹었어");
+    expect(parts).toHaveLength(1);
+    expect(parts[0]).toMatchObject({
+      status: "resolved",
+      item: { name: "브로콜리", amount: "100g", caloriesEstimated: true },
+      portionGuess: { kind: "weight", grams: 100 },
+    });
+    if (parts[0]?.status !== "resolved") return;
+    expect(parts[0].item.portionNote).toContain("앱 추정값");
+  });
+
+  it("stores the 100 g it recorded, not the count it could not weigh", async () => {
+    const parts = await estimated("소시지 3개 먹었어");
+    expect(parts[0]).toMatchObject({
+      status: "resolved",
+      item: { amount: "100g" },
+      portionGuess: { kind: "weight", grams: 100, said: "3개" },
+    });
+  });
+
+  it("uses one of the food's own portions for a counter it has no size for", async () => {
+    const parts = await estimated("만두 5개 먹었어");
+    expect(parts[0]).toMatchObject({
+      status: "resolved",
+      item: { name: "만두", amount: "1인분", caloriesEstimated: true },
+      portionGuess: { kind: "portion", said: "5개", portion: "1인분" },
+    });
+  });
+
+  it("counts 큰 계란 at the standard size, and says so", async () => {
+    const parts = await estimated("큰 계란 두 개 먹었어");
+    expect(parts[0]).toMatchObject({ status: "resolved", portionGuess: { kind: "size" }, item: { caloriesEstimated: true } });
+  });
+
+  it("names the assumed size of a counter (샤인머스캣 5알)", async () => {
+    const parts = await estimated("샤인머스캣 5알 먹었어");
+    expect(parts[0]).toMatchObject({
+      status: "resolved",
+      item: { name: "샤인머스캣", amount: "5알", caloriesEstimated: true },
+      portionGuess: { kind: "unit", unit: "알", grams: 13, measure: "g" },
+    });
+    if (parts[0]?.status !== "resolved") return;
+    // Calories still come from the MFDS row: 5 × 13 g at its kcal/100 g.
+    const entry = (await koreanFoodResolver.resolve({ name: "샤인머스캣", quantity: { value: 100, unit: "g", text: "100g", assumed: false }, sourceText: "샤인머스캣 100g" }));
+    if (entry.status !== "resolved") throw new Error("샤인머스캣 is in the dataset");
+    expect(parts[0].item.calories).toBe(Math.round(entry.match.entry.caloriesPer100g * 0.65));
+  });
+
+  it("does not guess where the food itself is uncertain or part was left", async () => {
+    // Which food is a question for the user; so is how much of a dish was left.
+    expect((await estimated("밥 한 공기 먹었어"))[0]?.status).toBe("ambiguous");
+    expect((await estimated("비빔밥 먹었는데 밥은 반 남겼어"))[0]).toMatchObject({ status: "unmeasurable", reason: "partly_left" });
+  });
+
+  it("leaves resolveAddParts itself unchanged, so the eaten-or-not filter still sees a question", async () => {
+    const parts = await resolveAddParts("브로콜리 먹었어", koreanFoodResolver);
+    expect(parts[0]).toMatchObject({ status: "unmeasurable", estimate: { guess: { kind: "weight" } } });
   });
 });
 
@@ -415,7 +481,7 @@ describe("cancelling a pending question", () => {
 
   it("writes nothing when the sentence is abandoned", async () => {
     const { repository, add } = fakeRepository();
-    const pending = await start("닭가슴살 1팩 먹었어");
+    const pending = await start("브로콜리 먹었어");
 
     expect(isComplete(pending)).toBe(false);
     // The screen drops the pending state; nothing ever reaches the repository.
@@ -608,8 +674,13 @@ describe("a high-variance food", () => {
   });
 
   it("does not turn 한 마리 into the row's portion", async () => {
+    // Asked until 2026-10-13; now a 마리 has an assumed size of its own.
     const pending = await start("치킨 한 마리 먹었어");
-    expect(isSettled(pending.parts)).toBe(false);
+    expect(isSettled(pending.parts)).toBe(true);
+    const part = pending.parts[0];
+    if (part?.status !== "resolved") throw new Error("치킨 한 마리 should resolve");
+    expect(part.item.amount).toBe("한 마리");
+    expect(part.portionGuess).toMatchObject({ kind: "unit", unit: "마리", grams: 700 });
   });
 
   it("does not flag an ordinary food", async () => {

@@ -66,10 +66,13 @@ describe("human units — the serving reference layer", () => {
     expect(match.portionNote).toContain("180~200 mL 범위의 상단값");
   });
 
-  it("귤·참외·복숭아 by the piece ask for grams — only the pre-2010 table counts them", async () => {
+  it("귤·참외·복숭아 by the piece count from the pre-2010 table, cited as such", async () => {
+    // Asked for grams until 2026-10-13. The older table is still printed on
+    // the society's page; it is cited apart from the 2010 revision.
     for (const sentence of ["귤 1개 먹었어", "참외 1개 먹었어", "복숭아 1개 먹었어"]) {
-      const result = await resolveOne(sentence);
-      expect(result.status, sentence).toBe("unmeasurable");
+      const match = await resolved(sentence);
+      expect(match.estimated, sentence).toBe(true);
+      expect(match.portionNote, sentence).toContain("구판 표");
     }
   });
 
@@ -279,10 +282,8 @@ describe("a name inside a longer word is not that food", () => {
   });
 
   it("prefers the longest name: 그릭 요거트 is not also 요거트", async () => {
-    const result = await resolveOne("운동 끝나고 그릭 요거트 하나 먹었어");
-    expect(result.status).toBe("unmeasurable");
-    if (result.status !== "unmeasurable") return;
-    expect(result.entries.map((entry) => entry.name)).toEqual(["그릭요거트"]);
+    const match = await resolved("운동 끝나고 그릭 요거트 하나 먹었어");
+    expect(match.entry.name).toBe("그릭요거트");
   });
 
   it("does not take a food that something else follows", () => {
@@ -298,7 +299,7 @@ describe("a name inside a longer word is not that food", () => {
 
   // 차 left this list on 2026-10-03: with 유자차 and 녹차 it heads two kinds
   // of tea and asks which — see "a single syllable that heads several foods".
-  it.each(["떡", "묵", "롤"])(
+  it.each(["떡", "롤"])(
     "a single syllable is not narrowed to the one food it is part of: %s",
     async (word) => {
       expect((await resolveOne(`${word} 먹었어`)).status).toBe("unknown");
@@ -319,6 +320,8 @@ describe("a name inside a longer word is not that food", () => {
   it("a single syllable that heads several foods still asks", async () => {
     expect((await resolveOne("밥 한 공기 먹었어")).status).toBe("ambiguous");
     expect((await resolveOne("차 마셨어")).status).toBe("ambiguous");
+    // 묵 joined this list on 2026-10-13, once 어묵 had a size beside 도토리묵.
+    expect((await resolveOne("묵 먹었어")).status).toBe("ambiguous");
   });
 });
 
@@ -404,10 +407,16 @@ describe("v1 coverage expansion (2026-10-02)", () => {
     expect((await resolved(`${food} 먹었어`)).entry.name).toBe(name);
   });
 
-  it.each(["치킨 한 마리", "피자 한 판", "피자 두 조각", "초밥 10개"])(
-    "%s asks rather than pricing a unit the row never sized",
+  it("초밥 10개 asks rather than pricing a unit the row never sized", async () => {
+    expect((await resolveOne("초밥 10개 먹었어")).status).toBe("unmeasurable");
+  });
+
+  it.each(["치킨 한 마리", "피자 한 판", "피자 두 조각"])(
+    "%s is priced at an assumed size of its own unit, never the row's 인분 (2026-10-13)",
     async (phrase) => {
-      expect((await resolveOne(`${phrase} 먹었어`)).status).toBe("unmeasurable");
+      const match = await resolved(`${phrase} 먹었어`);
+      expect(match.serving?.unit).not.toBe("인분");
+      expect(match.serving?.basis).toMatchObject({ kind: "assumed" });
     },
   );
 
@@ -510,7 +519,7 @@ describe("v1 coverage expansion, second round (2026-10-02)", () => {
     expect(match.entry.variance).toBe("high");
   });
 
-  it.each(["케이크 한 판", "아이스크림 한 통", "만두 5개", "피자 두 조각", "컵라면 큰 거", "주스 한 병"])(
+  it.each(["케이크 한 판", "아이스크림 한 통", "만두 5개", "컵라면 큰 거", "주스 한 병"])(
     "%s asks rather than pricing a unit the row never sized",
     async (phrase) => {
       expect((await resolveOne(`${phrase} 먹었어`)).status).not.toBe("resolved");
@@ -525,10 +534,12 @@ describe("v1 coverage expansion, second round (2026-10-02)", () => {
   );
 
   it("does not record the one food of several that happens to state a portion", async () => {
-    // 음료 reaches eight drinks and only 이온음료 states a glass; 탄산 reaches
-    // four and only 탄산수 a bottle. Both ask, as they did before those rows.
+    // 음료 reaches eight drinks and 탄산 four. Until 2026-10-13 only one of
+    // each stated a size, and both asked how much; now that the sodas and
+    // plant milks carry one too, they ask *which* — never the one the data
+    // happened to price.
     for (const word of ["음료", "탄산"]) {
-      expect((await resolveOne(`${word} 마셨어`)).status, word).toBe("unmeasurable");
+      expect((await resolveOne(`${word} 마셨어`)).status, word).toBe("ambiguous");
     }
   });
 
@@ -541,9 +552,12 @@ describe("v1 coverage expansion, second round (2026-10-02)", () => {
     expect(result.pieces.map((piece) => piece.name)).toEqual(["닭가슴살", "김치"]);
   });
 
-  it("a food that is sold by weight asks for the weight, not the calories", async () => {
+  it("a food that is sold by weight is recorded at an assumed portion, labelled as one", async () => {
+    // Asked for the weight until 2026-10-13: record first, report after.
     for (const food of ["보쌈", "목살", "돼지갈비", "차돌박이", "순두부", "견과류"]) {
-      expect((await resolveOne(`${food} 먹었어`)).status, food).toBe("unmeasurable");
+      const match = await resolved(`${food} 먹었어`);
+      expect(match.estimated, food).toBe(true);
+      expect(match.portionNote, food).toContain("앱 추정값");
     }
   });
 

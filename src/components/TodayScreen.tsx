@@ -309,6 +309,7 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
               ...part.item,
               ...(part.amountAssumed === true ? { amountAssumed: true } : {}),
               ...(part.variantAssumed === undefined ? {} : { variantAssumed: part.variantAssumed }),
+              ...(part.portionGuess === undefined ? {} : { portionGuess: part.portionGuess }),
             },
           ]
         : [],

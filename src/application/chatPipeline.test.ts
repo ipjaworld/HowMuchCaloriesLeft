@@ -55,3 +55,38 @@ describe("foods listed with only a space between them", () => {
     }
   });
 });
+
+describe("record first, report after (2026-10-13)", () => {
+  async function addWith(message: string, eaten: number) {
+    const asked: string[][] = [];
+    const candidateJudge = {
+      judgeEaten: (_message: string, phrases: string[]) => {
+        asked.push(phrases);
+        return Promise.resolve(phrases.map(() => eaten));
+      },
+    };
+    const { command } = await runChat(
+      { message, now: "2026-10-13T12:30:00+09:00", dailyGoalCalories: 1800, recentItems: [] },
+      undefined,
+      { judge, resolver: koreanFoodResolver, candidateJudge },
+    );
+    if (command.type !== "add") throw new Error(`expected add: ${command.type}`);
+    return { command, asked };
+  }
+
+  it("records a food it cannot weigh at an estimate once Jev judges it eaten", async () => {
+    const { command, asked } = await addWith("브로콜리 먹었어", 0.95);
+    // Jev was asked first, while it was still a question.
+    expect(asked).toEqual([["브로콜리"]]);
+    expect(command.parts[0]).toMatchObject({
+      status: "resolved",
+      item: { name: "브로콜리", amount: "100g", caloriesEstimated: true },
+      portionGuess: { kind: "weight", grams: 100 },
+    });
+  });
+
+  it("records nothing on a guess for a food Jev judges uneaten", async () => {
+    const { command } = await addWith("브로콜리 먹었어", 0.05);
+    expect(command.parts).toEqual([]);
+  });
+});

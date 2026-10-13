@@ -176,8 +176,9 @@ describe("a cooking method the user states is not dropped by a space (2026-10-03
     expect(await statusOf(sentence)).toEqual([expected]);
   });
 
-  it("계란후라이 still reaches its own entry (asks for the amount, as before)", async () => {
-    expect(await statusOf("계란후라이 먹었어")).toEqual(["unmeasurable"]);
+  it("계란후라이 still reaches its own entry", async () => {
+    // Asked for an amount until 2026-10-13; now one egg, from the printed measure.
+    expect(await statusOf("계란후라이 먹었어")).toEqual(["달걀프라이 1개"]);
   });
 
   it("a stated figure keeps the user's name", async () => {
@@ -197,7 +198,7 @@ describe("a cooking method the user states is not dropped by a space (2026-10-03
   // keeps the food but asks the amount instead of the calories.
   it.each([
     ["따뜻한 커피 마셨어", "아메리카노 1잔"],
-    ["편의점 삼각김밥 먹었어", "unmeasurable"],
+    ["편의점 삼각김밥 먹었어", "삼각김밥 (참치마요) 1개"],
     ["구운 삼겹살 먹었어", "삼겹살구이 1인분"],
     ["큰 계란 두 개 먹었어", "unmeasurable"],
   ])("%s → %s (no calorie question)", async (sentence, expected) => {

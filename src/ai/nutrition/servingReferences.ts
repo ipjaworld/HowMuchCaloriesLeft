@@ -24,8 +24,10 @@ import type { FoodEntry, Serving, ServingBasis } from "./types";
  *      (`reference`);
  *   4. a documented typical size (`typical`), used only where (3) has nothing
  *      and the size comes from real data rather than from this file;
- *   5. the user's own grams — always available, and the only answer for
- *      anything not listed here.
+ *   5. the app's own working size (`assumed`) — no source at all, written
+ *      here as a plain guess and labelled as one everywhere it surfaces;
+ *   6. the user's own grams — always available, and the correction for any
+ *      of the above.
  *
  * Every reference and typical portion is marked estimated, so the list shows
  * "~" and the stored item carries `portionNote` naming the source. One egg is
@@ -35,9 +37,16 @@ import type { FoodEntry, Serving, ServingBasis } from "./types";
  * Adding a reference: find the measure *printed* in a source — a household
  * measure next to a gram weight, like "바나나 50 g (중 1/2개)" — and derive
  * the per-unit weight from it with ordinary arithmetic, writing both the
- * printed measure and the citation below. If no source prints one, the food
- * stays without a count and the app asks for grams. Do not fill the gap from
- * memory or from a model.
+ * printed measure and the citation below.
+ *
+ * If no source prints one, the food used to stay without a count and the app
+ * asked for grams. Real use showed what that costs: "샤인머스캣 5알" answered
+ * with "g이나 ml로 알려주세요" is a reason to stop using the app. Since
+ * 2026-10-13 the app records first and reports after, so a food people count
+ * may carry an `assumed` size instead. That kind is never dressed up as a
+ * source: its citation says there is none, the reply states the size it
+ * took, and the user corrects it in a word. Prefer (3) or (4) whenever one
+ * exists; `assumed` is the last resort before a flat 100 g.
  */
 
 /**
@@ -99,12 +108,36 @@ const MFDS_ROW_PORTION = "식약처 식품영양성분DB 다른 행의 1회 제�
  */
 const MFDS_JUICE_CUP = "식약처 식품영양성분DB 과·채주스 1회 제공량(200mL)";
 
+/**
+ * The older of the two fruit tables on the society's exchange-list page
+ * (pre-2010 amounts: 귤 100 g, 배 100 g, 사과 100 g). It is still printed
+ * there next to a count, so it is a real household measure, only not the
+ * 2010 revision's, which is why it is cited apart. Used only for fruits the
+ * 2010 table gives no count for (귤·참외·복숭아); read 2026-10-13.
+ */
+const EXCHANGE_LISTS_OLD = "대한당뇨병학회 식품교환표(구판 표)";
+
+/**
+ * No source. The app's own working size for a food people count, so that
+ * "방울토마토 10개" is recorded instead of asked about. Each is a rounded
+ * ordinary size, and the reply says what it took.
+ *
+ * Cross-checked by web search on 2026-10-13 against what could be found —
+ * retail labels, Korean nutrition-tracking databases, USDA serving weights,
+ * Japanese prefectural trial reports for grapes — and the range found is
+ * kept in each printed note. None of those is a published household
+ * measure of the kind `reference` requires, so the kind stays `assumed`.
+ * Unconfirmed by search: 두부 1모, 단호박, 곤약, 연어회 1점, 아보카도 과육,
+ * 체리·블루베리 1줌.
+ */
+const APP_ASSUMPTION = "앱 추정값(출처 없음)";
+
 export type ServingReference = {
   /** The MFDS food code of the entry this applies to. */
   foodId: string;
   unit: string;
   gramsPerUnit: number;
-  kind: "reference" | "typical";
+  kind: "reference" | "typical" | "assumed";
   /** The measure as printed, so the arithmetic can be checked by eye. */
   printed: string;
   citation: string;
@@ -130,6 +163,17 @@ function ref(
     citation,
     ...(measure === undefined ? {} : { measure }),
   }));
+}
+
+/** An `assumed` size: the printed text is the assumption itself. */
+function assumed(
+  foodId: string,
+  units: string[],
+  gramsPerUnit: number,
+  printed: string,
+  options: { measure?: "mL" } = {},
+): ServingReference[] {
+  return ref(foodId, units, gramsPerUnit, printed, APP_ASSUMPTION, { kind: "assumed", ...options });
 }
 
 export const SERVING_REFERENCES: ServingReference[] = [
@@ -350,6 +394,128 @@ export const SERVING_REFERENCES: ServingReference[] = [
   ...ref("R115-007000000-0000", ["잔", "컵"], 355, "카페라떼·카페모카 행의 1회 제공량을 빌려 씀", MFDS_CAFE_CUP, { kind: "typical", measure: "mL" }),
   // 아이스크림
   ...ref("P102-005010100-F001-009", ["개"], 80, "아이스크림바 행(P102-101010100-0053)의 1회 제공량 80 mL를 빌려 씀", MFDS_ROW_PORTION, { kind: "typical", measure: "mL" }),
+
+  // ── 4차 (2026-10-13): 선기록 후보고 ─────────────────────────────────
+  // Every food below used to answer a count with "g으로 알려주세요". Printed
+  // measures first; the rest are `assumed`, and the reply says so. The order
+  // of units matters: the first is what a bare name is counted as, so a
+  // small thing eaten by the handful (아몬드, 블루베리) defaults to 줌, not 알.
+
+  // Printed measures.
+  ...ref("R121-032010100-0000", ["개", "알"], 50, "계란후라이 1개 (계란 50 g)", EXCHANGE_GUIDE),
+  ...ref("R108-001010001-0000", ["개"], 150, "단감 50 g (중 1/3개)", EXCHANGE_LISTS),
+  ...ref("R108-006000005-0000", ["개"], 30, "곶감 15 g (소 1/2개)", EXCHANGE_LISTS),
+  ...ref("R108-010020001-0000", ["개"], 100, "귤 100 g (대 1개)", EXCHANGE_LISTS_OLD),
+  ...ref("R108-086004101-0000", ["개"], 200, "참외 100 g (대 1/2개)", EXCHANGE_LISTS_OLD),
+  ...ref("R108-043020001-0000", ["개"], 200, "복숭아(백도) 100 g (대 1/2개)", EXCHANGE_LISTS_OLD),
+
+  // 과일
+  ...assumed("R108-098097301-0000", ["송이"], 600, "샤인머스캣 1송이 약 600 g으로 가정 (농식품부 권장 600~650 g)"),
+  ...assumed("R108-098097301-0000", ["알", "개"], 13, "샤인머스캣 1알 약 13 g으로 가정 (일본 현 시험장 자료 12~14 g)"),
+  ...assumed("R108-098070001-0000", ["송이"], 350, "포도 1송이 약 350 g으로 가정 (캠벨얼리 시험 자료 320~340 g)"),
+  ...assumed("R108-098070001-0000", ["알", "개"], 6, "포도 1알 약 6 g으로 가정 (캠벨얼리 시험 자료 5.8 g)"),
+  ...assumed("R108-090020001-0000", ["개"], 90, "키위 1개 약 90 g으로 가정 (영양DB 그린키위 93 g)"),
+  ...assumed("R108-064000001-0000", ["개"], 150, "아보카도 1개(먹는 부분) 약 150 g으로 가정"),
+  ...assumed("R108-028000001-0000", ["개"], 300, "망고 1개(먹는 부분) 약 300 g으로 가정 (USDA 336 g, 작은 수입종 감안)"),
+  ...assumed("R108-084000001-0000", ["개"], 250, "자몽 1개(먹는 부분) 약 250 g으로 가정 (시판 1개 약 320 g)"),
+  ...assumed("R108-082000001-0000", ["개"], 70, "자두 1개 약 70 g으로 가정 (영양DB 60~70 g)"),
+  ...assumed("R108-001040001-0000", ["개"], 100, "홍시 1개 약 100 g으로 가정 (영양DB, 대봉은 더 큼)"),
+  ...assumed("R108-010010001-0000", ["개"], 250, "한라봉 1개(먹는 부분) 약 250 g으로 가정 (과중 250~400 g 논문)"),
+  ...assumed("R108-092000001-0000", ["조각"], 85, "파인애플 1조각 약 85 g으로 가정 (USDA 1조각 84 g)"),
+  ...assumed("R108-034020001-0000", ["조각"], 150, "멜론 1조각 약 150 g으로 가정 (교환표 구판의 1/10개 150 g 참고)"),
+  ...assumed("R108-111000001-0000", ["줌"], 100, "체리 1줌 약 100 g으로 가정"),
+  ...assumed("R108-111000001-0000", ["개", "알"], 8, "체리 1알 약 8 g으로 가정 (중간 크기 6~10 g)"),
+  ...assumed("R108-047000001-0000", ["줌"], 50, "블루베리 1줌 약 50 g으로 가정"),
+  ...assumed("R108-047000001-0000", ["컵"], 145, "블루베리 1컵 약 145 g으로 가정 (영양DB 140~148 g)"),
+
+  // 채소
+  ...assumed("R106-186000001-0000", ["개"], 150, "토마토 1개 약 150 g으로 가정 (영양DB 중간 크기 123 g)"),
+  ...assumed("R106-186010001-0001", ["개", "알"], 17, "방울토마토 1개 약 17 g으로 가정 (영양DB 17 g)"),
+  ...assumed("R106-148010001-0000", ["개"], 200, "오이 1개 약 200 g으로 가정 (영양DB 중간 크기)"),
+  ...assumed("R106-198040049-0000", ["조각"], 100, "단호박 1조각 약 100 g으로 가정"),
+  ...assumed("R106-198040049-0000", ["개"], 700, "단호박 1개(먹는 부분) 약 700 g으로 가정"),
+  ...assumed("R101-030070049-0000", ["개"], 100, "옥수수 1개(속대 제외) 약 100 g으로 가정 (USDA 중간 크기 약 90 g)"),
+  ...assumed("R102-009020001-0000", ["개", "팩"], 200, "곤약 1팩 약 200 g으로 가정"),
+  ...assumed("R102-009010001-0000", ["팩", "봉지"], 180, "곤약면 1팩 약 180 g으로 가정 (시판 150~180 g)"),
+
+  // 견과
+  ...assumed("R105-020000058-0000", ["줌"], 25, "아몬드 1줌 약 25 g으로 가정"),
+  ...assumed("R105-020000058-0000", ["개", "알"], 1.2, "아몬드 1알 약 1.2 g으로 가정 (28 g에 약 23알)"),
+  ...assumed("R105-035000002-0000", ["줌"], 25, "호두 1줌 약 25 g으로 가정"),
+  ...assumed("R105-035000002-0000", ["개", "알"], 4, "호두 1알 약 4 g으로 가정 (영양DB 열량 역산)"),
+  ...assumed("R105-007000058-0000", ["줌"], 25, "땅콩 1줌 약 25 g으로 가정"),
+  ...assumed("R105-007000058-0000", ["개", "알"], 0.85, "땅콩 1알 약 0.85 g으로 가정 (영양DB 28 g에 33알)"),
+  ...assumed("P116-001030200-F003-003", ["봉지", "봉", "개"], 20, "견과류 1봉 약 20 g으로 가정 (하루견과 20 g)"),
+  ...assumed("P116-001030200-F003-003", ["줌"], 25, "견과류 1줌 약 25 g으로 가정"),
+
+  // 단백질 · 고기
+  ...assumed("R109-008000446-0000", ["개", "팩"], 100, "닭가슴살 1개(1팩) 약 100 g으로 가정 (시판 100 g 팩)"),
+  ...assumed("R109-008000417-0000", ["개", "팩"], 100, "훈제 닭가슴살 1개(1팩) 약 100 g으로 가정"),
+  ...assumed("P117-501050100-4893", ["팩"], 100, "닭안심 1팩 약 100 g으로 가정"),
+  ...assumed("D327-758015600-0001", ["개", "알"], 30, "달걀흰자 1개 약 30 g으로 가정 (영양DB 30~33 g)"),
+  ...assumed("R211-059013929-0000", ["캔", "개"], 100, "참치캔 1캔 약 100 g으로 가정 (기본 라인업 100 g)"),
+  ...assumed("R121-043020300-0000", ["인분"], 100, "두부 1인분 약 100 g으로 가정 (1/3모)"),
+  ...assumed("R121-043020300-0000", ["모", "팩"], 300, "두부 1모 약 300 g으로 가정"),
+  ...assumed("R121-043020500-0000", ["봉지", "팩"], 350, "순두부 1봉지 약 350 g으로 가정 (시판 350~400 g)"),
+  ...assumed("R211-201093901-0000", ["인분"], 150, "연어 1인분 약 150 g으로 가정"),
+  ...assumed("R211-201093901-0000", ["조각"], 15, "연어 1조각(회) 약 15 g으로 가정"),
+  ...assumed("R211-201093916-0000", ["인분"], 50, "훈제연어 1인분 약 50 g으로 가정"),
+  ...assumed("R211-201093916-0000", ["조각", "장"], 10, "훈제연어 1장 약 10 g으로 가정 (초밥용 6 g, 슬라이스 10~20 g)"),
+  ...assumed("R121-005010006-0000", ["스쿱", "스푼"], 30, "단백질 보충제 1스쿱 약 30 g으로 가정 (시판 1회 30~38 g)"),
+  ...[
+    "R109-027066201-0000", // 소고기 우둔살
+    "D308-400120000-0001", // 차돌박이
+    "D308-378120000-0001", // 막창
+    "D308-370120000-0001", // 대창
+    "D308-373010000-0001", // 돼지갈비
+    "R109-014008451-0000", // 목살
+    "R109-014003501-0000", // 항정살
+    "R109-014009446-0000", // 수육
+  ].flatMap((foodId) => assumed(foodId, ["인분"], 150, "고기 1인분 약 150 g으로 가정 (식당 1인분 150~180 g)")),
+  ...assumed("P117-300030000-0015", ["장", "줄"], 10, "베이컨 1장 약 10 g으로 가정 (시판 얇은 슬라이스 약 8.5 g)"),
+  ...assumed("R121-021020000-0000", ["장", "개"], 35, "어묵 1장 약 35 g으로 가정 (사각어묵 32~40 g)"),
+
+  // 유제품 · 음료
+  ...assumed("R121-026061100-0000", ["개"], 85, "떠먹는 요거트 1개 약 85 g으로 가정 (시판 85 g 컵)"),
+  ...assumed("P119-004040200-F001-005", ["개"], 100, "그릭요거트 1개 약 100 g으로 가정 (시판 80~100 g)"),
+  ...assumed("R121-038100000-0000", ["스푼", "숟가락"], 15, "크림치즈 1스푼 약 15 g으로 가정 (1큰술 14.5 g)"),
+  ...assumed("R121-026060100-0000", ["개", "병"], 150, "마시는 요구르트 1병 약 150 mL로 가정 (시판 145 mL)", { measure: "mL" }),
+  ...assumed("R121-029030000-0000", ["병", "팩", "개"], 250, "단백질 음료 1병 약 250 mL로 가정 (시판 250 mL 팩)", { measure: "mL" }),
+  ...["R121-045110000-0000", "R121-045080000-0000", "R121-045040000-0000"].flatMap((foodId) => [
+    // 콜라 · 제로콜라 · 사이다
+    ...assumed(foodId, ["캔"], 355, "탄산음료 1캔 355 mL로 가정 (250 mL 캔도 있음)", { measure: "mL" }),
+    ...assumed(foodId, ["잔", "컵"], 200, "탄산음료 1잔 200 mL로 가정", { measure: "mL" }),
+    ...assumed(foodId, ["병"], 500, "탄산음료 1병 500 mL로 가정", { measure: "mL" }),
+  ]),
+  ...["R121-029010000-0000", "R121-029140000-0000", "R121-029140000-0001"].flatMap((foodId) => [
+    // 오트밀크 · 아몬드밀크 · 무가당 아몬드밀크
+    ...assumed(foodId, ["잔", "컵"], 200, "식물성 음료 1잔 200 mL로 가정", { measure: "mL" }),
+    ...assumed(foodId, ["팩"], 190, "식물성 음료 1팩 190 mL로 가정 (시판 190 mL 팩)", { measure: "mL" }),
+  ]),
+
+  // 치킨 · 피자: MFDS states an 인분, but people count a 마리 and a 조각. Without
+  // these, "치킨 반 마리" and "한 마리" were both one 인분.
+  ...["D312-549000000-0001", "D312-549160000-0001"].flatMap((foodId) =>
+    assumed(foodId, ["마리"], 700, "치킨 1마리(먹는 부분) 약 700 g으로 가정 (소비자원 평균 879 g, 뼈 포함)"),
+  ),
+  ...[
+    "D102-120350000-0001", // 피자
+    "D302-120180000-0001", // 불고기피자
+    "D302-120340000-0001", // 치즈피자
+    "D302-120410000-0001", // 페퍼로니피자
+    "D302-120420000-0001", // 포테이토피자
+  ].flatMap((foodId) => [
+    ...assumed(foodId, ["조각"], 100, "피자 1조각(1/8판) 약 100 g으로 가정 (30 cm 피자 1/8 약 95~100 g)"),
+    ...assumed(foodId, ["판"], 800, "피자 1판 약 800 g으로 가정 (1/8판 100 g 기준)"),
+  ]),
+
+  // 곡류 · 간식
+  ...assumed("R101-001000000-0000", ["인분", "그릇"], 40, "오트밀 1인분(마른 것) 약 40 g으로 가정 (시판 1회 32~50 g)"),
+  ...assumed("R101-001000000-0000", ["스푼", "숟가락"], 10, "오트밀 1스푼 약 10 g으로 가정"),
+  ...assumed("D101-019460000-0001", ["개"], 110, "삼각김밥 1개 약 110 g으로 가정 (편의점 102~110 g)"),
+  ...assumed("P103-103020500-0051", ["개"], 39, "초코파이 1개 약 39 g으로 가정 (2015년 증량 후 39 g)"),
+  ...assumed("P101-104000100-0008", ["봉지", "봉"], 66, "감자칩 1봉지 약 66 g으로 가정 (포카칩 66 g)"),
+  ...assumed("P101-101000100-0142", ["봉지", "봉"], 80, "팝콘 1봉지 약 80 g으로 가정 (전자레인지용 80 g)"),
 ];
 
 function toServing(reference: ServingReference): Serving {

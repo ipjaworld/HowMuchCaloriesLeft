@@ -38,17 +38,17 @@
       "group": "A",
       "input": "삼각김밥 하나 먹었어",
       "expect": {
-        "status": "unmeasurable",
+        "status": "resolved",
         "entry": "삼각김밥 (참치마요)"
       },
-      "why": "base: the row has no 개, so it asks the amount (existing)"
+      "why": "base: the row has no 개; an assumed 1개 since 2026-10-13 (asked the amount before)"
     },
     {
       "id": "A05",
       "group": "A",
       "input": "편의점 삼각김밥 하나 먹었어",
       "expect": {
-        "status": "unmeasurable",
+        "status": "resolved",
         "entry": "삼각김밥 (참치마요)"
       },
       "pairOf": "A04",
@@ -59,7 +59,7 @@
       "group": "A",
       "input": "편의점에서 산 삼각김밥 하나 먹었어",
       "expect": {
-        "status": "unmeasurable",
+        "status": "resolved",
         "entry": "삼각김밥 (참치마요)"
       },
       "pairOf": "A04",
@@ -261,10 +261,10 @@
       "group": "C",
       "input": "계란후라이 먹었어",
       "expect": {
-        "status": "unmeasurable",
+        "status": "resolved",
         "entry": "달걀프라이"
       },
-      "why": "existing: asks the amount"
+      "why": "existing: one egg at the printed 50 g since 2026-10-13 (asked the amount before)"
     },
     {
       "id": "C07",
@@ -648,17 +648,17 @@
       "group": "X",
       "input": "콜라 마셨어",
       "expect": {
-        "status": "unmeasurable",
+        "status": "resolved",
         "entry": "콜라"
       },
-      "why": "base: asks the amount (existing)"
+      "why": "base: an assumed 1캔 since 2026-10-13 (asked the amount before)"
     },
     {
       "id": "X14",
       "group": "X",
       "input": "시원한 콜라 마셨어",
       "expect": {
-        "status": "unmeasurable",
+        "status": "resolved",
         "entry": "콜라"
       },
       "pairOf": "X14b",
@@ -679,10 +679,10 @@
       "group": "X",
       "input": "훈제 연어 먹었어",
       "expect": {
-        "status": "unmeasurable",
+        "status": "resolved",
         "entry": "훈제연어"
       },
-      "why": "exact name with a space (existing amount question)"
+      "why": "exact name with a space (an assumed 1인분 since 2026-10-13)"
     }
   ]
 }

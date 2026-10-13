@@ -1,7 +1,7 @@
 import type { CandidateJudge } from "@/ai/judgment/candidateJudge";
 import type { Judge, Judgment, JudgmentInput } from "@/ai/judgment/types";
 import type { NutritionResolver } from "@/ai/nutrition/types";
-import { resolveAddParts } from "./addFood";
+import { recordEstimates, resolveAddParts } from "./addFood";
 import {
   filterUneatenQuestions,
   type CandidateFilterReport,
@@ -52,7 +52,9 @@ export async function runChat(
   const decided = decideCommand(judgment, input, chosen);
 
   if (decided.type === "add_candidate") {
-    const { parts, report } = filteredParts;
+    const { report } = filteredParts;
+    // After the filter, so only a food judged eaten is recorded on a guess.
+    const parts = recordEstimates(filteredParts.parts);
     return {
       command: {
         type: "add",

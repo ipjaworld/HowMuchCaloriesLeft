@@ -95,7 +95,7 @@ describe("the shipped reference table", () => {
         if (ownUnits.has(serving.unit)) {
           expect(serving.basis, `${entry.name} ${serving.unit}`).toBeUndefined();
         } else {
-          expect(serving.basis?.kind, `${entry.name} ${serving.unit}`).toMatch(/reference|typical/);
+          expect(serving.basis?.kind, `${entry.name} ${serving.unit}`).toMatch(/reference|typical|assumed/);
         }
       }
     }

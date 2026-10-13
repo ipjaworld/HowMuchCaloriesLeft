@@ -152,6 +152,7 @@ export function caloriesFor(
     calories: Math.round((entry.caloriesPer100g * weighed.grams) / 100),
     amount: describeAmount(quantity, weighed),
     estimated: weighed.estimated,
+    ...(weighed.serving === undefined ? {} : { serving: weighed.serving }),
     ...(portionNote === undefined ? {} : { portionNote }),
     score: 0,
   };
