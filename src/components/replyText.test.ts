@@ -257,6 +257,23 @@ describe("the add pipeline's sentences", () => {
     expect(reply.text).toContain(sentence);
   });
 
+  it("says which food it took, with the sentence that changes it (2026-10-13)", () => {
+    const reply = describeAdded(summary(), [], [], [
+      { name: "쌀밥", amount: "한공기", calories: 351, caloriesEstimated: false, foodGuess: { said: "밥", example: "현미밥" } },
+      { name: "된장찌개", amount: "1그릇", calories: 92, caloriesEstimated: false, foodGuess: { said: "소고기 된장찌개" } },
+      {
+        name: "배추김치",
+        amount: "조금",
+        calories: 10,
+        caloriesEstimated: true,
+        portionGuess: { kind: "vague", said: "조금", portion: "1인분", factor: 0.5, grams: 25 },
+      },
+    ]);
+    expect(reply.text).toContain('밥은 쌀밥으로 기록했어요. 다르면 "현미밥으로 고쳐줘"처럼 말해주세요.');
+    expect(reply.text).toContain("소고기 된장찌개는 따로 정보가 없어 된장찌개로 기록했어요.");
+    expect(reply.text).toContain("배추김치 조금은 1인분의 절반(약 25g)으로 잡았어요.");
+  });
+
   it("says nothing about a default amount when every amount was said", () => {
     const reply = describeAdded(summary(), [], [], [
       { name: "김밥", amount: "반 줄", calories: 161, caloriesEstimated: false },

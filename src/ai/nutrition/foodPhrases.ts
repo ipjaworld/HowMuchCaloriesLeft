@@ -239,7 +239,9 @@ export function segmentFoods(sentence: string): FoodSegment[] {
       const left = parseAmountOnly(body.replace(/(?:은|는|을|를|이|가)$/, ""));
       const [only] = previous;
       const phrase = only === undefined ? null : toFoodPhrase(only.text);
-      if (left !== null && previous.length === 1 && only !== undefined && phrase !== null) {
+      // "조금 남겼어" reads as an amount since 2026-10-13, but half a serving
+      // is a guess at what was eaten, not arithmetic on it — so it still asks.
+      if (left !== null && left.vague !== true && previous.length === 1 && only !== undefined && phrase !== null) {
         const served = phrase.quantity;
         const eaten = (served.assumed ? 1 : served.value) - left.value;
         if (eaten > 0 && (left.unit === null || left.unit === served.unit)) {

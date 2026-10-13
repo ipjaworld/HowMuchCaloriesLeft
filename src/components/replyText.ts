@@ -1,5 +1,5 @@
 import { cleanFoodLabel } from "@/ai/nutrition/statedCalories";
-import type { AddPart, PortionGuess } from "@/application/addFood";
+import type { AddPart, FoodGuess, PortionGuess } from "@/application/addFood";
 import type { Command } from "@/application/commands";
 import type { PendingQuestion } from "@/application/pendingAdd";
 import type { DailySummary } from "@/domain/calories";
@@ -353,6 +353,11 @@ export function describeAdded(
     lines.push(`${names}${topicParticle(assumed.at(-1) ?? names)} 양을 말하지 않아 기본량으로 계산했어요.`);
   }
 
+  // Which food was taken on the user's words, before how much of it.
+  for (const food of recorded) {
+    if (food.foodGuess !== undefined) lines.push(foodGuessLine(food, food.foodGuess));
+  }
+
   // Recorded first, reported now: the size the app took, and the sentence
   // that changes it — the "…로 고쳐줘" form read as a correction.
   const guessed = recorded.filter((food) => food.portionGuess !== undefined);
@@ -401,7 +406,18 @@ export type RecordedFood = {
   variantAssumed?: { brand: string; label: string; example: string };
   /** The portion was the app's own guess; the reply says which. */
   portionGuess?: PortionGuess;
+  /** The food was taken on the user's words: 밥 as 쌀밥. */
+  foodGuess?: FoodGuess;
 };
+
+/** "밥은 쌀밥으로 기록했어요. 다르면 …" — which food was taken, and how to change it. */
+function foodGuessLine(food: RecordedFood, guess: FoodGuess): string {
+  const subject = `${guess.said}${topicParticle(guess.said)}`;
+  const as = `${food.name}${directionParticle(food.name)}`;
+  return guess.example === undefined
+    ? `${subject} 따로 정보가 없어 ${as} 기록했어요.`
+    : `${subject} ${as} 기록했어요. 다르면 "${guess.example}${directionParticle(guess.example)} 고쳐줘"처럼 말해주세요.`;
+}
 
 /** "샤인머스캣 1알은 약 12g으로 잡았어요." — what the app took, plainly. */
 function portionGuessLine(food: RecordedFood): string {
@@ -424,6 +440,10 @@ function portionGuessLine(food: RecordedFood): string {
       return `${name} ${guess.said}의 무게를 몰라 ${guess.portion}${directionParticle(guess.portion)} 잡았어요.`;
     case "size":
       return `${name}${topicParticle(name)} 크기를 반영하지 않고 보통 크기로 잡았어요.`;
+    case "vague": {
+      const share = guess.factor === 0.5 ? "절반" : `${guess.factor}배`;
+      return `${name} ${guess.said}${topicParticle(guess.said)} ${guess.portion}의 ${share}(약 ${numberFormat.format(guess.grams)}g)으로 잡았어요.`;
+    }
     case undefined:
       return "";
   }

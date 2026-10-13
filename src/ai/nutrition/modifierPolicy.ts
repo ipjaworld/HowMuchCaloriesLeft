@@ -90,6 +90,20 @@ function verbStemOf(word: string, stems: readonly string[]): boolean {
   return stems.some((stem) => VERB_ENDINGS.some((ending) => word === stem + ending));
 }
 
+/**
+ * What a dish is made with, said in front of it: "소고기 된장찌개", "해물
+ * 칼국수" (2026-10-13). The dish is still the dish; the dataset has no row
+ * per filling, so it is recorded as the plain one and the reply says so. Only
+ * words that name no food of their own — 두부, 김치, 어묵 are dataset foods,
+ * and "두부 김치" may be two of them, which the listed-foods reading asks
+ * about. Applied only when exactly one dish is left (see `readModifiers`).
+ */
+const INGREDIENT_WORDS = new Set([
+  "소고기", "쇠고기", "한우", "돼지고기", "돼지", "닭고기", "닭", "고기", "우삼겹", "대패",
+  "해물", "해산물", "야채", "채소", "버섯", "햄", "스팸", "참치", "새우", "오징어", "낙지",
+  "쭈꾸미", "주꾸미", "조개", "바지락", "홍합", "굴", "꽃게", "콩나물",
+]);
+
 /** Something was put in or on it — the food is no longer the plain one. */
 const ADDITION_WORDS = new Set(["넣은", "넣은거", "들어간", "올린", "얹은", "뿌린", "섞은", "추가한", "곁들인", "바른", "찍은", "탄", "타먹은"]);
 
@@ -127,6 +141,7 @@ export type ModifierKind =
   | "addition"
   | "argument"
   | "boundary"
+  | "ingredient"
   | "unresolved";
 
 export function classifyModifier(word: string): ModifierKind {
@@ -139,6 +154,7 @@ export function classifyModifier(word: string): ModifierKind {
   if (NEUTRAL_SUFFIXES.some((suffix) => word.length > suffix.length && word.endsWith(suffix))) return "provenance";
   if (isNarration(word) || CLAUSE_ENDINGS.test(word)) return "boundary";
   if (ARGUMENT_PARTICLES.some((particle) => word.length > particle.length && word.endsWith(particle))) return "argument";
+  if (INGREDIENT_WORDS.has(word)) return "ingredient";
   return "unresolved";
 }
 
@@ -173,7 +189,7 @@ export function describedFoodWords(words: readonly string[]): string[] | null {
     const next = kinds[index + 1];
     const describes = kind === "description" || kind === "manner" || kind === "size" || kind === "cooking" || kind === "addition";
     // "설탕 넣은", "설탕을 넣은": what was put in, right before the word that says so.
-    const ingredient = (kind === "unresolved" || kind === "argument") && next === "addition";
+    const ingredient = (kind === "unresolved" || kind === "argument" || kind === "ingredient") && next === "addition";
     if (!describes && !ingredient) return null;
   }
   return kept;

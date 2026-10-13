@@ -66,6 +66,12 @@ type AddPartBody =
        * once, so the user can correct it in a word.
        */
       portionGuess?: PortionGuess;
+      /**
+       * Which food was taken on the user's words, not settled by them:
+       * "밥 한 공기" as 쌀밥, "소고기 된장찌개" as 된장찌개 (2026-10-13). Not
+       * stored — the reply says it once, with the sentence that changes it.
+       */
+      foodGuess?: FoodGuess;
     }
   | {
       status: "ambiguous";
@@ -86,6 +92,12 @@ type AddPartBody =
        * as its own part — what "둘 다" replaces this part with.
        */
       together?: AddPart[];
+      /**
+       * The one candidate the word ordinarily means — 밥 is 쌀밥 — taken
+       * after the eaten-or-not filter (`recordEstimates`), and said in the
+       * reply. Absent when the word has no such reading (빵, 죽, 튀김).
+       */
+      representative?: { candidate: AddCandidate; example: string };
     }
   | {
       status: "unmeasurable";
@@ -133,12 +145,43 @@ type AddPartBody =
  *   portion  the counter said has no size for this food ("만두 5개" against a
  *            food published per 인분), so one of its own portions is used
  *   size     "큰 계란 두 개": the standard size, since nothing scales it
+ *   vague    "김치 조금": a fraction of one portion — half for 조금, 1.5 for 많이
  */
 export type PortionGuess =
   | { kind: "unit"; unit: string; grams: number; measure: "g" | "mL" }
+  | { kind: "vague"; said: string; portion: string; factor: number; grams: number }
   | { kind: "weight"; grams: number; said?: string }
   | { kind: "portion"; said: string; portion: string }
   | { kind: "size" };
+
+/**
+ * "밥은 쌀밥으로 기록했어요": the words said, and another food to name in the
+ * reply's correction example. `example` is absent for a filling that was
+ * not counted ("소고기 된장찌개" as 된장찌개), where there is no other row.
+ */
+export type FoodGuess = { said: string; example?: string };
+
+/**
+ * Words that ordinarily mean one food (2026-10-13). Short on purpose: only a
+ * reading a Korean speaker would take for granted. `needsAmount` keeps
+ * "밥 먹었어" — which says a meal was had — from becoming a bowl of rice;
+ * "밥 한 공기" is a bowl of rice.
+ */
+const REPRESENTATIVES: Record<string, { name: string; example: string; needsAmount: boolean }> = {
+  밥: { name: "쌀밥", example: "현미밥", needsAmount: true },
+  샐러드: { name: "채소 샐러드", example: "닭가슴살 샐러드", needsAmount: false },
+};
+
+function representativeFor(
+  phrase: ParsedFoodPhrase,
+  candidates: AddCandidate[],
+): { candidate: AddCandidate; example: string } | undefined {
+  const reading = REPRESENTATIVES[phrase.name.replace(/s+/g, "")];
+  if (reading === undefined) return undefined;
+  if (reading.needsAmount && phrase.quantity.assumed) return undefined;
+  const candidate = candidates.find((option) => option.name === reading.name);
+  return candidate === undefined ? undefined : { candidate, example: reading.example };
+}
 
 export type AddCandidate = {
   /** The dataset entry id, which is the MFDS food code. */
@@ -331,12 +374,13 @@ function partFor(
 
   switch (resolution.status) {
     case "resolved": {
-      const guess = assumedUnitGuess(resolution.match);
+      const guess = vagueGuess(phrase.quantity, resolution.match) ?? assumedUnitGuess(resolution.match);
       return {
         status: "resolved",
         phraseName: phrase.name,
         item: toFoodItem(resolution.match),
         ...(guess === undefined ? {} : { portionGuess: guess }),
+        ...(resolution.ingredients === undefined ? {} : { foodGuess: { said: phrase.name } }),
         // A pack is the natural unit of a brand's product, and the reply's
         // first line already says "1봉지" — no "기본량" sentence for it.
         ...(phrase.quantity.assumed && resolution.match.entry.brand !== true
@@ -346,17 +390,21 @@ function partFor(
       };
     }
 
-    case "ambiguous":
+    case "ambiguous": {
+      const candidates = resolution.candidates.map((match) => ({
+        entryId: match.entry.id,
+        name: match.entry.name,
+        item: toFoodItem(match),
+      }));
+      const representative = representativeFor(phrase, candidates);
       return {
         status: "ambiguous",
         phraseName: phrase.name,
-        candidates: resolution.candidates.map((match) => ({
-          entryId: match.entry.id,
-          name: match.entry.name,
-          item: toFoodItem(match),
-        })),
+        candidates,
         ...(phrase.quantity.assumed ? {} : { saidAmount: phrase.quantity.text }),
+        ...(representative === undefined ? {} : { representative }),
       };
+    }
 
     case "unmeasurable": {
       const knownUnits = (resolution.entries[0]?.servings ?? []).map(
@@ -400,6 +448,18 @@ function assumedUnitGuess(match: NutritionMatch): PortionGuess | undefined {
     unit: serving.unit,
     grams: serving.grams,
     measure: serving.basis.measure ?? "g",
+  };
+}
+
+/** "김치 조금" counted as half of 1인분: which portion, and how much of it. */
+function vagueGuess(quantity: Quantity, match: NutritionMatch): PortionGuess | undefined {
+  if (quantity.vague !== true || match.serving === undefined) return undefined;
+  return {
+    kind: "vague",
+    said: quantity.text,
+    portion: `1${match.serving.unit}`,
+    factor: quantity.value,
+    grams: Math.round(match.serving.grams * quantity.value),
   };
 }
 
@@ -452,6 +512,18 @@ function estimateFor(
     });
   }
 
+  if (quantity.vague === true) {
+    const grams = Math.round(FALLBACK_GRAMS * quantity.value);
+    const vague: Quantity = { value: grams, unit: "g", text: `${grams}g`, assumed: false };
+    return take(caloriesFor(vague, entry), `무게 정보가 없어 ${quantity.text}을 ${grams}g으로`, {
+      kind: "vague",
+      said: quantity.text,
+      portion: `${FALLBACK_GRAMS}g`,
+      factor: quantity.value,
+      grams,
+    });
+  }
+
   const flat: Quantity = { value: FALLBACK_GRAMS, unit: "g", text: `${FALLBACK_GRAMS}g`, assumed: false };
   return take(caloriesFor(flat, entry), `무게 정보가 없어 ${FALLBACK_GRAMS}g 기준`, {
     kind: "weight",
@@ -471,6 +543,17 @@ function estimateFor(
  */
 export function recordEstimates(parts: AddPart[]): AddPart[] {
   return parts.map((part) => {
+    // "밥 한 공기": the food it ordinarily means, said in the reply. Not when
+    // the candidates are different foods the phrase names ("둘 다").
+    if (part.status === "ambiguous" && part.representative !== undefined && part.together === undefined) {
+      return {
+        status: "resolved",
+        phraseName: part.phraseName,
+        item: part.representative.candidate.item,
+        foodGuess: { said: part.phraseName, example: part.representative.example },
+        ...(part.listed === true ? { listed: true as const } : {}),
+      };
+    }
     if (part.status !== "unmeasurable" || part.estimate === undefined) return part;
     return {
       status: "resolved",

@@ -29,6 +29,11 @@ export const UNITS = [
   // 두부 한 모
   "모",
   "줌",
+  // a bite's worth: 열무김치 두 가닥, 고기 세 점, 한 입, 한 젓가락
+  "가닥",
+  "젓가락",
+  "점",
+  "입",
   // vessels
   "공기",
   "그릇",
@@ -38,6 +43,7 @@ export const UNITS = [
   "스푼",
   "스쿱",
   "숟가락",
+  "국자",
   // packaging
   "팩",
   "병",
@@ -92,6 +98,22 @@ const HALF_WORDS: Record<string, number> = {
   절반: 0.5,
 };
 
+/**
+ * "김치 조금", "밥 많이": an amount said without a number (2026-10-13). Read
+ * as a fraction of one serving and marked `vague`, so the record is an
+ * estimate and the reply says what it was taken as. These used to fall
+ * through to the name, and "김치 조금" was asked for its calories.
+ */
+const VAGUE_WORDS: Record<string, number> = {
+  조금: 0.5,
+  쪼금: 0.5,
+  쪼끔: 0.5,
+  조끔: 0.5,
+  약간: 0.5,
+  살짝: 0.5,
+  많이: 1.5,
+};
+
 export type Quantity = {
   /** 1 for 하나, 0.5 for 반, 200 for 200ml. */
   value: number;
@@ -101,6 +123,8 @@ export type Quantity = {
   text: string;
   /** True when nothing was stated and one serving was assumed. */
   assumed: boolean;
+  /** "조금", "많이": said, but without a number. */
+  vague?: true;
 };
 
 export type QuantityMatch = {
@@ -265,6 +289,15 @@ const PATTERNS: { re: RegExp; read: (m: RegExpMatchArray) => Quantity | null }[]
   {
     re: new RegExp(`(?<=^|[ ])(${halfPattern})${ONLY}[ ]*$`),
     read: (m) => ({ value: 0.5, unit: null, text: spoken(m[0]), assumed: false }),
+  },
+  // 조금, 약간, 많이 — only as a word of its own, like 반.
+  {
+    re: new RegExp(`(?<=^|[ ])(${Object.keys(VAGUE_WORDS).join("|")})${ONLY}[ ]*$`),
+    read: (m) => {
+      const value = m[1] === undefined ? undefined : VAGUE_WORDS[m[1]];
+      if (value === undefined) return null;
+      return { value, unit: null, text: spoken(m[0]), assumed: false, vague: true };
+    },
   },
   // 2, 3 — a bare digit
   {

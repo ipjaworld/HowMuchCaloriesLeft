@@ -1,6 +1,7 @@
 import { toFoodPhrase, type ParsedFoodPhrase } from "./foodPhrases";
 import { assumedQuantity, type Quantity } from "./quantity";
 import { findByName, mentionPieces, splitListedFoods } from "./dataset";
+import { BITE_SERVINGS } from "./servingReferences";
 import {
   isEstimatedServing,
   type FoodEntry,
@@ -70,7 +71,10 @@ export function toGrams(quantity: Quantity, entry: FoodEntry): Weighed {
       return { grams: value * 1000, estimated: true, unit };
     }
 
-    const serving = entry.servings?.find((candidate) => candidate.unit === unit);
+    // A food's own portion first; a bite-sized counter fits any food.
+    const serving =
+      entry.servings?.find((candidate) => candidate.unit === unit) ??
+      BITE_SERVINGS.find((candidate) => candidate.unit === unit);
     if (serving !== undefined) {
       return {
         grams: value * serving.grams,
@@ -96,8 +100,9 @@ export function toGrams(quantity: Quantity, entry: FoodEntry): Weighed {
   return {
     grams: value * fallback.grams,
     // "하나" of a food counted in 그릇 is one 그릇; only an assumed amount,
-    // or a portion that is itself a reference size, makes it approximate.
-    estimated: quantity.assumed || isEstimatedServing(fallback),
+    // a vague one ("조금"), or a portion that is itself a reference size,
+    // makes it approximate.
+    estimated: quantity.assumed || quantity.vague === true || isEstimatedServing(fallback),
     unit: fallback.unit,
     serving: fallback,
   };
@@ -270,7 +275,13 @@ export function createLocalDatasetResolver(
         if (found.kind === "several" && found.generic === true) {
           return { status: "unknown", phrase };
         }
-        return { status: "resolved", phrase, match: candidates[0] };
+        const ingredients = found.kind === "one" ? found.ingredients : undefined;
+        return {
+          status: "resolved",
+          phrase,
+          match: candidates[0],
+          ...(ingredients === undefined ? {} : { ingredients }),
+        };
       }
 
       // Different foods in one phrase, not kinds of one: the user may say

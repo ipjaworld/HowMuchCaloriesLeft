@@ -352,15 +352,22 @@ function readModifiers(
     current = named;
   }
 
+  const generic = current.every((entry) => GENERIC_REPRESENTATIVE_IDS.has(entry.id));
   const unresolved = said.some(({ kind }) => kind === "unresolved");
-  if (unresolved && !current.every((entry) => GENERIC_REPRESENTATIVE_IDS.has(entry.id))) {
+  if (unresolved && !generic) {
     return { kind: "none" };
   }
+
+  // "소고기 된장찌개": recorded as the one dish it names, and the reply says
+  // the filling was not counted. Never settled among several dishes.
+  const ingredients = said.filter(({ kind }) => kind === "ingredient").map(({ word }) => word);
+  if (ingredients.length > 0 && current.length !== 1 && !generic) return { kind: "none" };
+  const filled = ingredients.length > 0 && !generic ? { ingredients } : {};
 
   const sized = said.some(({ kind }) => kind === "size") ? { sizeQualified: true as const } : {};
   const [first] = current;
   if (current.length === 1 && first !== undefined) {
-    return { kind: "one", entry: first, score: EMBEDDED_SCORE, ...sized };
+    return { kind: "one", entry: first, score: EMBEDDED_SCORE, ...sized, ...filled };
   }
   return { kind: "several", entries: current, score: EMBEDDED_SCORE, ...sized };
 }
@@ -385,6 +392,11 @@ export type NameSearch =
        * piece is not the published one, so a count cannot be priced.
        */
       sizeQualified?: true;
+      /**
+       * What the dish was said to be made with, which no row prices:
+       * "소고기 된장찌개" is recorded as 된장찌개, and the reply says so.
+       */
+      ingredients?: string[];
     }
   | {
       kind: "several";

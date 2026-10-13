@@ -164,7 +164,13 @@ export type UnmeasurableReason = "missing_serving" | "unsupported_unit" | "partl
  * food it does know, and hides the fix from the person who could apply it.
  */
 export type PhraseResolution =
-  | { status: "resolved"; phrase: ParsedFoodPhrase; match: NutritionMatch }
+  | {
+      status: "resolved";
+      phrase: ParsedFoodPhrase;
+      match: NutritionMatch;
+      /** "소고기 된장찌개" taken as 된장찌개: the words that were not counted. */
+      ingredients?: string[];
+    }
   | {
       status: "ambiguous";
       phrase: ParsedFoodPhrase;

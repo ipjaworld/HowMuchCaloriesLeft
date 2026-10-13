@@ -313,10 +313,44 @@ describe("record first, report after (2026-10-13)", () => {
     expect(parts[0].item.calories).toBe(Math.round(entry.match.entry.caloriesPer100g * 0.65));
   });
 
-  it("does not guess where the food itself is uncertain or part was left", async () => {
-    // Which food is a question for the user; so is how much of a dish was left.
-    expect((await estimated("밥 한 공기 먹었어"))[0]?.status).toBe("ambiguous");
+  it("does not guess where no food is the ordinary reading, or part was left", async () => {
+    // 빵 has no ordinary kind; how much of a dish was left is the user's to say.
+    expect((await estimated("빵 하나 먹었어"))[0]?.status).toBe("ambiguous");
     expect((await estimated("비빔밥 먹었는데 밥은 반 남겼어"))[0]).toMatchObject({ status: "unmeasurable", reason: "partly_left" });
+    expect((await estimated("비빔밥 먹었는데 조금 남겼어"))[0]).toMatchObject({ status: "unmeasurable", reason: "partly_left" });
+  });
+
+  it("records the whole 2026-10-13 sentence without a single question", async () => {
+    const parts = await estimated("밥 한공기 + 김치 조금 + 열무김치 2가닥 + 소고기 된장찌개 1그릇");
+    expect(parts.map((part) => (part.status === "resolved" ? [part.item.name, part.item.amount] : part.status))).toEqual([
+      ["쌀밥", "한공기"],
+      ["배추김치", "조금"],
+      ["열무김치", "2가닥"],
+      ["된장찌개", "1그릇"],
+    ]);
+    expect(parts[0]).toMatchObject({ foodGuess: { said: "밥", example: "현미밥" } });
+    expect(parts[1]).toMatchObject({ portionGuess: { kind: "vague", said: "조금", portion: "1인분", factor: 0.5 } });
+    expect(parts[2]).toMatchObject({ portionGuess: { kind: "unit", unit: "가닥", grams: 10 } });
+    expect(parts[3]).toMatchObject({ foodGuess: { said: "소고기 된장찌개" } });
+  });
+
+  it("reads 많이 as one and a half servings, and 조금 of a food with no portion as 50 g", async () => {
+    expect((await estimated("떡볶이 많이 먹었어"))[0]).toMatchObject({ status: "resolved", portionGuess: { kind: "vague", factor: 1.5 } });
+    expect((await estimated("브로콜리 조금 먹었어"))[0]).toMatchObject({
+      status: "resolved",
+      item: { amount: "50g" },
+      portionGuess: { kind: "vague", portion: "100g", grams: 50 },
+    });
+  });
+
+  it("takes 밥 as 쌀밥 only when an amount was said — 밥 먹었어 is a meal", async () => {
+    expect((await estimated("밥 반 공기 먹었어"))[0]).toMatchObject({ status: "resolved", item: { name: "쌀밥" } });
+    expect((await estimated("밥 먹었어"))[0]?.status).not.toBe("resolved");
+  });
+
+  it("does not settle a filling in front of a word naming several dishes", async () => {
+    // 튀김 is 감자튀김 or 고구마튀김; neither is 새우 튀김.
+    expect((await estimated("새우 튀김 먹었어"))[0]?.status).not.toBe("resolved");
   });
 
   it("leaves resolveAddParts itself unchanged, so the eaten-or-not filter still sees a question", async () => {

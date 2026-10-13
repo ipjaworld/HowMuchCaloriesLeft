@@ -232,3 +232,29 @@ describe("readAmountAnswer — the reply to the quantity question", () => {
     },
   );
 });
+
+describe("amounts said without a number (2026-10-13)", () => {
+  it.each([
+    ["김치 조금", 0.5],
+    ["김치 조금만", 0.5],
+    ["밥 약간", 0.5],
+    ["떡볶이 많이", 1.5],
+  ])("%s", (phrase, value) => {
+    const match = parseTrailingQuantity(phrase);
+    expect(match?.quantity).toMatchObject({ value, unit: null, vague: true });
+  });
+
+  it("is only a word of its own, never the end of a name", () => {
+    expect(parseTrailingQuantity("김치조금")).toBeNull();
+  });
+
+  it.each([
+    ["열무김치 2가닥", 2, "가닥"],
+    ["삼겹살 세 점", 3, "점"],
+    ["떡볶이 한 입", 1, "입"],
+    ["김치 두 젓가락", 2, "젓가락"],
+    ["된장국 한 국자", 1, "국자"],
+  ])("reads a bite-sized counter: %s", (phrase, value, unit) => {
+    expect(parseTrailingQuantity(phrase)?.quantity).toMatchObject({ value, unit });
+  });
+});

@@ -518,6 +518,23 @@ export const SERVING_REFERENCES: ServingReference[] = [
   ...assumed("P101-101000100-0142", ["봉지", "봉"], 80, "팝콘 1봉지 약 80 g으로 가정 (전자레인지용 80 g)"),
 ];
 
+/**
+ * Bite-sized counters that fit any food: 한 입, 한 젓가락, 고기 한 점, 열무김치
+ * 한 가닥, 국 한 국자 (2026-10-13). A food's own portion for the same counter
+ * always wins; these apply only where it has none, and are `assumed` like the
+ * table above. Checked by web search the same day: a mean bite of 11.6 g
+ * (plate-size study, Int J Behav Nutr Phys Act 2019); 젓가락·점·가닥·국자 are
+ * estimates with no published figure found (one 젓가락 of kimchi ~15~30 g,
+ * a household ladle ~100~150 mL).
+ */
+export const BITE_SERVINGS: readonly Serving[] = [
+  { unit: "입", grams: 12, basis: { kind: "assumed", note: "한 입 약 12 g으로 가정 (연구 평균 11.6 g)", citation: APP_ASSUMPTION } },
+  { unit: "젓가락", grams: 20, basis: { kind: "assumed", note: "한 젓가락 약 20 g으로 가정", citation: APP_ASSUMPTION } },
+  { unit: "점", grams: 20, basis: { kind: "assumed", note: "한 점 약 20 g으로 가정", citation: APP_ASSUMPTION } },
+  { unit: "가닥", grams: 10, basis: { kind: "assumed", note: "한 가닥 약 10 g으로 가정", citation: APP_ASSUMPTION } },
+  { unit: "국자", grams: 120, basis: { kind: "assumed", note: "한 국자 약 120 mL로 가정", citation: APP_ASSUMPTION, measure: "mL" } },
+];
+
 function toServing(reference: ServingReference): Serving {
   const basis: ServingBasis = {
     kind: reference.kind,

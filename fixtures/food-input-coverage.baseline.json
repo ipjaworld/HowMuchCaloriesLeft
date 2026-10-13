@@ -74,9 +74,9 @@
     },
     {
       "id": "clean-11",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "ambiguous 닭가슴살 샐러드|채소 샐러드|감자 샐러드|참치 샐러드|단호박 샐러드 ← \"샐러드\""
+        "resolved 채소 샐러드 (1그릇) ← \"샐러드\""
       ]
     },
     {
@@ -245,10 +245,10 @@
     },
     {
       "id": "multi-04",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
         "resolved 김치찌개 (1그릇) ← \"김치찌개\"",
-        "ambiguous 쌀밥|현미밥|잡곡밥|보리밥 ← \"밥\""
+        "resolved 쌀밥 (한 공기) ← \"밥\""
       ]
     },
     {
@@ -662,9 +662,9 @@
     },
     {
       "id": "qty-04",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "ambiguous 쌀밥|현미밥|잡곡밥|보리밥 ← \"밥\""
+        "resolved 쌀밥 (반 공기) ← \"밥\""
       ]
     },
     {
@@ -977,9 +977,9 @@
     },
     {
       "id": "pol-10",
-      "verdict": "correct_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "ambiguous 닭가슴살 샐러드|채소 샐러드|감자 샐러드|참치 샐러드|단호박 샐러드 ← \"샐러드\""
+        "resolved 채소 샐러드 (1그릇) ← \"샐러드\""
       ]
     },
     {
@@ -1415,7 +1415,7 @@
       "id": "review-09",
       "verdict": "partial_multi_food",
       "actual": [
-        "unknown ← \"떡볶이는 맛없어서 조금만\"",
+        "unknown ← \"떡볶이는 맛없어서\"",
         "resolved 순대 (1인분) ← \"순대\""
       ]
     },
