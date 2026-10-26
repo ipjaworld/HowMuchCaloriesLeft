@@ -1,6 +1,8 @@
 # HANDOFF — 음식 입력 해석 (production 442-food, 2026-10-03 배포)
 
-> **현재 상태 — 이 블록이 유일한 기준이다 (2026-10-03 배포 후 갱신).** 아래 절들은 과거 기록이며, 그 안의 "다음 세션 순서"·"다음 세션 첫 명령"·"현재 상태"는 모두 이 블록으로 대체됐다.
+> **과거 기록 (2026-10-18 연결): 최신 상태는 [STATE.md](STATE.md), 최신 원칙은 [DECISIONS.md](DECISIONS.md)다.** 아래 배포 ID·복구 대상·다음 행동·파서 변경 제한·승인 범위는 당시 기록이다. 10월 13일 이후 정책과 실제 코드 확인 없이 재사용하지 않는다.
+
+> **2026-10-03 당시 상태.** 아래 절들의 더 오래된 "다음 세션 순서"·"다음 세션 첫 명령"·"현재 상태"를 대체했던 블록이며, 지금의 유일한 기준은 아니다.
 >
 > - **production**: **442-food RC, source `0a02958`**(코드 = `9f6193b`). Vercel deployment `dpl_DyaGYGYFAwioteYRbdRsFoezCUxu` (`how-much-calories-left-cmgq923o6-…vercel.app`), 2026-10-03 14:46 KST, Ready. 서비스 도메인 `how-much-calories-left.vercel.app`이 이 deployment에 연결됨(`vercel inspect` 도메인 직접 조회, 정적 자산 변경, runtime 응답으로 확인). GitHub deployment 6823902362(sha `0a02958`, success).
 > - **8A 후보 필터**: on — production `/api/chat` 응답의 `candidateFilter`가 `applied`(팀원들 drop)로 배포 전·후 모두 확인. env는 바꾸지 않았다.

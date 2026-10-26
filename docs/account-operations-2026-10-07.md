@@ -1,5 +1,9 @@
 # 선택 계정 기능 운영 메모 — 2026-10-07
 
+> **공통 문서 연결 (2026-10-18): [STATE.md](STATE.md) → [DECISIONS.md](DECISIONS.md).** 아래는 당시 구현·검증·운영 설정의 근거이며 이번 문서 정비에서 운영을 재조회하지 않았다. 카카오 실제 가입 성공 기록과 말미의 가입 미완료 설명이 함께 남아 있으므로 검증 범위를 구분하고 현재 설정과 미확인 흐름을 다시 확인한다. 운영 활성화 승인으로 재사용하지 않는다.
+
+> **2026-10-26 갱신:** 운영 production의 `ACCOUNT_ENABLED`는 `on`이며, 사용자가 의도한 것으로 확인하고 유지하기로 했다([DECISIONS D06](DECISIONS.md#d06-구현과-계정-기능-공개운영-활성화를-구분한다)). 아래 `off` 기록과 "`on`으로 바꾸지 않는다"는 2026-10-07 당시 기준이다. [공개 전 남은 운영 확인](#공개-전-남은-운영-확인)의 항목은 운영 중 해결할 과제로 남는다. 복구 기능(`ACCOUNT_RECOVERY_ENABLED`)과 카카오 해제 운영 적용은 이 갱신에 포함되지 않는다.
+
 ## 공개 상태
 
 1·2단계는 `22845aa`까지 main에 push했다. Vercel production의 `RATE_LIMIT_SECRET`은 암호학적 난수 32바이트(64자리 hex)로 설정했다. 이 값은 요청 횟수가 아니라 IP/계정 식별자를 HMAC하는 비밀키다. 제한 기본값은 chat 분당 20/하루 200, resolve 분당 60/하루 600, Jev 시도 하루 2,000이다. 계정 제한은 IP 제한에 추가된다.
@@ -57,6 +61,8 @@
 ## 환경 변수
 
 Vercel production에 `ACCOUNT_ENABLED=off`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `APP_ORIGIN`, `PRIVACY_OPERATOR`, `PRIVACY_CONTACT_EMAIL`을 설정했다. `ACCOUNT_PROVIDERS` 기본은 `google,kakao`다. OAuth Client Secret은 Supabase에만 저장한다. 서비스 역할 키는 앱에 사용하지 않는다.
+
+> 2026-10-26 재조회: production `ACCOUNT_ENABLED`는 `on`이다(의도된 활성화, 문서 상단 갱신 참조). `ACCOUNT_RECOVERY_ENABLED`는 미설정이라 기본 off다.
 
 `.env.local`과 `.env.example`은 수정하지 않았다. 로컬 계정 검증이 필요할 때만 위 값을 셸 환경으로 주입하고 APP_ORIGIN을 해당 테스트 origin으로 설정한다. 비밀값은 저장소·문서·채팅에 기록하지 않는다.
 

@@ -1,5 +1,7 @@
 # 로그인·계정 연동 계획 (2026-10-07)
 
+> **초기 계획 보존 (2026-10-18 연결).** 아래의 "계획만 세웠다", "요청 제한 없음", 스키마 제안과 단계별 승인 요청은 작성 당시 상태다. 이후 구현과 운영 미적용 범위는 [STATE.md](../STATE.md), 확정 결정은 [DECISIONS.md](../DECISIONS.md), 운영 근거는 [계정 운영 메모](../account-operations-2026-10-07.md)를 먼저 확인한다. 이 계획을 처음부터 다시 실행하지 않는다.
+
 - 상태: **계획만 세웠다. 코드는 바꾸지 않았다.** 단계를 시작하려면 아래 §6에서 결정해 주셔야 한다.
 - 기준 코드: `b495fef` (main, clean)
 - 근거로 읽은 것: `docs/product/user-feedback-requirements.md` R07·R12·R14, `user-feedback-status-2026-10-06.md`, `docs/architecture.md`의 Privacy 절, README "배포 메모·이후 확장 아이디어", `src/domain/repository.ts`, `src/infrastructure/*`, `src/privacy.test.ts`, `src/components/chatRequest.ts`, Next 16 문서 `node_modules/next/dist/docs/01-app/02-guides/authentication.md`
