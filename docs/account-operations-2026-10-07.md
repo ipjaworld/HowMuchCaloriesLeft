@@ -50,6 +50,7 @@
 ## 공개 전 남은 운영 확인
 
 1. Google·카카오 실제 가입 → 콜백 → 계정 읽기 → 로그아웃을 완료하고 결과를 아래에 기록한다. Google 게시 상태 및 테스트 사용자 정책도 확인한다.
+   - **2026-10-26:** 사용자가 운영에서 Google 로그인 점검을 직접 수행했고 성공했다고 보고했다(사용자 보고, 세부 단계 기록 없음). 턴 단위 저장(`3d4eec4`)은 아직 배포 전이라 이 점검에 포함되지 않았다.
 2. 카카오 외부 연결 해제 코드를 7일 복구 유예 정책으로 수정했다. 코드와 로컬 PostgreSQL 검증은 완료했지만 보관 근거 확인 전 운영 DB 적용·Edge Function 배포·카카오 웹훅 활성화는 하지 않았다.
 3. 개인정보처리방침의 위탁/국외 이전 국가·연락처·이전 시점 및 방법·제공자 내부 로그/백업 보존기간을 계약과 실제 설정으로 확정한다. 서울 DB만으로 모든 처리가 국내라고 단정하지 않는다. 운영자: 이건하, 문의: this_is_laugh@naver.com.
 4. 현재 앱 별도 백업은 없다. 공급자의 내부 복제/운영 백업과 로그가 즉시 모두 삭제된다고 약속하지 않는다. 무료 플랜의 비활성 정지와 백업 제약을 고려해 정식 운영 전 복구 방법을 결정한다.
@@ -57,6 +58,30 @@
 6. 한 번의 기록 변경/합치기는 원자적이지만, 수정+추가+대화처럼 여러 저장 동작을 하는 턴 전체가 한 트랜잭션은 아니다. 중간 연결 실패 시 일부가 저장될 수 있어 화면에 알리고 새로고침을 요구한다. 응답 유실 뒤 자동 재시도하지 않는다.
 
 참조: [Supabase DPA](https://supabase.com/legal/customer-resources/data-processing-addendum), [Vercel DPA](https://vercel.com/legal/dpa), [TypeSafe DPA](https://typesafe.ai/legal/data-processing), [TypeSafe 개인정보처리방침](https://typesafe.ai/legal/privacy-policy). 문서의 계약 종료 후 보존기간을 개별 앱 사용자의 삭제 지연 기간으로 대입하지 않는다.
+
+## 카카오 연결 해제 운영 적용 절차 (2026-10-26 준비, 실행 전)
+
+사용자가 2026-10-26에 7일 유예 정책 적용을 결정했다([DECISIONS D06](DECISIONS.md#d06-구현과-계정-기능-공개운영-활성화를-구분한다)). 아래는 운영 변경이므로 **실행 직전에 다시 확인받는다.** 대상 파일은 10월 7일 검증 이후 바뀌지 않았다(`d3a87da`).
+
+| 순서 | 작업 | 누가 | 되돌리기 |
+| --- | --- | --- | --- |
+| 0 | 첫 계정 DB 백업([절차](account-backup.md)) | 운영자 | — |
+| 1 | SQL 편집기에서 사전 확인: 앞의 migration 3개 적용 여부(`select to_regclass('public.account_data')`), `pg_cron` 활성, `private.account_recovery`가 아직 없는지 | 운영자(대시보드) | 읽기만 |
+| 2 | `supabase/migrations/20261007040148_kakao_unlink_cleanup.sql` 적용. 매분 cron 두 개(`hmcl-kakao-unlink-retry`, `hmcl-account-recovery-expiry`)가 등록된다 | 운영자(SQL 편집기 또는 Supabase CLI) | cron 해제 후 추가 객체 삭제. 기록 테이블은 건드리지 않는다 |
+| 3 | Edge Function `kakao-unlink` 배포. 카카오는 JWT 없이 `KakaoAK`로 호출하므로 JWT 검증을 끈다. `KAKAO_UNLINK_ADMIN_KEY`는 이미 저장돼 있다 | 운영자(Supabase CLI) | 함수 삭제 |
+| 4 | 카카오 개발자 콘솔 → 앱 1599886 → 연결 해제 웹훅 URL을 `https://<project>.supabase.co/functions/v1/kakao-unlink`로 등록 | 운영자(카카오 콘솔) | URL 제거 |
+| 5 | Vercel production `ACCOUNT_RECOVERY_ENABLED=on` → 재배포. 처리방침의 카카오 유예 절과 복구 화면이 함께 열린다 | Claude(승인 시, Vercel CLI) 또는 운영자 | `off` 후 재배포 |
+| 6 | 테스트 카카오 계정으로 확인: 로그인 → 기록 → 카카오 설정에서 연결 끊기 → 앱이 기록을 잠금 → 7일 안에 다시 로그인 → 재동의 후 복구 → 결과를 이 문서에 기록 | 운영자 | — |
+
+- SQL 재검증: 이번에는 PGlite 임시 설치본이 지워져 있어 `supabase/tests/account-recovery.mjs`를 다시 돌리지 못했다(npm 다운로드가 필요해 사용자 확인 대상). 관련 단위 테스트 24개(`kakaoUnlink`, 복구 API)는 2026-10-26에 통과했다.
+- 웹훅은 3초 안에 200을 요구하고 재전송이 없다. 첫 접수가 실패하면 `KAKAO_UNLINK_DELIVERY_FAILED` 로그가 남는다. 이때는 카카오 연결 상태와 DB를 수동으로 대조한다.
+
+## 공유 요청 제한 (Upstash) 운영 연결 절차 (2026-10-26 코드 준비, 미연결)
+
+1. 운영자: Vercel Marketplace에서 Upstash Redis를 만든다. 리전은 함수와 같은 **미국 동부(us-east-1)**. 이 프로젝트에 연결하면 `KV_REST_API_URL`·`KV_REST_API_TOKEN`(또는 `UPSTASH_REDIS_REST_*`)이 들어간다. 코드는 두 이름을 모두 읽는다.
+2. production에 `RATE_LIMIT_STORE=upstash`를 넣고 재배포한다. 이 값이 없으면 지금처럼 인스턴스별 메모리 제한이다.
+3. 확인: 배포 로그에 "using per-instance limits" 경고가 없는지, Upstash 콘솔에 `hmcl:rl:` 키가 생기는지. 처리방침에 Upstash 항목이 나타난다.
+4. 되돌리기: `RATE_LIMIT_STORE=memory` 후 재배포. 저장소가 실패하면 코드가 자동으로 메모리 제한으로 대신한다.
 
 ## 환경 변수
 

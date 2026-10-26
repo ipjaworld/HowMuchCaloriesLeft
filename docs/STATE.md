@@ -34,6 +34,11 @@
 
 - `22845aa`: 요청 제한·Jev 일간 시도 상한. [serverUsageLimits](../src/infrastructure/serverUsageLimits.ts)는 프로세스 메모리 구현이다. 인스턴스 간 공유되지 않으므로 서비스 전체 과금 상한 보장이 아니다.
 - `933273b` 이후: 선택 로그인, 동의한 계정 기록 저장·합치기·내보내기·삭제, 프로필 별도 동의, 계정 전환·revision 보호 코드가 있다. [accountMerge](../src/application/accountMerge.ts), [AccountScreen](../src/components/AccountScreen.tsx), [운영 메모](account-operations-2026-10-07.md) 참조.
+- **2026-10-26 로컬 커밋 `3d4eec4`, push·배포 안 함:** 로그인 상태의 한 턴(수정·추가·대화)을 `batch` 변경 하나로 저장하도록 바꿨다. 서버는 같은 `mutateAccountData`로 순서대로 적용하고 revision을 한 번만 올린다. 실패하면 아무것도 저장되지 않는다. 브라우저는 턴 동안 캐시에 적용해 두었다가 턴 끝에 보내고, 실패하면 다시 읽고 실패 답장으로 바꾼다. 로그인하지 않은 로컬 저장과 턴 밖의 쓰기(목표 편집 등)는 그대로다. [accountMutation](../src/application/accountMutation.ts), [remoteRepositories](../src/infrastructure/remoteRepositories.ts), [TodayScreen](../src/components/TodayScreen.tsx) `runTurn`.
+- **2026-10-26 로컬 커밋·미배포 — 사용자 결정 반영:** [개인정보처리방침](../src/app/privacy/page.tsx)을 9개 절과 수령자별 국외 이전 고지로 보완했다. Supabase 연락처·처리 국가, Upstash 항목(공유 제한 사용 시만), 백업 보관 90일(계정 기능 켜짐 시만)을 넣었다. `privacyPage.test.ts`가 기능별 표시 조건을 검사한다. 시행일(`EFFECTIVE_DATE`)은 게시하는 날로 바꾼다.
+- **2026-10-26 로컬 커밋·운영 미연결:** 공유 요청 제한 [upstashRateLimiter](../src/infrastructure/upstashRateLimiter.ts). `RATE_LIMIT_STORE=upstash`와 자격 증명이 있을 때만 쓰고, 실패하면 메모리 제한으로 대신한다. 기본값은 지금과 같은 `memory`다. 운영 연결은 [절차](account-operations-2026-10-07.md#공유-요청-제한-upstash-운영-연결-절차-2026-10-26-코드-준비-미연결).
+- **2026-10-26 로컬 커밋:** 월 1회 계정 DB 백업 [스크립트](../scripts/ops/backup-account-db.sh)와 [절차](account-backup.md). 실제 백업은 아직 하지 않았다.
+- 카카오 해제 7일 유예는 사용자가 적용을 결정했다(2026-10-26). 운영 적용 [절차](account-operations-2026-10-07.md#카카오-연결-해제-운영-적용-절차-2026-10-26-준비-실행-전)만 준비했고 실행하지 않았다.
 - 카카오 외부 연결 해제 후 7일 복구 유예는 코드와 격리 SQL 검증이 준비된 상태다. 운영 migration·Edge Function·웹훅 활성화 완료로 취급하지 않는다.
 
 ## 3. 배포·활성화: 마지막 기록과 미확인 사항
@@ -49,12 +54,15 @@
 
 - 2026-10-13 Claude 완료 보고: typecheck·lint·단위 테스트 1,648개 통과, coverage 85.9%, silent wrong/drop 0/0. 밥·샐러드 4건의 기대 동작을 대표 음식 기록으로 변경했다고 보고했다.
 - **2026-10-26 `67a33f5` 재실행(Claude Code):** typecheck·lint 통과, 단위 테스트 63개 파일 1,648개 통과, production build 통과. `eval:food-coverage` 데이터셋 455개·207건 중 정확 177/206(85.9%), Jev guard 가정 173/194(89.2%), silent wrong/drop 0/0, 불필요한 질문 31. `eval:food-modifiers` 66/66, 경계 13/16(기존 한계 3). 10월 13일 보고 수치와 같다. fixture·기준선은 바꾸지 않았다. `eval:food-judgment`(Jev 과금)와 브라우저·운영 smoke는 실행하지 않았다.
+- **2026-10-26 A3·A4 준비 후(커밋 전 실행):** typecheck·lint 통과, 66개 파일 1,674개 테스트 통과(Upstash 제한 11개·처리방침 표시 조건 5개 추가), build 통과, coverage 85.9%·silent 0/0 불변. 3210 production 빌드에서 기본(memory) 설정으로 음식 기록 1건과 서버 오류 없음을 확인했다. 백업 스크립트는 가짜 `pg_dump`와 테스트 암호로 암호화·복호화·보관 개수를 확인했다(운영 DB 미연결). 카카오 SQL 격리 검사(PGlite)는 설치본이 지워져 재실행하지 못했고, 관련 단위 테스트 24개는 통과했다.
+- **2026-10-26 A1·A2 변경 후(커밋 전 실행):** typecheck·lint 통과, 64개 파일 1,658개 테스트 통과(새 batch·턴 버퍼 테스트 10개), production build 통과, `eval:food-coverage` 85.9%·silent 0/0 불변. 3210 포트 production 빌드에서 비로그인 추가·정정·삭제·되돌리기와 `/privacy`(375px 가로 넘침 없음)를 확인했다. **로그인 상태의 턴 저장은 실제 계정이 필요해 브라우저로 확인하지 못했다**(단위 테스트만).
 - 위 수치는 당시 보고이며 이번 실행 결과가 아니다. coverage는 고정 평가셋의 동작 평가이지 실사용 정확도나 영양값 정확도 보장이 아니다. [평가 기준선](../fixtures/food-input-coverage.baseline.json), [평가 입력](../fixtures/food-input-coverage.json) 참조.
 - 2026-10-18 문서 정비 검증: 14개 문서의 내부 링크·제목 링크 87개 유효, Next.js 생성 블록 원문 보존, `git diff --check` 통과. 로컬 데이터셋 455개 항목도 확인했다. 앱 코드를 바꾸지 않아 typecheck·lint·test·build 및 브라우저·운영 검증은 재실행하지 않았다.
 - 코드 변경 시 기본 검증 명령: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`. 영향에 맞는 날짜 경계·음식 coverage·브라우저 확인을 추가한다. 실제 Jev 평가·식약처 동기화는 네트워크·과금 영향이 있어 일반 테스트와 구분한다. 테스트 서버는 사용자 3000 포트와 분리한다.
 
 ## 5. 다음 작업
 
+- **2026-10-26 진행 중:** 사용자 지시로 [실행 계획](product/execution-plan-2026-10-26.md)(계정 위험 → 반복 사용 → 입력 품질)을 세웠다. Phase A1(턴 단위 원자 저장), A2(처리방침·결정 메모), 사용자 결정 반영(Google 점검 성공, 카카오 유예 적용, Upstash, 월 백업, 처리방침 권장안, 민감정보 아님), A3(공유 제한 코드), A4 준비(백업 스크립트, 카카오 적용 절차)를 마쳤다. **운영 적용은 사용자가 직접 한다(2026-10-26 사용자 지시):** 첫 백업, Upstash 생성·연결, 카카오 migration·함수·웹훅. 끝나면 사용자가 알려 준다. 그 뒤 `ACCOUNT_RECOVERY_ENABLED`·`RATE_LIMIT_STORE` 전환과 영역 B(반복 사용)를 이어 간다. 커밋(모두 사용자 승인, push 안 함 — `origin/main`·production은 `67a33f5`): A1은 `3d4eec4`, A3·백업 스크립트·처리방침은 그 위의 코드 커밋, 이 문서들은 그다음 문서 커밋이다. `.claude/launch.json`(`verify-start` 3210 추가 포함)은 미추적으로 남겼다(T02).
 - 이번 승인 범위인 공통 인수인계 정비는 완료했다. 앱 기능 추가·계정 활성화·배포는 포함하지 않았다. 다음 기능은 아직 선택하지 않았다.
 - 제안 1: 실제 입력 실패 문장을 회귀 사례로 추가하고, 추정 기준 안내와 정정 흐름을 개선한다. 추정 단위·기본량의 실사용 적합성도 확인한다.
 - 제안 2: 운영에서 켜진 계정 기능의 남은 위험(Google 실제 로그인 검증, 개인정보처리방침 항목, 백업, 공유 요청 제한, 카카오 해제·복구)을 해결한다. 2026-10-26부터 공개 전 조건이 아니라 운영 중 과제다.
