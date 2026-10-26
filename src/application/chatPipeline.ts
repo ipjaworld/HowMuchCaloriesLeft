@@ -9,6 +9,7 @@ import {
 } from "./candidateFilter";
 import { decideCommand, type ChosenTarget, type Command } from "./commands";
 import { resolveModifyParts } from "./mixedModify";
+import { readTalk } from "./smallTalk";
 
 /**
  * One sentence in, one command out — what `/api/chat` does, kept out of the
@@ -85,6 +86,13 @@ export async function runChat(
       },
       judgment,
     };
+  }
+
+  // Nothing to store. Read what it was about instead, so the reply can answer
+  // it; the dataset lookup is local, so this costs no judgment call.
+  if (decided.type === "ignore" || (decided.type === "answer" && decided.kind === "recommendation")) {
+    const talk = await readTalk(input.message, deps.resolver);
+    if (talk !== null) return { command: { ...decided, talk }, judgment };
   }
 
   return { command: decided, judgment };

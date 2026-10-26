@@ -13,6 +13,7 @@ import {
   resolveReferenceByName,
 } from "@/ai/judgment/referenceHeuristic";
 import type { Intent, Judgment, JudgmentInput, RecentItem } from "@/ai/judgment/types";
+import type { Talk } from "./smallTalk";
 
 /**
  * What the server tells the browser to do. It never does it itself.
@@ -48,7 +49,8 @@ export type ClarifyCandidate = {
 };
 
 export type Command =
-  | { type: "answer"; kind: "status" | "recommendation" | "goal_setting" }
+  /** `talk`: what a recommendation question was about, for the reply. Says nothing to storage. */
+  | { type: "answer"; kind: "status" | "recommendation" | "goal_setting"; talk?: Talk }
   | { type: "add_candidate"; sourceText: string; needsConfirmation: boolean }
   /**
    * `add_candidate` with the nutrition lookup done. `decideCommand` never
@@ -98,7 +100,8 @@ export type Command =
       intent: Intent;
       candidates?: ClarifyCandidate[];
     }
-  | { type: "ignore"; reason: "not_consumption" | "off_topic" };
+  /** `talk`: what the sentence was about instead, so the reply can answer it. */
+  | { type: "ignore"; reason: "not_consumption" | "off_topic"; talk?: Talk };
 
 /** How many entries a clarifying question may offer to choose between. */
 const MAX_CLARIFY_CANDIDATES = 4;

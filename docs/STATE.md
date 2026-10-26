@@ -4,6 +4,13 @@
 
 이 파일은 현재 작업의 진입점이다. 확정 원칙은 [DECISIONS](DECISIONS.md), 실행 규칙은 [AGENTS](../AGENTS.md)를 읽는다. 날짜별 문서는 과거 근거이며, 그 안의 상태·테스트 수·명령·승인 범위가 지금도 유효하다고 가정하지 않는다.
 
+## 2026-10-26 Claude Code — 대화를 받아 주는 답장 (C0, 로컬 커밋)
+
+- 사용자 결정(D07 갱신): 과한 격려·훈계·코칭은 하지 않되, 대화를 받아 주는 UX가 필요하다. 기준 HEAD `24d2636`(Codex 커밋), `origin/main`·production `67a33f5`.
+- 구현: Jev가 기록이 아니라고 본 문장(`other`, 먹지 않은 언급, 추천 질문)만 [smallTalk](../src/application/smallTalk.ts)가 읽는다. 음식 질문("떡볶이 칼로리 높아?", "치킨 먹어도 돼?", "삼겹살 먹고 싶다")은 질문 단서 앞부분을 데이터셋으로 조회해 kcal와 오늘 남은 양을 답한다. 인사·고마움·배고픔·배부름은 짧게 받아 준다. 단서가 없으면("빵 터졌네") 음식 정보를 붙이지 않고 기존 한 줄을 쓴다. 저장·수정·삭제 경로와 Jev 호출 수는 바뀌지 않는다. [chatPipeline](../src/application/chatPipeline.ts), [replyText](../src/components/replyText.ts) `describeTalk`.
+- 검증: typecheck·lint 통과, 67개 파일 1,711개 테스트 통과(새 37개), build 통과, coverage 85.9%·silent 0/0 불변. 3210 production 빌드에서 실제 Jev로 7문장 확인(인사·떡볶이 질문·치킨 추천 질문·고마워·배고파·빵 터졌네·배불러), 식사 기록 생성 없음, 서버 오류 없음.
+- 사용자가 답장 문구를 확인했고(2026-10-26) 승인에 따라 `24d2636` 위에 로컬 커밋했다. **push 안 함** — `origin/main`·production은 `67a33f5`, 로컬이 6개 커밋 앞선다. `.claude/launch.json`은 계속 미추적. 엉뚱한 말을 음식으로 읽어 묻는 문제(coverage `spurious_ask` 19건)는 이 변경 범위 밖이다(C1 이후).
+
 ## 2026-10-26 Codex 인계 점검 최신 결과
 
 ### 로컬 커밋 인계

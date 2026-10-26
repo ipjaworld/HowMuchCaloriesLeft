@@ -194,6 +194,66 @@ describe("phase 4 boundaries are stated plainly, without dev jargon", () => {
   });
 });
 
+describe("answering a sentence that changes nothing (D07, 2026-10-26)", () => {
+  const ignore = (talk: NonNullable<Extract<Command, { type: "ignore" }>["talk"]>): Command => ({ type: "ignore", reason: "off_topic", talk });
+
+  it("answers a food question with the dataset's figure and the day", () => {
+    const reply = describeCommand(
+      ignore({ kind: "food_info", foods: [{ name: "떡볶이", amount: "1인분", calories: 482, estimated: true }] }),
+      summary(),
+    );
+    expect(reply.text).toBe('떡볶이 1인분은 약 482 kcal예요. 오늘은 520 kcal 남았어요. 드셨으면 "먹었어"라고 말해 주세요.');
+  });
+
+  it("states a figure without 약 when the amount was said, and the day only once a goal exists", () => {
+    const reply = describeCommand(
+      ignore({ kind: "food_info", foods: [{ name: "김밥", amount: "2줄", calories: 644, estimated: false }, { name: "라면", amount: "1그릇", calories: 451, estimated: true }] }),
+      summary({ calorieTarget: null, remainingCalories: null, status: null }),
+    );
+    expect(reply.text).toBe('김밥 2줄은 644 kcal예요. 라면 1그릇은 약 451 kcal예요. 드셨으면 "먹었어"라고 말해 주세요.');
+  });
+
+  it("never says a negative number for a day over the goal", () => {
+    const reply = describeCommand(
+      ignore({ kind: "food_info", foods: [{ name: "치킨", amount: "1인분", calories: 903, estimated: true }] }),
+      summary({ consumedCalories: 2240, remainingCalories: -140, status: "over" }),
+    );
+    expect(reply.text).toContain("오늘은 목표보다 140 kcal 더 먹었어요.");
+    expect(reply.text).not.toContain("-");
+  });
+
+  it.each([
+    [{ kind: "greeting" } as const, '안녕하세요. 드신 걸 말해 주시면 적어 둘게요. 예: "김밥 한 줄 먹었어"'],
+    [{ kind: "thanks" } as const, "천만에요. 또 드신 게 있으면 말해 주세요."],
+    [{ kind: "hungry" } as const, "출출하시군요. 지금까지 1,580 kcal 먹었어요. 520 kcal 남았어요."],
+    [{ kind: "full" } as const, "배부르시군요. 아직 안 적은 게 있으면 말해 주세요."],
+  ])("takes the turn: %o", (talk, text) => {
+    expect(describeCommand(ignore(talk), summary()).text).toBe(text);
+  });
+
+  it("answers hunger without a goal with the day so far", () => {
+    const noGoal = { calorieTarget: null, remainingCalories: null, status: null };
+    expect(describeCommand(ignore({ kind: "hungry" }), summary(noGoal)).text).toBe("출출하시군요. 오늘 지금까지 1,580 kcal 먹었어요.");
+    expect(describeCommand(ignore({ kind: "hungry" }), summary({ ...noGoal, consumedCalories: 0 })).text).toBe("출출하시군요. 오늘은 아직 기록이 없어요.");
+  });
+
+  it("answers a recommendation question with the day's numbers, not a pick", () => {
+    expect(describeCommand({ type: "answer", kind: "recommendation" }, summary()).text).toBe(
+      "뭘 먹을지는 골라드리지 못해요. 지금까지 1,580 kcal 먹었어요. 520 kcal 남았어요.",
+    );
+  });
+
+  it("does not praise, advise or judge a food", () => {
+    const replies = [
+      describeCommand(ignore({ kind: "food_info", foods: [{ name: "치킨", amount: "1인분", calories: 903, estimated: true }] }), summary()),
+      describeCommand(ignore({ kind: "hungry" }), summary()),
+      describeCommand(ignore({ kind: "full" }), summary()),
+      describeCommand({ type: "answer", kind: "recommendation" }, summary()),
+    ];
+    for (const reply of replies) expect(reply.text).not.toMatch(/잘하|대단|훌륭|좋아요|좋은 선택|추천|드세요|하세요|건강|조심|참으|줄이|높은 편|낮은 편/);
+  });
+});
+
 describe("the add pipeline's sentences", () => {
   it("reports the stored total, not a number it worked out itself", () => {
     const reply = describeAdded(summary());

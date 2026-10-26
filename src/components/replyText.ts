@@ -2,6 +2,7 @@ import { cleanFoodLabel } from "@/ai/nutrition/statedCalories";
 import type { AddPart, FoodGuess, PortionGuess } from "@/application/addFood";
 import type { Command } from "@/application/commands";
 import type { PendingQuestion } from "@/application/pendingAdd";
+import type { Talk } from "@/application/smallTalk";
 import type { DailySummary } from "@/domain/calories";
 import { clockTimeOf } from "@/domain/date";
 
@@ -82,6 +83,43 @@ export function describeStorageFailure(): Reply {
 
 export function describeConnectionFailure(): Reply {
   return { kind: "statement", text: "연결이 안 되네요. 잠시 후 다시 시도해주세요." };
+}
+
+/**
+ * A short answer to a sentence that changes nothing (D07, 2026-10-26): it
+ * takes the turn the user offered, then says what the app can do. No praise,
+ * no advice. Food figures are the dataset's, as an add would have priced them.
+ */
+export function describeTalk(talk: Talk, summary: DailySummary): string {
+  switch (talk.kind) {
+    case "food_info": {
+      const facts = talk.foods.map((food) => {
+        const label = food.amount === undefined ? food.name : `${food.name} ${food.amount}`;
+        return `${label}${topicParticle(label)} ${food.estimated ? "약 " : ""}${numberFormat.format(food.calories)} kcal예요.`;
+      });
+      const day = summary.remainingCalories === null ? "" : ` 오늘은 ${describeRemaining(summary.remainingCalories)}`;
+      return `${facts.join(" ")}${day} 드셨으면 "먹었어"라고 말해 주세요.`;
+    }
+    case "greeting":
+      return "안녕하세요. 드신 걸 말해 주시면 적어 둘게요. 예: \"김밥 한 줄 먹었어\"";
+    case "thanks":
+      return "천만에요. 또 드신 게 있으면 말해 주세요.";
+    case "hungry":
+      // Without a goal, "목표를 정하면 알려드릴게요" would not follow from 배고파.
+      if (summary.remainingCalories === null)
+        return summary.consumedCalories > 0
+          ? `출출하시군요. 오늘 지금까지 ${numberFormat.format(summary.consumedCalories)} kcal 먹었어요.`
+          : "출출하시군요. 오늘은 아직 기록이 없어요.";
+      return `출출하시군요. ${describeStatus(summary)}`;
+    case "full":
+      return "배부르시군요. 아직 안 적은 게 있으면 말해 주세요.";
+  }
+}
+
+function describeRemaining(remaining: number): string {
+  if (remaining > 0) return `${numberFormat.format(remaining)} kcal 남았어요.`;
+  if (remaining === 0) return "목표에 딱 맞췄어요.";
+  return `목표보다 ${numberFormat.format(-remaining)} kcal 더 먹었어요.`;
 }
 
 function describeStatus(summary: DailySummary): string {
@@ -244,7 +282,11 @@ export function describeCommand(
               ? "목표는 위의 '목표 수정'에서 바꿀 수 있어요."
               // Honest about the limit without narrating a roadmap: "다음
               // 단계" is a word about our backlog, not about their day.
-              : "뭘 먹을지는 아직 못 골라드려요. 드신 걸 말씀해주시면 기록할게요.",
+              : command.talk !== undefined
+                ? describeTalk(command.talk, summary)
+                // Not a recommendation, and no coaching (D07) — but the day's
+                // own numbers are an answer the user can choose with.
+                : `뭘 먹을지는 골라드리지 못해요. ${describeStatus(summary)}`,
       };
 
     case "add_candidate":
@@ -272,7 +314,7 @@ export function describeCommand(
     case "ignore":
       return {
         kind: "statement",
-        text: "먹은 걸 말씀해주시면 기록할게요.",
+        text: command.talk !== undefined ? describeTalk(command.talk, summary) : "먹은 걸 말씀해주시면 기록할게요.",
       };
   }
 }
