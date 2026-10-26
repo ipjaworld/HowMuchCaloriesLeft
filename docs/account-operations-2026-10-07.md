@@ -12,6 +12,8 @@
 
 ## 전용 리소스
 
+- **2026-10-26 DB 비밀번호 재설정:** 사용자가 Supabase에서 변경 완료를 보고했고, 변경 후 첫 DB 백업이 성공했다. 비밀번호 값은 기록하지 않는다. 이전 비밀번호를 사용하던 Supabase CLI link 등 도구·직접 DB 연결이 있다면 해당 로컬 자격 증명을 갱신한다. 연결 목록 전체를 점검한 것은 아니다.
+
 - Supabase: Minjaekoon's Org / HowMuchCaloriesLeft / `juqriefbvymiuespfslj` / 서울 `ap-northeast-2`, 생성 시 월 비용 $0 확인.
 - Google Cloud: HowMuchCaloriesLeft / `gold-pod-510903-t6`. 로그인 표시 이름: 오늘 얼마 먹어도 돼?. 웹 클라이언트: HowMuchCaloriesLeft Supabase.
 - Kakao: 오늘 얼마 먹어도 돼? / 앱 ID `1599886`. 닉네임 선택 동의, 이메일 미제공 허용. 기존 HIS 앱과 별개다.
@@ -65,18 +67,23 @@
 
 | 순서 | 작업 | 누가 | 되돌리기 |
 | --- | --- | --- | --- |
-| 0 | 첫 계정 DB 백업([절차](account-backup.md)) | 운영자 | — |
-| 1 | SQL 편집기에서 사전 확인: 앞의 migration 3개 적용 여부(`select to_regclass('public.account_data')`), `pg_cron` 활성, `private.account_recovery`가 아직 없는지 | 운영자(대시보드) | 읽기만 |
-| 2 | `supabase/migrations/20261007040148_kakao_unlink_cleanup.sql` 적용. 매분 cron 두 개(`hmcl-kakao-unlink-retry`, `hmcl-account-recovery-expiry`)가 등록된다 | 운영자(SQL 편집기 또는 Supabase CLI) | cron 해제 후 추가 객체 삭제. 기록 테이블은 건드리지 않는다 |
-| 3 | Edge Function `kakao-unlink` 배포. 카카오는 JWT 없이 `KakaoAK`로 호출하므로 JWT 검증을 끈다. `KAKAO_UNLINK_ADMIN_KEY`는 이미 저장돼 있다 | 운영자(Supabase CLI) | 함수 삭제 |
-| 4 | 카카오 개발자 콘솔 → 앱 1599886 → 연결 해제 웹훅 URL을 `https://<project>.supabase.co/functions/v1/kakao-unlink`로 등록 | 운영자(카카오 콘솔) | URL 제거 |
-| 5 | Vercel production `ACCOUNT_RECOVERY_ENABLED=on` → 재배포. 처리방침의 카카오 유예 절과 복구 화면이 함께 열린다 | Claude(승인 시, Vercel CLI) 또는 운영자 | `off` 후 재배포 |
-| 6 | 테스트 카카오 계정으로 확인: 로그인 → 기록 → 카카오 설정에서 연결 끊기 → 앱이 기록을 잠금 → 7일 안에 다시 로그인 → 재동의 후 복구 → 결과를 이 문서에 기록 | 운영자 | — |
+| 0 | 첫 계정 DB 암호화 백업 및 격리 환경 복원 확인([절차](account-backup.md)). 90일 보관을 위한 일일 정리 환경 확보 | 운영자와 작업 도구 | — |
+| 1 | 선행 migration 3개, `account_data`·`account_profiles`, `pg_cron`, 복구 테이블 부재 확인 | 작업 도구(읽기) | 읽기만 |
+| 2 | `supabase/migrations/20261007040148_kakao_unlink_cleanup.sql` 적용. DB 정책 기본 false를 유지. cron 두 개와 RLS가 생기므로 **off여도 읽기·쓰기 권한에 영향**이 있다 | 운영 승인 후 작업 도구 | RLS 포함 영향 확인 없이 객체를 삭제하지 않는다. 접수 전이면 검토한 별도 역migration 사용 |
+| 3 | 실제 Supabase 스키마의 격리 fixture·advisor·기존 로그인 읽기/쓰기 확인 | 작업 도구·운영자 | 실패 시 활성화하지 않음 |
+| 4 | 게시일 확인 후 복구 코드가 포함된 앱을 `ACCOUNT_RECOVERY_ENABLED=on`으로 배포. 처리방침·복구 API 확인 | 배포 승인 후 작업 도구 | 접수 전이면 off 후 재배포 |
+| 5 | `update private.account_lifecycle_settings set enabled=true where singleton=true;` 실행 후 조회 확인 | 운영 승인 후 작업 도구 | false는 접수·큐·만료 삭제만 중지하며 이미 잠긴 계정의 RLS는 유지 |
+| 6 | Edge Function `kakao-unlink` 배포(`verify_jwt=false`). `KAKAO_UNLINK_ADMIN_KEY` 존재 재확인, 인증 거부 동작 확인 | 운영 승인 후 작업 도구 | 웹훅 등록 전 함수 배포를 되돌림 |
+| 7 | 카카오 앱 1599886의 연결 해제 웹훅을 `https://juqriefbvymiuespfslj.supabase.co/functions/v1/kakao-unlink`로 등록. **앱·DB 준비 뒤 마지막으로 등록** | 운영자 또는 콘솔 접근 가능한 작업 도구 | 웹훅 제거 후 기존 유예 계정 처리 방침 확인 |
+| 8 | 테스트 계정 로그인 → 기록 → 카카오 연결 끊기 → 기록 잠금 → 7일 안에 로그인 → 재동의 후 복구. 큐·cron·선택 프로필 동의까지 결과 기록 | 운영자와 작업 도구 | 기존 유예 상태를 임의 삭제하거나 단순 off로 복구된 것으로 취급하지 않음 |
 
-- SQL 재검증: 이번에는 PGlite 임시 설치본이 지워져 있어 `supabase/tests/account-recovery.mjs`를 다시 돌리지 못했다(npm 다운로드가 필요해 사용자 확인 대상). 관련 단위 테스트 24개(`kakaoUnlink`, 복구 API)는 2026-10-26에 통과했다.
+- SQL 재검증(2026-10-26 Codex): 임시 디렉터리에 PGlite 0.5.8을 설치해 `supabase/tests/account-recovery.mjs`의 14개 검사를 모두 통과했다. 실제 Supabase Auth·cron·병렬 트랜잭션 확인을 대신하지 않는다.
+- 운영 사전 조회(2026-10-26 Codex): 선행 migration `account_storage`·`optional_profile_storage`·`resilient_conversation_retention` 적용, `pg_cron` 있음. 복구·정책 테이블은 없고 Edge Function 목록은 비어 있다. 위 순서는 새 6단계 표에 빠져 있던 DB 스위치를 복원하고 기존 상세 절의 순서에 맞춘 것이다.
 - 웹훅은 3초 안에 200을 요구하고 재전송이 없다. 첫 접수가 실패하면 `KAKAO_UNLINK_DELIVERY_FAILED` 로그가 남는다. 이때는 카카오 연결 상태와 DB를 수동으로 대조한다.
 
 ## 공유 요청 제한 (Upstash) 운영 연결 절차 (2026-10-26 코드 준비, 미연결)
+
+전체 배포는 [운영 체크리스트](product/operations-todo-2026-10-26.md)의 기본 앱→Upstash→카카오 3단계 계획안을 따른다. 실제 실행은 승인 범위 안에서 진행한다. 생성 시 실제 저장 리전이 `/privacy`의 "미국 동부"와 일치하는지 확인하고, 다른 리전이면 같은 배포에서 처리방침을 고친다.
 
 1. 운영자: Vercel Marketplace에서 Upstash Redis를 만든다. 리전은 함수와 같은 **미국 동부(us-east-1)**. 이 프로젝트에 연결하면 `KV_REST_API_URL`·`KV_REST_API_TOKEN`(또는 `UPSTASH_REDIS_REST_*`)이 들어간다. 코드는 두 이름을 모두 읽는다.
 2. production에 `RATE_LIMIT_STORE=upstash`를 넣고 재배포한다. 이 값이 없으면 지금처럼 인스턴스별 메모리 제한이다.
