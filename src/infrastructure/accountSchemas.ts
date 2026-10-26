@@ -38,48 +38,46 @@ export const accountDataSchema = z
       .strict(),
   })
   .strict();
+const revisionSchema = z.number().int().nonnegative();
+const addChange = z.object({ operation: z.literal("add"), record: mealRecordSchema }).strict();
+const updateChange = z
+  .object({
+    operation: z.literal("update"),
+    id: z.string(),
+    input: mealRecordSchema
+      .pick({
+        consumedAt: true,
+        mealType: true,
+        sourceText: true,
+        items: true,
+      })
+      .partial(),
+  })
+  .strict();
+const removeChange = z.object({ operation: z.literal("remove"), id: z.string() }).strict();
+const goalChange = z.object({ operation: z.literal("goal"), goal: dailyGoalSchema }).strict();
+const turnChange = z.object({ operation: z.literal("turn"), turn: accountTurnSchema }).strict();
+/** One change inside a turn. Import is never part of a turn. */
+export const accountChangeSchema = z.discriminatedUnion("operation", [
+  addChange,
+  updateChange,
+  removeChange,
+  goalChange,
+  turnChange,
+]);
+/** Most changes one turn writes: a correction, its additions and the turn itself. */
+export const MAX_BATCH_CHANGES = 100;
 export const accountMutationSchema = z.discriminatedUnion("operation", [
+  addChange.extend({ revision: revisionSchema }),
+  updateChange.extend({ revision: revisionSchema }),
+  removeChange.extend({ revision: revisionSchema }),
+  goalChange.extend({ revision: revisionSchema }),
+  turnChange.extend({ revision: revisionSchema }),
   z
     .object({
-      operation: z.literal("add"),
-      record: mealRecordSchema,
-      revision: z.number().int().nonnegative(),
-    })
-    .strict(),
-  z
-    .object({
-      operation: z.literal("update"),
-      id: z.string(),
-      input: mealRecordSchema
-        .pick({
-          consumedAt: true,
-          mealType: true,
-          sourceText: true,
-          items: true,
-        })
-        .partial(),
-      revision: z.number().int().nonnegative(),
-    })
-    .strict(),
-  z
-    .object({
-      operation: z.literal("remove"),
-      id: z.string(),
-      revision: z.number().int().nonnegative(),
-    })
-    .strict(),
-  z
-    .object({
-      operation: z.literal("goal"),
-      goal: dailyGoalSchema,
-      revision: z.number().int().nonnegative(),
-    })
-    .strict(),
-  z
-    .object({
-      operation: z.literal("turn"),
-      turn: accountTurnSchema,
-      revision: z.number().int().nonnegative(),
+      operation: z.literal("batch"),
+      changes: z.array(accountChangeSchema).min(1).max(MAX_BATCH_CHANGES),
+      revision: revisionSchema,
     })
     .strict(),
   z
@@ -87,7 +85,7 @@ export const accountMutationSchema = z.discriminatedUnion("operation", [
       operation: z.literal("import"),
       data: accountDataSchema,
       consent: z.literal(true),
-      revision: z.number().int().nonnegative(),
+      revision: revisionSchema,
     })
     .strict(),
 ]);

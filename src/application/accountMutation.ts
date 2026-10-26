@@ -2,9 +2,14 @@ import type { z } from "zod";
 import type { AccountData } from "@/domain/account";
 import { retainedTurns } from "@/domain/conversation";
 import { todayKey } from "@/domain/date";
-import type { accountMutationSchema } from "@/infrastructure/accountSchemas";
+import type { accountChangeSchema, accountMutationSchema } from "@/infrastructure/accountSchemas";
 import { mergeAccountData } from "./accountMerge";
 export type AccountMutation = z.infer<typeof accountMutationSchema>;
+export type AccountChange = z.infer<typeof accountChangeSchema>;
+/**
+ * The server and the browser's turn buffer both run this, so what a turn
+ * shows before it is saved is what the saved data becomes.
+ */
 export function mutateAccountData(
   current: AccountData,
   mutation: AccountMutation,
@@ -12,6 +17,16 @@ export function mutateAccountData(
 ): AccountData {
   if (mutation.operation === "import")
     return mergeAccountData(current, mutation.data, todayKey(now));
+  // One revision for the whole turn: every change lands, or none does.
+  if (mutation.operation === "batch")
+    return mutation.changes.reduce((data, change) => applyAccountChange(data, change, now), current);
+  return applyAccountChange(current, mutation, now);
+}
+export function applyAccountChange(
+  current: AccountData,
+  mutation: AccountChange,
+  now: Date,
+): AccountData {
   const next = structuredClone(current),
     at = now.toISOString();
   switch (mutation.operation) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { makeConversationTurn } from "@/application/conversation";
-import { createRemoteRepositories, AccountStorageError } from "@/infrastructure/remoteRepositories";
+import { createRemoteRepositories, AccountStorageError, AccountTurnError } from "@/infrastructure/remoteRepositories";
 import { createAccountProfileRepository } from "@/infrastructure/accountProfileRepository";
 import type { ConversationTurn } from "@/domain/conversation";
 import { createLocalStorageConversationRepository } from "@/infrastructure/localStorageConversationRepository";
@@ -121,14 +121,19 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
   const turnBusy = useRef(false);
   const turnLimited = useRef(false);
   const repositories = useMemo(
-    () => ({
-      meals: createLocalStorageMealRecordRepository({ onMetadataFailure: () => setStorageNotice(describeStorageNotice("metadata")) }),
-      goals: createLocalStorageDailyGoalRepository({ onMetadataFailure: () => setStorageNotice(describeStorageNotice("metadata")) }),
-      conversation: createLocalStorageConversationRepository(),
-      ...(accountId ? createRemoteRepositories(accountId) : {}),
-      // Body facts use only the separately consented profile route, never judgment.
-      profile: accountId ? createAccountProfileRepository(createLocalStorageDietProfileRepository(),accountId) : createLocalStorageDietProfileRepository(),
-    }),
+    () => {
+      const remote = accountId ? createRemoteRepositories(accountId) : null;
+      return {
+        meals: createLocalStorageMealRecordRepository({ onMetadataFailure: () => setStorageNotice(describeStorageNotice("metadata")) }),
+        goals: createLocalStorageDailyGoalRepository({ onMetadataFailure: () => setStorageNotice(describeStorageNotice("metadata")) }),
+        conversation: createLocalStorageConversationRepository(),
+        ...remote,
+        /** Account storage saves the whole turn in one request; local storage writes as it goes. */
+        turn: remote,
+        // Body facts use only the separately consented profile route, never judgment.
+        profile: accountId ? createAccountProfileRepository(createLocalStorageDietProfileRepository(),accountId) : createLocalStorageDietProfileRepository(),
+      };
+    },
     [accountId],
   );
 
@@ -224,11 +229,14 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
     setLastMessage(user);
     turnReply.current = null;
     turnLimited.current = false;
+    const turnStore = repositories.turn;
+    turnStore?.beginTurn();
     try {
       const before = await repositories.meals.getAll();
       try {
         await action();
       } catch (error) {
+        turnStore?.abandonTurn();
         if(error instanceof AccountStorageError) {
           await reloadDay();
           setStorageNotice(error.message);
@@ -239,6 +247,7 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
         showReply(describeStorageFailure(), "failed");
       }
       if (turnLimited.current) {
+        if (!(await commitTurnWrites())) return;
         setPendingAdd(pendingAdd);
         setClarification(clarification);
         setLastRemoved(lastRemoved);
@@ -259,9 +268,36 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
           setStorageNotice(describeStorageNotice("conversation"));
         }
       }
+      await commitTurnWrites();
     } finally {
+      turnStore?.abandonTurn();
       turnBusy.current = false;
       setIsPending(false);
+    }
+
+    /**
+     * Sends the turn's account writes. On failure nothing on screen may claim
+     * a record that is not stored: the day is re-read and the reply replaced.
+     * A turn that only carried its conversation entry keeps its reply.
+     */
+    async function commitTurnWrites(): Promise<boolean> {
+      if (turnStore === null) return true;
+      try {
+        await turnStore.commitTurn();
+        return true;
+      } catch (error) {
+        if (error instanceof AccountTurnError && !error.recordsChanged) {
+          setStorageNotice(describeStorageNotice("conversation"));
+          return false;
+        }
+        await reloadDay().catch(() => undefined);
+        setStorageNotice(error instanceof AccountStorageError ? error.message : describeStorageNotice("conversation"));
+        setPendingAdd(null);
+        setClarification(null);
+        setLastRemoved(null);
+        setReply(describeStorageFailure());
+        return false;
+      }
     }
   }
 

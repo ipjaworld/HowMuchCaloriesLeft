@@ -162,6 +162,49 @@ describe("account mutations", () => {
     expect(write.eq).toHaveBeenCalledWith("user_id", "user-a");
     expect(write.eq).toHaveBeenCalledWith("revision", 2);
   });
+  it("saves a turn batch with a single revision step", async () => {
+    const read = query({
+      data: { data: emptyAccountData(), revision: 2 },
+      error: null,
+    });
+    const write = query({ data: { revision: 3 }, error: null });
+    mocks.from.mockReturnValueOnce(read).mockReturnValueOnce(write);
+    const response = await data.POST(
+      request("POST", {
+        operation: "batch",
+        changes: [
+          { operation: "remove", id: "a" },
+          { operation: "goal", goal: { date: "2026-10-26", calorieTarget: 1800 } },
+        ],
+        revision: 2,
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(write.update).toHaveBeenCalledTimes(1);
+    const saved = write.update.mock.calls[0]?.[0];
+    expect(saved.revision).toBe(3);
+    expect(saved.data.meta.removedRecords.map((r: { id: string }) => r.id)).toEqual(["a"]);
+    expect(saved.data.goals).toEqual([{ date: "2026-10-26", calorieTarget: 1800 }]);
+  });
+  it("saves nothing when one change in a batch is invalid", async () => {
+    const read = query({
+      data: { data: emptyAccountData(), revision: 2 },
+      error: null,
+    });
+    mocks.from.mockReturnValue(read);
+    const response = await data.POST(
+      request("POST", {
+        operation: "batch",
+        changes: [
+          { operation: "remove", id: "a" },
+          { operation: "goal", goal: { date: "2026-10-26", calorieTarget: 1 } },
+        ],
+        revision: 2,
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(read.update).not.toHaveBeenCalled();
+  });
   it("rejects import without separate consent", async () => {
     const read = query({
       data: { data: emptyAccountData(), revision: 0 },
