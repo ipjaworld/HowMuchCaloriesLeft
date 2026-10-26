@@ -66,6 +66,16 @@ export const envSchema = z.object({
   // Provisional: 100 beta users × 20 paid attempts/day, including optional
   // per-food judgment. Counts attempts, not tokens or guaranteed spend.
   JEV_CALLS_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(2000)),
+  /**
+   * Where the counters above live. `memory` is per instance, as before.
+   * `upstash` shares them across instances and falls back to memory when the
+   * store fails. The Vercel Marketplace integration may name the pair KV_*.
+   */
+  RATE_LIMIT_STORE: blankAsUnset(z.enum(["memory", "upstash"]).default("memory")),
+  UPSTASH_REDIS_REST_URL: blankAsUnset(z.url().optional()),
+  UPSTASH_REDIS_REST_TOKEN: optionalSecret,
+  KV_REST_API_URL: blankAsUnset(z.url().optional()),
+  KV_REST_API_TOKEN: optionalSecret,
 
   /**
    * Anthropic — LLM *fallback* parser only, for food name + quantity
