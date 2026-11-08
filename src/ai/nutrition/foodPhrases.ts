@@ -1,4 +1,4 @@
-import { assumedQuantity, normalizeSpacing, parseAmountOnly, parseTrailingQuantity, type Quantity } from "./quantity";
+import { assumedQuantity, normalizeSpacing, parseAmountOnly, parseTrailingQuantity, shareAmount, type Quantity } from "./quantity";
 import { findStatedCalories } from "./statedCalories";
 
 /**
@@ -41,7 +41,7 @@ const LIGHT_VERBS = new Set(["했어", "했어요"]);
  * "점심에", "편의점에서", "아까".
  */
 const LEADING_MARKERS = [
-  /^(오늘|어제|아까|방금|지금|이따|아침|점심|저녁|간식|야식)(에|엔|으로|로|은|는)?[ ]+/,
+  /^(오늘|어제|내일|모레|아까|방금|지금|이따가|이따|나중|아침|점심|저녁|간식|야식)(에|엔|으로|로|은|는)?[ ]+/,
   /^[가-힣]+에서[ ]+/,
 ];
 
@@ -226,8 +226,28 @@ export function segmentFoods(sentence: string): FoodSegment[] {
     // parser once made it by cutting everything before the last connective —
     // which cut eaten foods too. The matcher already takes only a food that
     // ends its phrase; whatever it cannot place is asked about, not dropped.
-    const body = stripLeadingMarkers(clause.words.join(" "));
+    let body = stripLeadingMarkers(clause.words.join(" "));
     if (body.length === 0) continue;
+
+    // "라면 한 봉지 끓였는데 반만 먹었어" (2026-11-08 QA): the food was
+    // cooked or bought in one breath and only an amount of it was eaten in
+    // the next. Read as that amount of the one food, never as a food called
+    // "라면 한 봉지 끓였는데". Only when what follows is an amount, all of it,
+    // or what was left — "라면 끓여서 계란 두 개 넣고" stays a story.
+    const served = splitServed(body);
+    if (served !== null) {
+      const food = splitPieces(served.food).length === 1 ? toFoodPhrase(served.food) : null;
+      if (food !== null && clause.leftover === true) {
+        const segment = { text: served.food, clause: index };
+        segments.push(segment);
+        previous = [segment];
+        body = served.rest;
+      } else if (food !== null) {
+        const amount = parseAmountOnly(served.rest);
+        if (amount !== null) body = `${food.name} ${eatenAmountText(food.quantity, amount, served.rest)}`;
+        else if (ALL_OF_IT.test(served.rest)) body = served.food;
+      }
+    }
 
     // "김밥 한 줄 먹었는데 반 줄만 먹은 거였어": a clause that is only an
     // amount corrects the one food before it. With several foods before it,
@@ -264,7 +284,7 @@ export function segmentFoods(sentence: string): FoodSegment[] {
       const [only] = previous;
       const phrase = only === undefined ? null : toFoodPhrase(only.text);
       if (previous.length === 1 && only !== undefined && phrase !== null) {
-        only.text = `${phrase.name} ${body}`;
+        only.text = `${phrase.name} ${eatenAmountText(phrase.quantity, amount, body)}`;
       }
       continue;
     }
@@ -279,6 +299,41 @@ export function segmentFoods(sentence: string): FoodSegment[] {
   }
 
   return segments;
+}
+
+/**
+ * How a food was got before it was eaten, as a connective inside a clause:
+ * 끓였는데, 시켰고, 사서. What follows it is how much of that food was eaten.
+ *
+ * Only verbs that leave the food what it was. 구워서, 삶아서 make another food
+ * of it ("계란을 구워서 두 개" is not 계란 두 개), so they are not here and
+ * such a sentence is asked about as before.
+ */
+const SERVED_CONNECTIVE =
+  /^(?:(?:끓였|시켰|배달시켰|샀|사왔|주문했|포장했|데웠|받았|펐|담았)(?:는데|고|지만|더니)|(?:끓여|시켜|사|데워|담아|퍼)서)$/;
+
+/** "다 먹었어": all of what was served. */
+const ALL_OF_IT = /^(?:다|전부|싹|싹다|남김없이)$/;
+
+/** A clause cut at a serving connective: the food before it, the words after. */
+function splitServed(body: string): { food: string; rest: string } | null {
+  const words = body.split(" ");
+  const at = words.findIndex((word, i) => i > 0 && i < words.length - 1 && SERVED_CONNECTIVE.test(word));
+  if (at === -1) return null;
+  return { food: words.slice(0, at).join(" "), rest: words.slice(at + 1).join(" ") };
+}
+
+/**
+ * The amount eaten, when a later clause gives it for a food already said
+ * with an amount. A bare fraction is a share of what was said: "한 봉지 …
+ * 반만" is 반 봉지 and "두 줄 … 반만" is 1줄, not half of one serving.
+ * Anything else — "반 줄만", "조금만" — is the amount as said.
+ */
+function eatenAmountText(served: Quantity, eaten: Quantity, said: string): string {
+  if (eaten.unit !== null || eaten.vague === true || eaten.value >= 1) return said;
+  if (served.assumed || served.unit === null) return said;
+  const value = served.value * eaten.value;
+  return Number.isInteger(value) ? `${value}${served.unit}` : value < 1 ? shareAmount(value, served.unit) : `${Math.round(value * 100) / 100}${served.unit}`;
 }
 
 /** The reading every sentence got before clauses: one clause, verb and framing stripped. */
@@ -314,7 +369,10 @@ function isIntentOnly(words: string[]): boolean {
   const before = words.at(-2) ?? "";
   if (/^(?:먹|마시)고싶/.test(last)) return true;
   if (/^싶/.test(last) && /^(?:먹|마시)고$/.test(before)) return true;
-  return /^(?:먹을까|마실까|먹을래|마실래|먹어야지|마셔야지|먹으려고|마시려고)/.test(last);
+  // "먹을 거야" (거야 already read past), "먹을 예정이야": a plan, not a meal.
+  if (/^(?:먹을|마실)$/.test(last)) return true;
+  if (/^(?:먹을|마실)$/.test(before) && /^(?:예정|생각|계획|거|건|것)/.test(last)) return true;
+  return /^(?:먹을까|마실까|먹을래|마실래|먹을게|마실게|먹겠|마시겠|먹어야지|마셔야지|먹으려고|마시려고)/.test(last);
 }
 
 /**

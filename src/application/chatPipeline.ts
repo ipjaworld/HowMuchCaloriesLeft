@@ -91,7 +91,7 @@ export async function runChat(
   // Nothing to store. Read what it was about instead, so the reply can answer
   // it; the dataset lookup is local, so this costs no judgment call.
   if (decided.type === "ignore" || (decided.type === "answer" && decided.kind === "recommendation")) {
-    const talk = await readTalk(input.message, deps.resolver);
+    const talk = await readTalk(input.message, deps.resolver, input.recentItems);
     if (talk !== null) return { command: { ...decided, talk }, judgment };
   }
 

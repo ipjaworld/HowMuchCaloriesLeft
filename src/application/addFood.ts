@@ -6,7 +6,7 @@ import {
   statesATotal,
 } from "@/ai/nutrition/statedCalories";
 import { caloriesFor } from "@/ai/nutrition/localDatasetResolver";
-import type { Quantity } from "@/ai/nutrition/quantity";
+import { shareAmount, shareWord, type Quantity } from "@/ai/nutrition/quantity";
 import type {
   FoodEntry,
   NutritionMatch,
@@ -143,7 +143,8 @@ type AddPartBody =
  *   weight   no portion of the food is known at all: 100 g, the amount MFDS
  *            states energy for
  *   portion  the counter said has no size for this food ("만두 5개" against a
- *            food published per 인분), so one of its own portions is used
+ *            food published per 인분), so one of its own portions is used —
+ *            or `factor` of one, for a share said below one ("반 봉지")
  *   size     "큰 계란 두 개": the standard size, since nothing scales it
  *   vague    "김치 조금": a fraction of one portion — half for 조금, 1.5 for 많이
  */
@@ -151,7 +152,7 @@ export type PortionGuess =
   | { kind: "unit"; unit: string; grams: number; measure: "g" | "mL" }
   | { kind: "vague"; said: string; portion: string; factor: number; grams: number }
   | { kind: "weight"; grams: number; said?: string }
-  | { kind: "portion"; said: string; portion: string }
+  | { kind: "portion"; said: string; portion: string; factor?: number }
   | { kind: "size" };
 
 /**
@@ -504,12 +505,22 @@ function estimateFor(
 
   const natural = servings[0];
   if (natural !== undefined) {
-    const one: Quantity = { value: 1, unit: natural.unit as Quantity["unit"], text: `1${natural.unit}`, assumed: false };
-    return take(caloriesFor(one, entry), `${quantity.text} 대신 1${natural.unit} 기준`, {
-      kind: "portion",
-      said: quantity.text,
-      portion: `1${natural.unit}`,
-    });
+    // "라면 반 봉지" against a food published per 그릇 (2026-11-08 QA): the
+    // 봉지 has no size, but the 반 does — half of one portion, never the whole
+    // one. Only a share below one is carried: "만두 5개" is not 5인분.
+    const share = quantity.vague !== true && quantity.value > 0 && quantity.value < 1 ? quantity.value : 1;
+    const portionText = share === 1 ? `1${natural.unit}` : shareAmount(share, natural.unit);
+    const one: Quantity = { value: share, unit: natural.unit as Quantity["unit"], text: portionText, assumed: false };
+    return take(
+      caloriesFor(one, entry),
+      `${quantity.text} 대신 1${natural.unit}${share === 1 ? "" : `의 ${shareWord(share)}`} 기준`,
+      {
+        kind: "portion",
+        said: quantity.text,
+        portion: `1${natural.unit}`,
+        ...(share === 1 ? {} : { factor: share }),
+      },
+    );
   }
 
   if (quantity.vague === true) {

@@ -225,6 +225,21 @@ export function asksToChangeGoal(message: string): boolean {
   );
 }
 
+/** A finished "did not eat": 안 먹었어, 먹으려다가 말았어, 먹지 않았어, 참았어. */
+export const NOT_EATEN = /(?:안|못)\s*(?:먹었|먹엇|먹음|마셨|마심|드셨)|(?:먹|마시)지\s*(?:않았|못했|말았)|참았|(?:먹|마시)(?:으)?려다(?:가)?\s*말았/;
+
+/**
+ * Words that speak of an entry rather than of the meal: a request to change
+ * it, or a report that it was wrong ("먹었다고 했는데", "사실", "아까 그거").
+ */
+const ABOUT_THE_RECORD =
+  /수정|고쳐|고치|바꿔|바꾸|변경|취소|삭제|지워|지우|빼|없애|잘못|정정|기록|입력|적은|넣은|사실|다고|댔|아까|아니/;
+
+/** Says a food was not eaten, and says nothing about any entry. */
+export function saysOnlyNotEaten(message: string): boolean {
+  return NOT_EATEN.test(message) && !ABOUT_THE_RECORD.test(message);
+}
+
 /**
  * An entry the user picked in answer to "어떤 기록을 수정할까요?". It is
  * final: the sentence is re-sent with it, and nothing may ask the same
@@ -261,6 +276,14 @@ export function decideCommand(
           needsConfirmation: false,
           parts: [],
         };
+  }
+
+  // "라면 먹으려다가 안 먹었어" names a logged food but asks nothing of it
+  // (2026-11-08 QA-03: read as delete, it offered both 라면 entries for
+  // removal). Only a sentence that also speaks of the record — 지워, 취소,
+  // 잘못, 먹었다고, 사실 — may change one; this one is answered instead.
+  if ((judgment.intent === "delete_food" || judgment.intent === "modify_food") && saysOnlyNotEaten(input.message)) {
+    return { type: "ignore", reason: "not_consumption" };
   }
 
   // Repeating a food name is not permission to overwrite it. Plain reports

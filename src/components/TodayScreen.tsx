@@ -24,6 +24,7 @@ import {
 import { addMealRecord } from "@/application/mealRecords";
 import { addConsumption } from "@/application/addConsumption";
 import { planModifyStart } from "@/application/modifyFlow";
+import { followUpMessage } from "@/application/talkFollowUp";
 import {
   answerAllOfChoices,
   answerCalories,
@@ -153,6 +154,11 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
    * being sent to Jev as a standalone message.
    */
   const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null);
+  /**
+   * The food the last reply answered a question about ("떡볶이"), so a bare
+   * "먹었어" sent next is about it. Cleared by any other message.
+   */
+  const talkedFood = useRef<string | null>(null);
   /** Which calculator step is showing, or null when it is closed. */
   const [calculator, setCalculator] = useState<CalculatorStep | null>(null);
   const [savedProfile, setSavedProfile] = useState<DietProfile | null>(null);
@@ -657,6 +663,8 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
     if (chosen === undefined) setLastMessage(message);
     // A new sentence replaces the reply that carried 되돌리기.
     setLastRemoved(null);
+    const previousFood = talkedFood.current;
+    talkedFood.current = null;
 
     try {
       // An open question owns the next message. Sending "200ml" to the judge
@@ -693,7 +701,8 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(
           buildChatRequest({
-            message,
+            // An open question was handled above; a pick is re-sent as said.
+            message: chosen === undefined ? followUpMessage(message, previousFood) : message,
             now: new Date(),
             dailyGoalCalories: summary.calorieTarget,
             records,
@@ -739,6 +748,14 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
       }
 
       showReply(describeCommand(command, summary), command.type === "clarify" ? "asked" : command.type === "ignore" ? "nothing_added" : "answered");
+      if (
+        (command.type === "ignore" || command.type === "answer") &&
+        command.talk?.kind === "food_info" &&
+        command.talk.plan !== "later" &&
+        command.talk.said !== undefined
+      ) {
+        talkedFood.current = command.talk.said;
+      }
 
       if (command.type === "clarify" && command.candidates !== undefined) {
         setClarification({

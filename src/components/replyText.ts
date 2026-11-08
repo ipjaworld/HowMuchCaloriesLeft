@@ -1,3 +1,4 @@
+import { shareWord } from "@/ai/nutrition/quantity";
 import { cleanFoodLabel } from "@/ai/nutrition/statedCalories";
 import type { AddPart, FoodGuess, PortionGuess } from "@/application/addFood";
 import type { Command } from "@/application/commands";
@@ -97,9 +98,21 @@ export function describeTalk(talk: Talk, summary: DailySummary): string {
         const label = food.amount === undefined ? food.name : `${food.name} ${food.amount}`;
         return `${label}${topicParticle(label)} ${food.estimated ? "약 " : ""}${numberFormat.format(food.calories)} kcal예요.`;
       });
+      // Quoted whole, so typing exactly what it says records that food
+      // (2026-11-08 QA-02: a bare "먹었어" used to lose what it was about).
+      const say = `"${talk.said ?? talk.foods.map((food) => food.name).join(", ")} 먹었어"`;
+      if (talk.plan === "later") {
+        return `${facts.join(" ")} 아직 드시기 전이라 기록하지 않았어요. 드신 날 ${say}라고 말해 주세요.`;
+      }
       const day = summary.remainingCalories === null ? "" : ` 오늘은 ${describeRemaining(summary.remainingCalories)}`;
-      return `${facts.join(" ")}${day} 드셨으면 "먹었어"라고 말해 주세요.`;
+      return talk.plan === "today"
+        ? `${facts.join(" ")}${day} 드신 뒤 ${say}라고 말해 주세요.`
+        : `${facts.join(" ")}${day} 드셨으면 ${say}라고 말해 주세요.`;
     }
+    case "uneaten":
+      return talk.logged === undefined
+        ? "안 드신 건 기록하지 않았어요."
+        : `안 드신 건 기록하지 않았어요. 이미 적힌 ${talk.logged}${objectParticle(talk.logged)} 지우려면 "${talk.logged} 지워줘"라고 말해 주세요.`;
     case "greeting":
       return "안녕하세요. 드신 걸 말해 주시면 적어 둘게요. 예: \"김밥 한 줄 먹었어\"";
     case "thanks":
@@ -479,7 +492,9 @@ function portionGuessLine(food: RecordedFood): string {
         ? `${name}${topicParticle(name)} 무게 정보가 없어 ${guess.grams}g으로 잡았어요.`
         : `${name} ${guess.said}의 무게를 몰라 ${guess.grams}g으로 잡았어요.`;
     case "portion":
-      return `${name} ${guess.said}의 무게를 몰라 ${guess.portion}${directionParticle(guess.portion)} 잡았어요.`;
+      return guess.factor === undefined
+        ? `${name} ${guess.said}의 무게를 몰라 ${guess.portion}${directionParticle(guess.portion)} 잡았어요.`
+        : `${name} ${guess.said}의 무게를 몰라 ${guess.portion}의 ${shareWord(guess.factor)}${directionParticle(shareWord(guess.factor))} 잡았어요.`;
     case "size":
       return `${name}${topicParticle(name)} 크기를 반영하지 않고 보통 크기로 잡았어요.`;
     case "vague": {

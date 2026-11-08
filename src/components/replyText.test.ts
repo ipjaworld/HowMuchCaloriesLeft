@@ -199,10 +199,36 @@ describe("answering a sentence that changes nothing (D07, 2026-10-26)", () => {
 
   it("answers a food question with the dataset's figure and the day", () => {
     const reply = describeCommand(
-      ignore({ kind: "food_info", foods: [{ name: "떡볶이", amount: "1인분", calories: 482, estimated: true }] }),
+      ignore({ kind: "food_info", foods: [{ name: "떡볶이", amount: "1인분", calories: 482, estimated: true }], said: "떡볶이" }),
       summary(),
     );
-    expect(reply.text).toBe('떡볶이 1인분은 약 482 kcal예요. 오늘은 520 kcal 남았어요. 드셨으면 "먹었어"라고 말해 주세요.');
+    // The food is in the sentence to say: a bare "먹었어" once named nothing
+    // (2026-11-08 QA-02).
+    expect(reply.text).toBe('떡볶이 1인분은 약 482 kcal예요. 오늘은 520 kcal 남았어요. 드셨으면 "떡볶이 먹었어"라고 말해 주세요.');
+  });
+
+  it("answers a plan for today with the day, and records nothing (2026-11-08 QA-05)", () => {
+    const reply = describeCommand(
+      ignore({ kind: "food_info", foods: [{ name: "떡볶이", amount: "1인분", calories: 482, estimated: true }], said: "떡볶이", plan: "today" }),
+      summary(),
+    );
+    expect(reply.text).toBe('떡볶이 1인분은 약 482 kcal예요. 오늘은 520 kcal 남았어요. 드신 뒤 "떡볶이 먹었어"라고 말해 주세요.');
+  });
+
+  it("answers a plan for another day without today's remaining figure", () => {
+    const reply = describeCommand(
+      ignore({ kind: "food_info", foods: [{ name: "떡볶이", amount: "1인분", calories: 482, estimated: true }], said: "떡볶이", plan: "later" }),
+      summary(),
+    );
+    expect(reply.text).toBe('떡볶이 1인분은 약 482 kcal예요. 아직 드시기 전이라 기록하지 않았어요. 드신 날 "떡볶이 먹었어"라고 말해 주세요.');
+    expect(reply.text).not.toContain("남았어요");
+  });
+
+  it("answers a meal that did not happen, and says how to remove an entry if that was meant (2026-11-08 QA-03)", () => {
+    expect(describeCommand(ignore({ kind: "uneaten" }), summary()).text).toBe("안 드신 건 기록하지 않았어요.");
+    expect(describeCommand(ignore({ kind: "uneaten", logged: "라면" }), summary()).text).toBe(
+      '안 드신 건 기록하지 않았어요. 이미 적힌 라면을 지우려면 "라면 지워줘"라고 말해 주세요.',
+    );
   });
 
   it("states a figure without 약 when the amount was said, and the day only once a goal exists", () => {
@@ -210,7 +236,7 @@ describe("answering a sentence that changes nothing (D07, 2026-10-26)", () => {
       ignore({ kind: "food_info", foods: [{ name: "김밥", amount: "2줄", calories: 644, estimated: false }, { name: "라면", amount: "1그릇", calories: 451, estimated: true }] }),
       summary({ calorieTarget: null, remainingCalories: null, status: null }),
     );
-    expect(reply.text).toBe('김밥 2줄은 644 kcal예요. 라면 1그릇은 약 451 kcal예요. 드셨으면 "먹었어"라고 말해 주세요.');
+    expect(reply.text).toBe('김밥 2줄은 644 kcal예요. 라면 1그릇은 약 451 kcal예요. 드셨으면 "김밥, 라면 먹었어"라고 말해 주세요.');
   });
 
   it("never says a negative number for a day over the goal", () => {
@@ -309,6 +335,8 @@ describe("the add pipeline's sentences", () => {
     [{ kind: "weight", grams: 100 } as const, "브로콜리는 무게 정보가 없어 100g으로 잡았어요."],
     [{ kind: "weight", grams: 100, said: "3개" } as const, "브로콜리 3개의 무게를 몰라 100g으로 잡았어요."],
     [{ kind: "portion", said: "5개", portion: "1인분" } as const, "브로콜리 5개의 무게를 몰라 1인분으로 잡았어요."],
+    [{ kind: "portion", said: "반 봉지", portion: "1인분", factor: 0.5 } as const, "브로콜리 반 봉지의 무게를 몰라 1인분의 절반으로 잡았어요."],
+    [{ kind: "portion", said: "1/3봉지", portion: "1인분", factor: 1 / 3 } as const, "브로콜리 1/3봉지의 무게를 몰라 1인분의 3분의 1로 잡았어요."],
     [{ kind: "size" } as const, "브로콜리는 크기를 반영하지 않고 보통 크기로 잡았어요."],
   ])("says what it took: %o", (portionGuess, sentence) => {
     const reply = describeAdded(summary(), [], [], [

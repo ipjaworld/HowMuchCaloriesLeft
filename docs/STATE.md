@@ -1,8 +1,50 @@
 # 현재 상태 — 공통 인수인계
 
-최종 갱신: 2026-10-26 (KST) 운영 상태·검증 재확인 추가 (본문 정비는 2026-10-18) · Codex / Claude Code 공용
+최종 갱신: 2026-11-08 (KST) 브라우저 QA 5건 대응·배포 · Codex / Claude Code 공용
 
 이 파일은 현재 작업의 진입점이다. 확정 원칙은 [DECISIONS](DECISIONS.md), 실행 규칙은 [AGENTS](../AGENTS.md)를 읽는다. 날짜별 문서는 과거 근거이며, 그 안의 상태·테스트 수·명령·승인 범위가 지금도 유효하다고 가정하지 않는다.
+
+## 2026-11-08 Claude Code — 브라우저 QA 5건 대응
+
+- 사용자 요청: [QA 결과](product/live-browser-qa-2026-11-08.md)에 대응해 수정 후 배포. 기준 HEAD·`origin/main` `ad5b344`, production `dpl_E5fALeZ2g4HaSCw38EXjHX5Je5Gv`(되돌릴 대상).
+- QA-01 `라면 반 봉지` → 1그릇: 단위 크기를 모르는 음식은 1회분으로 대체하던 경로가 `반`을 버렸다. 1 미만의 몫(반·1/2·1/3)은 그 비율의 1회분으로 기록한다(`라면 반 그릇 ~226`, "1그릇의 절반으로 잡았어요"). 1 이상(`만두 5개` → 1인분)은 기존 그대로. [addFood](../src/application/addFood.ts) `estimateFor`.
+- QA-02 `먹을까?` → `먹었어` 미연결: 답장이 `"떡볶이 먹었어"`처럼 음식명을 넣어 안내하고, 음식 질문 답장 바로 뒤의 단독 `먹었어`(응/네/결국 포함)는 화면이 그 음식 문장으로 보낸다. 섭취 판단은 그대로 Jev. [talkFollowUp](../src/application/talkFollowUp.ts), [TodayScreen](../src/components/TodayScreen.tsx).
+- QA-03 `먹으려다가 안 먹었어` → 삭제 후보: Jev가 실제로 `delete_food`로 판단함을 로컬 운영 빌드에서 재현. 먹지 않았다는 문장에 기록을 가리키는 말(지워·취소·잘못·기록·사실·먹었다고·아까 등)이 없으면 수정·삭제를 하지 않고 "안 드신 건 기록하지 않았어요"로 답한다. 같은 음식 기록이 있으면 `"라면 지워줘"` 방법을 함께 안내. [commands](../src/application/commands.ts) `saysOnlyNotEaten`, [smallTalk](../src/application/smallTalk.ts).
+- QA-04 `한 봉지 끓였는데 반만 먹었어` → 미등록 음식: 끓였는데·시켰는데·샀는데·데워서 등 음식을 바꾸지 않는 준비 동사 뒤에 양만 오면 앞 음식의 그 양으로 읽는다(`라면 반 봉지` → QA-01 경로). 앞 양의 비율로 계산(`두 줄 … 반만` → 1줄), `다 먹었어`는 전량, `반은 남겼어`는 뺄셈. 구워서·삶아서는 다른 음식이 되므로 제외(기존 L10·L11 fixture 유지). [foodPhrases](../src/ai/nutrition/foodPhrases.ts).
+- QA-05 `내일 떡볶이 먹을 거야` → 일반 안내: `내일` 등이 음식명에 붙어 조회가 실패했다. 시간어를 떼고, 먹을 계획은 계획으로 답한다(다른 날이면 남은 양 없이 "아직 드시기 전이라 기록하지 않았어요"). `먹을 거야/예정/먹을게`는 파서에서도 섭취로 읽지 않는다.
+- 검증: 68파일 1,755개 테스트(새 [QA 회귀 테스트](../src/application/qa20261108.test.ts) 포함), typecheck, lint, production build 통과. 3210 로컬 production 빌드에서 실제 Jev로 QA 문장 5건과 대조 문장(`라면 반 그릇`, `김밥 먹었어`, `바나나 지워줘`) API 확인, 화면에서 QA-01·02·03 흐름과 답장 확인, 서버 오류 없음. 테스트 기록은 인앱 브라우저 localhost 저장소에만 생겼다.
+- 미커밋 상태로 두는 것: [AccountScreen](../src/components/AccountScreen.tsx) 만든 사람 링크(10-31, 결정 대기), 운영 체크리스트 diff, `.agents/`·`skills-lock.json`·`.claude/launch.json`. 배포 결과와 운영 재확인은 아래 후속에 적는다.
+
+## 2026-11-08 Codex — 운영 페이지 브라우저 QA 인계
+
+- 사용자의 요청으로 실제 공개 페이지에서 수행한 두 차례의 수동 브라우저 검증을 [QA 결과 문서](product/live-browser-qa-2026-11-08.md)로 정리했다. 명시한 `라면 반 봉지`가 1그릇으로 기록된 사례 등 결함 후보 5건과 기대대로 동작한 주요 흐름을 입력·기대·실제 결과로 구분했다. 이 문서는 관찰 기록이며 수정·회귀 확인 완료를 뜻하지 않는다.
+- 검증 당시 목표는 2,540 kcal였다. 테스트 식사 기록은 UI에서 전부 제거했고 새로고침 후 오늘 0 kcal를 확인했다. 테스트 대화는 브라우저 대화 기록에 남아 있다. 로그인 상태, 서버 저장, 모바일·날짜 경계는 이번 QA 범위 밖이다.
+- 이번 작업은 문서만 추가·갱신했다. 문서 링크·내용·diff를 확인하고 앱 테스트·빌드는 실행하지 않는다. 기존 미커밋 변경은 보존하며 코드·운영 설정·배포는 바꾸지 않았다. 커밋·push 없음. 다음 행동: 작업 세션에서 QA-01부터 재현·원인 확인·수정 후 운영 회귀 검증.
+
+## 2026-10-31 Claude Code — 내 계정 푸터에 만든 사람 링크 (미커밋)
+
+- 사용자 요청으로 [AccountScreen](../src/components/AccountScreen.tsx) 푸터의 개인정보처리방침 옆에 `만든 사람` → `https://hetrich.com/?ref=calories` 링크를 추가했다. 로그아웃 버튼의 오른쪽 배치를 유지하려고 왼쪽 두 링크만 묶었다.
+- 검증: 로컬 dev `/account`에서 데스크톱·375px 폭 모두 링크 노출과 가로 넘침 없음을 확인했다. 로컬은 로그인 미설정 화면이라 로그인 상태의 로그아웃 버튼과 나란한 배치는 화면으로 확인하지 못했다. typecheck와 해당 파일 eslint 통과. 전체 vitest와 production build는 이 컴포넌트를 다루는 테스트가 없어 실행하지 않았다.
+- 커밋·push·배포는 하지 않았다. 기존 미커밋 변경과 미추적 파일은 그대로 두었다. 다음 행동: 사용자가 커밋·배포 여부를 결정한다.
+
+## 2026-10-26 Codex — 운영 순차 적용 진행
+
+### 후속: Upstash 운영 완료, 카카오 도구 오류로 미적용
+
+- 사용자 약관 동의 후 Upstash `hmcl-rate-limit` (`store_MxpCpF8mUwQjnUbJ`) 생성·production 연결 완료. Free 플랜(월 500,000 commands), 미국 동부 iad1, `autoUpgrade=false`, `prodPack=false`, `eviction=false`로 생성했다. Free·iad1·production 연결은 생성 후 다시 확인했다. `.env.local` pull은 하지 않았다.
+- `RATE_LIMIT_STORE=upstash` 설정 후 2차 production `dpl_E5fALeZ2g4HaSCw38EXjHX5Je5Gv` Ready 및 운영 alias 반영(2026-10-26 22:42 KST). 코드 `ad5b344` 유지. 이번 단계의 직전 배포는 `dpl_CZVKF82V4UspGACZ2R9cE9u2n1Fs`이며, 되돌릴 때 환경 설정도 memory로 복원해야 한다.
+- 실제 로그인 상태의 인사 입력 성공, Redis Browser에서 `hmcl:rl:` chat IP·account·Jev 키 5개와 TTL 확인. 해당 배포 warning/error 로그 0건. `/privacy`에 Upstash·미국 동부 안내가 노출되는 것 확인. 운영 한도 초과 부하 테스트는 하지 않았다.
+- 카카오 `apply_migration` 두 번 모두 `Invalid or expired requestState` 오류. 각 시도 뒤 재조회했고 lifecycle/recovery 테이블이 모두 없음을 확인했다. migration은 미적용이며 앱 recovery 플래그·DB 스위치·함수·웹훅도 미변경이다. 정책 거절로 보고하지 않으며 도구 요청 상태 오류로 구분한다. 다음은 migration 도구 오류 해결 후 DB 적용·실제 스키마 검증부터 재개.
+- Vercel CLI가 Upstash 설치 중 `.agents/skills/upstash-redis-js`, `.agents/skills/upstash-ratelimit-js`, `skills-lock.json`을 자동 생성했다. 기존 `.claude/launch.json`과 함께 미추적으로 보존했고 커밋하지 않았다. 앱 코드 변경 없음; 운영 검증과 문서 diff 검사로 확인한다.
+
+- 사용자가 기본 앱 배포·A1 실계정 확인 → Upstash → 카카오 운영 적용을 현재 요청으로 지시했다. 아래 과거의 push 미승인·미배포 기록은 당시 상태다.
+- 1차 배포 완료: `main`의 6개 커밋을 `ad5b344`까지 push했다. Vercel production은 `dpl_CZVKF82V4UspGACZ2R9cE9u2n1Fs` Ready(22:16 KST 생성), 운영 alias 반영 확인. 직전 되돌릴 배포는 `dpl_BfCvZwnGyijeF7xjqSh627wfrvAF` / `67a33f5`다.
+- 설정: `ACCOUNT_ENABLED=on`, `RATE_LIMIT_STORE` 미설정(memory), `ACCOUNT_RECOVERY_ENABLED` 미설정(off). 배포 전 67파일·1,711개 테스트, typecheck, lint, production build 모두 통과.
+- 사용자가 브라우저에서 직접 로그인한 뒤 테스트 입력 1회를 보냈다. Vercel 요청 로그에서 `POST /api/account/data` 1회·200(22:19:15 KST), 해당 로그인 계정 revision 42→43, 새로고침 후 식사·답장 유지 확인. `batch` 본문은 운영 네트워크 캡처가 아니라 배포 소스와 테스트로 확인했다. 테스트 식사는 UI에서 지웠고 대화는 남는다. 다른 계정의 기록은 조회하지 않았다.
+- `/privacy`에서 실제 게시일 2026-10-26과 백업 안내 확인. Upstash·복구 기능은 아직 off라 관련 조건부 문구는 비노출.
+- Upstash 생성 대기: `upstash/upstash-kv`, Free(월 500,000 commands·카드 불필요), `primaryRegion=iad1`, `autoUpgrade=false`, `prodPack=false`, `eviction=false`, production만 연결, `--no-env-pull`로 준비했다. CLI가 최초 Marketplace 약관 동의를 요구하여 리소스는 아직 생성되지 않았다. 사용자에게 Vercel 로그인·약관 직접 동의를 요청했다.
+- 카카오 재조회: 선행 migration 3개만 적용, Edge Function 없음. 보안 advisor는 기존 leaked password protection 경고 1개이며 이번 신규 결함으로 표시하지 않는다. 카카오 migration·앱 플래그·DB 플래그·웹훅은 아직 변경하지 않았다.
+- 다음 행동: Upstash 약관 동의 확인 → 동일 무료 설정으로 생성·연결·2차 배포 검증 → 카카오 순서. `.claude/launch.json`은 보존. 이 절의 운영 기록은 로컬 문서 갱신이며 추가 커밋·push는 아직 하지 않았다.
 
 ## 2026-10-26 Claude Code — 대화를 받아 주는 답장 (C0, 로컬 커밋)
 

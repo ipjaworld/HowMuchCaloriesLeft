@@ -406,3 +406,26 @@ export function parseTrailingQuantity(phrase: string): QuantityMatch | null {
 
   return null;
 }
+
+/** A share below one as a fraction with a small denominator, or null. */
+function smallFraction(share: number): { top: number; bottom: number } | null {
+  for (let bottom = 2; bottom <= MAX_DENOMINATOR; bottom++) {
+    const top = Math.round(share * bottom);
+    if (top > 0 && Math.abs(top / bottom - share) < 1e-9) return { top, bottom };
+  }
+  return null;
+}
+
+/** "절반", "3분의 1": a share of one portion, as the reply and the note say it. */
+export function shareWord(share: number): string {
+  if (share === 0.5) return "절반";
+  const fraction = smallFraction(share);
+  return fraction === null ? `${Math.round(share * 100) / 100}배` : `${fraction.bottom}분의 ${fraction.top}`;
+}
+
+/** "반 그릇", "1/3그릇": a share of one `unit`, written so it reads back as said. */
+export function shareAmount(share: number, unit: string): string {
+  if (share === 0.5) return `반 ${unit}`;
+  const fraction = smallFraction(share);
+  return fraction === null ? `${Math.round(share * 100) / 100}${unit}` : `${fraction.top}/${fraction.bottom}${unit}`;
+}
