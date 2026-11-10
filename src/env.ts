@@ -99,6 +99,16 @@ export const envSchema = z.object({
    */
   PHOTO_INPUT: blankAsUnset(z.enum(["off", "on"]).default("off")),
   PHOTO_MODEL: blankAsUnset(z.string().min(1).default("claude-opus-5-5")),
+  /**
+   * "제보하기" on a food the dataset does not have: the name, and nothing
+   * else, is counted for the operator. `on` also needs the shared store
+   * (`RATE_LIMIT_STORE=upstash`), which is where the counts are kept.
+   */
+  FOOD_REPORT: blankAsUnset(z.enum(["off", "on"]).default("off")),
+  RATE_LIMIT_REPORT_PER_MINUTE: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(3)),
+  RATE_LIMIT_REPORT_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(10)),
+  FOOD_REPORTS_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(300)),
+
   /** `on` logs the answering model and token counts per reading. No content. */
   PHOTO_USAGE_LOG: blankAsUnset(z.enum(["off", "on"]).default("off")),
   /** One attempt plus one retry, each bounded by this. */

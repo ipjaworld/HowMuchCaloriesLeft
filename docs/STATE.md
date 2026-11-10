@@ -1,8 +1,18 @@
 # 현재 상태 — 공통 인수인계
 
-최종 갱신: 2026-11-10 (KST) 사진 입력 실제 시험 10장 완료(미커밋), Phase 3 묶음 1(미커밋) · Codex / Claude Code 공용
+최종 갱신: 2026-11-10 (KST) 음식 제보 버튼 구현(스위치 off, 미커밋). 사진·Phase 3 묶음 1은 로컬 커밋 `1ca36a9`까지 · Codex / Claude Code 공용
 
 이 파일은 현재 작업의 진입점이다. 확정 원칙은 [DECISIONS](DECISIONS.md), 실행 규칙은 [AGENTS](../AGENTS.md)를 읽는다. 날짜별 문서는 과거 근거이며, 그 안의 상태·테스트 수·명령·승인 범위가 지금도 유효하다고 가정하지 않는다.
+
+## 2026-11-10 Claude Code — 못 찾은 음식 제보 버튼 (스위치 off, 미커밋)
+
+- 사용자 현재 요청: 못 찾은 음식을 버튼으로 운영자에게 제보하는 UI를 제안하고 "구현해". 저장 위치는 Upstash로 확정. 원칙은 [D11](DECISIONS.md#d11-못-찾은-음식은-사용자가-눌러서-제보한다). 시작 HEAD `1ca36a9`, 작업 트리 깨끗한 상태에서 시작.
+- 구현(미커밋): [/api/food-report](../src/app/api/food-report/route.ts), [foodReport](../src/application/foodReport.ts)(이름 정규화·검증), [foodReportStore](../src/infrastructure/foodReportStore.ts)(Upstash `ZINCRBY`+`HSET`), 사용 한도에 report 추가, [replyText](../src/components/replyText.ts)의 `제보하기` 선택지와 제보 뒤 답장, [TodayScreen](../src/components/TodayScreen.tsx) 연결, 개인정보처리방침 조건부 문구, 운영자용 [목록 스크립트](../scripts/ops/list-food-reports.mjs). env `FOOD_REPORT`(기본 off, `RATE_LIMIT_STORE=upstash`도 있어야 켜짐), `RATE_LIMIT_REPORT_PER_MINUTE`(3)·`_PER_DAY`(10), `FOOD_REPORTS_PER_DAY`(300). 한도 값은 구현자가 정한 잠정값이다.
+- 동작: "○○은 아직 정보가 없어요" 질문에 `빼고 기록` 옆 `제보하기`가 나온다. 누르면 음식 이름만 전송하고 "제보했어요. 추가할 수 있는지 확인해 볼게요."와 함께 같은 질문이 남는다. 같은 이름은 한 방문에서 한 번만 버튼이 나온다. 전송 실패면 버튼이 남고, 하루 한도면 "오늘은 제보를 더 받을 수 없어요."
+- 범위 밖으로 둔 것: 문장 전체가 미지원이라 질문 없이 끝나는 답장(`describeNothingAdded`)에는 버튼이 없다. 여러 인스턴스에서 같은 이름이 무한히 늘어나는 것은 일간 상한 300으로만 막는다.
+- 검증(이번 직접 실행): typecheck·lint·72파일 1,845개 테스트(새 12개) 통과. 3214 로컬 production 빌드(가짜 Upstash 127.0.0.1:3298, Jev 키를 비워 mock 판단, 계정 off)에서 확인: 버튼 표시 → 제보 200·전송 본문은 `{"name":"뽀로롱떡"}`뿐 → 저장소에 이름·횟수·날짜만 → 같은 음식 재입력 시 버튼 없음 → 브라우저 하루 한도(시험값 2) 초과 시 429와 안내, `빼고 기록` 흐름 유지, 375px 가로 넘침 없음, 방침에 제보 문구 표시. 시험 저장값을 지우고 서버를 모두 종료했다.
+- 미검증: **실제 Upstash에 대한 쓰기와 목록 스크립트의 데이터 출력**(가짜 저장소로만 확인, 스크립트는 빈 목록·삭제만 확인. 데이터를 넣어 보는 시험은 Windows 셸 인코딩 문제로 실패), 실제 Jev 판단 경로에서의 버튼 표시, 운영 환경.
+- 운영 변경·커밋·push 없음. 켤 때 할 일: Vercel `FOOD_REPORT=on`, 방침 `EFFECTIVE_DATE` 갱신, push 승인, 운영에서 제보 1건과 목록 조회 smoke.
 
 ## 2026-11-10 Claude Code — 사진: 여러 개가 보이면 하나로 적고 안내 (미커밋)
 

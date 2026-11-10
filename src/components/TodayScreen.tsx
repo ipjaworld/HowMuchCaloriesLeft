@@ -78,6 +78,9 @@ import {
   ALL_OF_THESE,
   OTHER_FOOD,
   UNDO_DELETE,
+  REPORT_FOOD,
+  describeReported,
+  withReportOption,
   type ClarifyOption,
   type Reply,
 } from "./replyText";
@@ -116,7 +119,7 @@ type PendingClarification = {
  * storage and fills it in. One frame, no `suppressHydrationWarning`, and
  * nothing above this component has to become a client component.
  */
-export function TodayScreen({accountId=null,photoEnabled=false}:{accountId?:string|null;photoEnabled?:boolean} = {}) {
+export function TodayScreen({accountId=null,photoEnabled=false,reportEnabled=false}:{accountId?:string|null;photoEnabled?:boolean;reportEnabled?:boolean} = {}) {
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
   const turnReply = useRef<{ reply: Reply; outcome: ConversationTurn["outcome"] } | null>(null);
   const turnBusy = useRef(false);
@@ -159,6 +162,8 @@ export function TodayScreen({accountId=null,photoEnabled=false}:{accountId?:stri
    * "먹었어" sent next is about it. Cleared by any other message.
    */
   const talkedFood = useRef<string | null>(null);
+  /** Foods already reported in this visit, so the button is offered once each. */
+  const reportedFoods = useRef(new Set<string>());
   /** Which calculator step is showing, or null when it is closed. */
   const [calculator, setCalculator] = useState<CalculatorStep | null>(null);
   const [savedProfile, setSavedProfile] = useState<DietProfile | null>(null);
@@ -500,7 +505,33 @@ export function TodayScreen({accountId=null,photoEnabled=false}:{accountId?:stri
 
     const question = nextQuestion(pending);
     setPendingAdd(pending);
-    if (question !== null) showReply(describeQuestion(question));
+    if (question !== null) showReply(askAbout(pending, question));
+  }
+
+  /**
+   * The question as shown. A food the dataset lacks can be reported, once per
+   * name in this visit; the name is the user's own words for it.
+   */
+  function askAbout(pending: PendingAdd, question: NonNullable<ReturnType<typeof nextQuestion>>): Reply {
+    const asked = describeQuestion(question);
+    if (!reportEnabled || question.type !== "provide_calories") return asked;
+    const name = pending.parts[question.partIndex]?.phraseName ?? "";
+    return name === "" || reportedFoods.current.has(name) ? asked : withReportOption(asked);
+  }
+
+  /** Sends one food name to the operator's list. Nothing else leaves with it. */
+  async function reportFood(name: string): Promise<"sent" | "failed" | "limited"> {
+    try {
+      const response = await fetch("/api/food-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (response.ok) return "sent";
+      return response.status === 429 ? "limited" : "failed";
+    } catch {
+      return "failed";
+    }
   }
 
   /**
@@ -876,6 +907,15 @@ export function TodayScreen({accountId=null,photoEnabled=false}:{accountId?:stri
       }
 
       if (question?.type === "provide_calories") {
+        if (option.id === REPORT_FOOD) {
+          // Reporting answers nothing: the food is still unpriced, and the
+          // same question comes back with what happened to the report.
+          const name = pendingAdd.parts[question.partIndex]?.phraseName ?? "";
+          const result = await reportFood(name);
+          if (result !== "failed") reportedFoods.current.add(name);
+          showReply(describeReported(withReportOption(describeQuestion(question)), result));
+          return;
+        }
         if (option.id === "skip") {
           await advance(skipUnknown(pendingAdd, question.partIndex));
         } else {

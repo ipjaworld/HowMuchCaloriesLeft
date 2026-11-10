@@ -82,7 +82,9 @@ const TRANSFERS: {
 export default function PrivacyPage() {
   const account = accountConfigured();
   const photo = env.PHOTO_INPUT === "on" && env.ANTHROPIC_API_KEY !== undefined;
-  const shown = { account, sharedLimits: sharedRateLimitConfigured(), photo };
+  const sharedLimits = sharedRateLimitConfigured();
+  const report = env.FOOD_REPORT === "on" && sharedLimits;
+  const shown = { account, sharedLimits, photo };
   const operator = env.PRIVACY_OPERATOR ?? "이건하";
   const contact = env.PRIVACY_CONTACT_EMAIL ?? "this_is_laugh@naver.com";
   return (
@@ -102,6 +104,14 @@ export default function PrivacyPage() {
         위해 TypeSafe AI(Jev)에 필요한 문장과 음식 맥락을 전달합니다. 계산기
         입력값은 이 판단 요청에 넣지 않습니다.
       </p>
+      {report && (
+        <p>
+          <strong>음식 제보(선택).</strong> 앱이 찾지 못한 음식에서 제보하기를 누르면 그
+          음식 이름만 운영자에게 전달해 추가할 음식을 정하는 데 씁니다. 입력 문장
+          전체, 계정, 접속 정보는 함께 저장하지 않습니다. 누르지 않으면 전달되지
+          않습니다.
+        </p>
+      )}
       {photo && (
         <p>
           <strong>사진으로 입력할 때(선택).</strong> 고른 사진은 기기에서 줄여 다시
@@ -171,9 +181,15 @@ export default function PrivacyPage() {
             <dt className="font-semibold">{row.recipient}</dt>
             <dd>이전 국가: {row.country}</dd>
             <dd>위탁 업무: {row.task}</dd>
-            <dd>이전 항목: {row.items}</dd>
+            <dd>
+              이전 항목: {row.items}
+              {report && row.only === "sharedLimits" && ". 음식 제보를 누른 경우 그 음식 이름과 제보 횟수(누가 보냈는지는 함께 저장하지 않음)"}
+            </dd>
             <dd>이전 시기·방법: {row.when}</dd>
-            <dd>보유·이용 기간: {row.retention}</dd>
+            <dd>
+              보유·이용 기간: {row.retention}
+              {report && row.only === "sharedLimits" && ". 제보한 음식 이름은 추가 여부를 정리할 때까지 보관"}
+            </dd>
             <dd>거부 방법과 효과: {row.refuse}</dd>
             <dd>
               연락처: <a className="underline" href={row.contact.href}>{row.contact.label}</a>

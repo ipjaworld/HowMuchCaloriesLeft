@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-const state = vi.hoisted(() => ({ account: false, shared: false, recovery: "off", photo: "off", photoKey: undefined as string | undefined }));
+const state = vi.hoisted(() => ({ account: false, shared: false, recovery: "off", photo: "off", photoKey: undefined as string | undefined, report: "off" }));
 vi.mock("@/env", () => ({
   env: {
     get PHOTO_INPUT() { return state.photo; },
+    get FOOD_REPORT() { return state.report; },
     get ANTHROPIC_API_KEY() { return state.photoKey; },
     PRIVACY_OPERATOR: "운영자",
     PRIVACY_CONTACT_EMAIL: "ops@example.test",
@@ -17,7 +18,7 @@ vi.mock("@/infrastructure/serverUsageLimits", () => ({ sharedRateLimitConfigured
 const { default: PrivacyPage } = await import("./page");
 const render = () => renderToStaticMarkup(PrivacyPage());
 
-beforeEach(() => Object.assign(state, { account: false, shared: false, recovery: "off", photo: "off", photoKey: undefined }));
+beforeEach(() => Object.assign(state, { account: false, shared: false, recovery: "off", photo: "off", photoKey: undefined, report: "off" }));
 
 describe("privacy policy lists only what is actually sent", () => {
   it("names TypeSafe and Vercel for everyone, and nothing account-only while accounts are off", () => {
@@ -55,6 +56,16 @@ describe("privacy policy lists only what is actually sent", () => {
     expect(html).toContain("Anthropic, PBC");
     expect(html).toContain("사진으로 입력할 때(선택)");
     expect(html).toContain("앱은 사진을 저장하지 않음");
+  });
+  it("mentions food reports only while they are on and the shared store is in use", () => {
+    state.shared = true;
+    expect(render()).not.toContain("음식 제보");
+    state.report = "on";
+    const html = render();
+    expect(html).toContain("음식 제보(선택)");
+    expect(html).toContain("누가 보냈는지는 함께 저장하지 않음");
+    state.shared = false;
+    expect(render()).not.toContain("음식 제보");
   });
   it("tells every overseas recipient's country, items, timing, retention, refusal and contact", () => {
     Object.assign(state, { account: true, shared: true });

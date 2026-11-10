@@ -10,7 +10,8 @@ export function sharedRateLimitConfigured(): boolean {
   return sharedStore() !== null;
 }
 
-function sharedStore(): { url: string; token: string } | null {
+/** The shared store's address and token, or null when it is not in use. */
+export function sharedStore(): { url: string; token: string } | null {
   if (env.RATE_LIMIT_STORE !== "upstash") return null;
   const url = env.UPSTASH_REDIS_REST_URL ?? env.KV_REST_API_URL;
   const token = env.UPSTASH_REDIS_REST_TOKEN ?? env.KV_REST_API_TOKEN;
@@ -37,5 +38,13 @@ export const usageLimits = createUsageLimits(createLimiter(), {
   PHOTO_PER_MINUTE: env.RATE_LIMIT_PHOTO_PER_MINUTE,
   PHOTO_PER_DAY: env.RATE_LIMIT_PHOTO_PER_DAY,
   PHOTO_CALLS_PER_DAY: env.PHOTO_CALLS_PER_DAY,
+  REPORT_PER_MINUTE: env.RATE_LIMIT_REPORT_PER_MINUTE,
+  REPORT_PER_DAY: env.RATE_LIMIT_REPORT_PER_DAY,
+  REPORTS_PER_DAY: env.FOOD_REPORTS_PER_DAY,
 });
+/** Food reports are switched on and have somewhere to be kept. */
+export function foodReportEnabled(): boolean {
+  return env.FOOD_REPORT === "on" && sharedStore() !== null;
+}
+
 export const requestIdentity = createRequestIdentity({ secret: env.RATE_LIMIT_SECRET, vercel: env.VERCEL === "1" });

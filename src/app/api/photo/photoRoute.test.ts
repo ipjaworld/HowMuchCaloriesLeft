@@ -183,7 +183,7 @@ describe("what the browser says about each answer", () => {
 });
 
 describe("photo limits", () => {
-  const config = { CHAT_PER_MINUTE: 9, CHAT_PER_DAY: 9, RESOLVE_PER_MINUTE: 9, RESOLVE_PER_DAY: 9, JEV_CALLS_PER_DAY: 9, PHOTO_PER_MINUTE: 2, PHOTO_PER_DAY: 3, PHOTO_CALLS_PER_DAY: 2 };
+  const config = { CHAT_PER_MINUTE: 9, CHAT_PER_DAY: 9, RESOLVE_PER_MINUTE: 9, RESOLVE_PER_DAY: 9, JEV_CALLS_PER_DAY: 9, PHOTO_PER_MINUTE: 2, PHOTO_PER_DAY: 3, PHOTO_CALLS_PER_DAY: 2, REPORT_PER_MINUTE: 2, REPORT_PER_DAY: 3, REPORTS_PER_DAY: 2 };
 
   it("counts photos apart from chat, per identity", async () => {
     const limits = createUsageLimits(createMemoryRateLimiter({ now: () => 0 }), config);

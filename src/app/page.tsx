@@ -4,6 +4,7 @@ import { AccountBoundary } from "@/components/AccountBoundary";
 import type { Metadata } from "next";
 import { accountConfigured } from "@/infrastructure/accountAuth";
 import { photoInputEnabled } from "@/env";
+import { foodReportEnabled } from "@/infrastructure/serverUsageLimits";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -17,7 +18,7 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 export default function Home() {
   return (
     <main className="app-shell">
-      {accountConfigured() ? <AccountBoundary photoEnabled={photoInputEnabled} /> : <><AppNavigation current="today" accountEnabled={false} /><TodayScreen photoEnabled={photoInputEnabled} /></>}
+      {accountConfigured() ? <AccountBoundary photoEnabled={photoInputEnabled} reportEnabled={foodReportEnabled()} /> : <><AppNavigation current="today" accountEnabled={false} /><TodayScreen photoEnabled={photoInputEnabled} reportEnabled={foodReportEnabled()} /></>}
     </main>
   );
 }

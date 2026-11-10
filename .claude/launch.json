@@ -30,6 +30,12 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "set ACCOUNT_ENABLED=off&& set ACCOUNT_RECOVERY_ENABLED=off&& set RATE_LIMIT_STORE=memory&& set APP_ORIGIN=http://localhost:3213&& set LEGACY_HOSTS=&& set PHOTO_INPUT=on&& set PHOTO_USAGE_LOG=on&& pnpm start --port 3213"],
       "port": 3213
+    },
+    {
+      "name": "verify-report",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set ACCOUNT_ENABLED=off&& set TYPESAFE_API_KEY=&& set ANTHROPIC_API_KEY=&& set PHOTO_INPUT=off&& set FOOD_REPORT=on&& set RATE_LIMIT_STORE=upstash&& set UPSTASH_REDIS_REST_URL=http://127.0.0.1:3298&& set UPSTASH_REDIS_REST_TOKEN=local-fake&& set RATE_LIMIT_REPORT_PER_DAY=2&& pnpm start --port 3214"],
+      "port": 3214
     }
   ]
 }

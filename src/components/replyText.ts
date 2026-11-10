@@ -168,6 +168,45 @@ export const ALL_OF_THESE = "all_of_these";
 /** The chip that drops an unfinished sentence; nothing has been stored yet. */
 export const CANCEL_PENDING = "cancel_pending";
 
+/** "제보하기": tell the operator a food is missing. Does not answer the question it sits under. */
+export const REPORT_FOOD = "report_food";
+
+/**
+ * The "아직 정보가 없어요" question with a way to report the food.
+ *
+ * Added beside the existing answers, never instead of them: reporting a food
+ * records nothing and the question still stands.
+ */
+export function withReportOption(reply: Reply): Reply {
+  if (reply.kind !== "question") return reply;
+  return { ...reply, options: [...reply.options, { id: REPORT_FOOD, label: "제보하기" }] };
+}
+
+/**
+ * After a report: what happened to it, then the same question again without
+ * the report button. No promise of a date — some foods cannot be added, and
+ * the user is owed that honesty more than a comforting line.
+ */
+export function describeReported(question: Reply, result: "sent" | "failed" | "limited"): Reply {
+  const said =
+    result === "sent"
+      ? "제보했어요. 추가할 수 있는지 확인해 볼게요."
+      : result === "limited"
+        ? "오늘은 제보를 더 받을 수 없어요."
+        : "제보를 보내지 못했어요. 잠시 후 다시 눌러 주세요.";
+  if (question.kind !== "question") return { kind: "statement", text: said };
+  const options = question.options.filter((option) => option.id !== REPORT_FOOD);
+  const marker = "아직 정보가 없어요. ";
+  const at = question.text.indexOf(marker);
+  const rest = at === -1 ? question.text : question.text.slice(at + marker.length);
+  return {
+    kind: "question",
+    text: `${said} ${rest}`,
+    // A failed send keeps the button so it can be pressed again.
+    options: result === "failed" ? [...options, { id: REPORT_FOOD, label: "제보하기" }] : options,
+  };
+}
+
 /** The chip under "어떤 기록을…?" that says the entry is not among those shown. */
 export const NONE_OF_THESE = "none_of_these";
 
