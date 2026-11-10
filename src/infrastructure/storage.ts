@@ -82,6 +82,8 @@ export const STORAGE_KEYS = {
   onboarding: "hmcl.v1.onboarding",
   /** Old address only: when its records were handed to the new address. */
   originMove: "hmcl.v1.originMove",
+  /** That the user has been told where a photo goes before sending the first one. */
+  photoNotice: "hmcl.v1.photoNotice",
 } as const;
 
 export const STORAGE_VERSION = 1;

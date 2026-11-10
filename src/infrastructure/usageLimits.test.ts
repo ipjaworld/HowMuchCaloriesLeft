@@ -9,7 +9,7 @@ import { createJevCandidateJudge } from "@/ai/judgment/candidateJudge";
 import { createJudge } from "@/ai/judgment";
 import { envSchema } from "@/env";
 
-const config = { CHAT_PER_MINUTE: 1, CHAT_PER_DAY: 2, RESOLVE_PER_MINUTE: 2, RESOLVE_PER_DAY: 3, JEV_CALLS_PER_DAY: 1 };
+const config = { CHAT_PER_MINUTE: 1, CHAT_PER_DAY: 2, RESOLVE_PER_MINUTE: 2, RESOLVE_PER_DAY: 3, JEV_CALLS_PER_DAY: 1, PHOTO_PER_MINUTE: 1, PHOTO_PER_DAY: 2, PHOTO_CALLS_PER_DAY: 1 };
 describe("usage limits", () => {
   it("uses optional defaults and rejects invalid configuration", () => {
     const env = envSchema.parse({ RATE_LIMIT_CHAT_PER_MINUTE: " " });

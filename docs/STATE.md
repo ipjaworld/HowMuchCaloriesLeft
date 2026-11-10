@@ -1,8 +1,18 @@
 # 현재 상태 — 공통 인수인계
 
-최종 갱신: 2026-11-10 (KST) 도메인 이전 운영 설정·배포 준비 · Codex / Claude Code 공용
+최종 갱신: 2026-11-10 (KST) Phase 2 사진 입력 구현(스위치 off, 미커밋) · Codex / Claude Code 공용
 
 이 파일은 현재 작업의 진입점이다. 확정 원칙은 [DECISIONS](DECISIONS.md), 실행 규칙은 [AGENTS](../AGENTS.md)를 읽는다. 날짜별 문서는 과거 근거이며, 그 안의 상태·테스트 수·명령·승인 범위가 지금도 유효하다고 가정하지 않는다.
+
+## 2026-11-10 Claude Code — Phase 2 사진 입력 구현 (스위치 off, 미커밋)
+
+- 사용자 현재 요청: "주소 이전을 마쳤으니 확인만 하고 Phase 2 진행". 시작 브랜치 `main`, HEAD·원격 `22fbbe8`. 기존 미커밋 변경(문서 4개, AccountScreen, 도구 파일)은 그대로 두었다.
+- Phase 1 직접 재확인(읽기만): 새 주소 `/`·`/import` 200, canonical `https://calories.hetrich.com`, 옛 주소 `/`에 이전 안내 문구. 본문 없는 `POST /api/auth/start`는 500이었다(폼이 아닌 요청에서 `formData()`가 던짐, 이전부터의 동작으로 보이며 고치지 않았다. 정상 폼 경로는 아래 Codex 기록의 400/403).
+- 구현(미커밋): [/api/photo](../src/app/api/photo/route.ts), [recognizer](../src/ai/photo/recognizer.ts), [photoCandidates](../src/application/photoCandidates.ts), [photoInput](../src/components/photoInput.ts), [ChatInput](../src/components/ChatInput.tsx) 사진 버튼, 사용 한도에 photo 추가, 개인정보처리방침 조건부 Anthropic 행, env `PHOTO_INPUT`(기본 off)·`PHOTO_MODEL`·`PHOTO_TIMEOUT_MS`·사진 한도 3종. 의존성 `@anthropic-ai/sdk` 1.6.0 추가. 원칙은 [D10](DECISIONS.md#d10-사진은-문장을-채우는-보조-입력이다), 항목별 상태는 [계획 문서 Phase 2](product/roadmap-2026-11-10.md#phase-2--사진-인식-적당한-완성도).
+- 검증(이번 직접 실행): typecheck·lint 통과, 70파일 1,788개 테스트 통과(새 16개), production build 통과. 3212 로컬 production 빌드(`PHOTO_INPUT=on`, 가짜 키, 계정 off)에서 확인: 첫 사용 안내 → 동의 후에만 파일 선택 열림, 3000×2000 PNG가 1280×853 JPEG로 바뀌어 전송, 가짜 키라 서버 503·"사진을 읽지 못했어요" 안내·서버 로그에는 오류 이름과 상태만, `/api/photo` 응답을 화면에서 바꿔 끼운 경우 입력창에 문장이 채워지고 안내 표시, 375px 가로 넘침 없음, 방침에 Anthropic 행 표시. 기본값 빌드에서는 버튼과 방침 문구가 없다. 시험 데이터는 지웠고 서버는 껐다.
+- 미검증: **실제 모델 호출과 인식 품질**(로컬·운영 모두 키 없음), 채워진 나열 문장을 실제 Jev가 기록으로 받는지, 실제 휴대폰 카메라·Safari·HEIC, 비용 실측.
+- 운영 변경 없음. 커밋·push 없음. production은 `22fbbe8` 그대로이며 이 코드가 배포돼도 스위치가 off이면 동작이 같다.
+- 다음 행동(사용자): Anthropic API 키 발급, 모델·한도 잠정값 확인, 시험용 식사 사진. 그 뒤 실제 사진 시험(과금, 실행 전 확인) → 키·스위치 등록과 시행일 갱신 → 커밋·push 승인 → smoke. 이어서 Phase 3.
 
 ## 2026-11-10 Codex — 도메인 이전 운영 설정·전환 배포
 
@@ -13,7 +23,12 @@
 - 이번 직접 재검증: typecheck·lint·69파일 1,772개 테스트·production build·diff check 통과. 기존 로컬 두 주소 브라우저 검증은 아래 Claude 기록이며 이번 재실행으로 표시하지 않는다.
 - 사용자에게 구체적인 전환 내용(`APP_ORIGIN`·`LEGACY_HOSTS`, 커밋·main push, 옛 주소 안내)을 제시했고 **이번 대화에서 전환 배포까지 승인받았다**. 도메인 이전 파일과 관련 문서만 커밋한다. 만든 사람 링크, 운영 체크리스트, 도구 설정·설치 파일은 제외한다.
 - 전환 직전 되돌릴 배포: `dpl_BJkZzDd9BC4ybgey6uVAwBN4fHBQ` / `a2dc622`. 이전 `APP_ORIGIN=https://how-much-calories-left.vercel.app`, `LEGACY_HOSTS` 미설정. 롤백할 때 환경변수도 복원해야 이후 재배포에서 다시 전환되지 않는다.
-- 다음 행동: production 환경변수 변경 → 승인된 파일 커밋·push → 새 배포 Ready·alias와 새 주소 기록/API·옛 주소 안내 확인. Google·카카오 실제 로그인 완료는 사용자 확인 필요. 사진 기능·커버리지 개선은 아직 구현하지 않았고 모델·비용 결정은 후속 단계다.
+- 전환 완료: production `APP_ORIGIN=https://calories.hetrich.com`, `LEGACY_HOSTS=how-much-calories-left.vercel.app` 설정 후 `22fbbe8` 커밋·main push. production `dpl_C922TBWNY1kAkqBaj33oaTYG9BeF` Ready, 새 주소·옛 주소 alias 반영 확인(12:11 KST). 이전 코드·문서는 위 커밋에 포함했고 제외한 기존 변경은 그대로 남겼다.
+- 운영 smoke 직접 확인: 새 주소 `/`·`/account`·`/privacy`·`/import`·`/api/account` 200, canonical 새 주소, 계정 configured=true. 옛 주소 `/`·`/history`·`/account` 모두 이전 안내 및 새 주소 표기. 크롬 화면에서도 안내·기록 옮기기 버튼과 새 주소의 Google·카카오 로그인 버튼을 확인했다. 사용자 원본 기록은 가져오기나 수정 없이 보존했다. 실제 두 주소 사이 가져오기 저장 동작은 아래 로컬 검증과 이번 전체 테스트로 확인했으며 운영 사용자 기록으로 시험하지 않았다.
+- 운영 `/api/chat` 직접 요청 2건: `김밥 한 줄 먹었어` → 322 kcal, `라면 반 봉지 먹었어` → 약 226 kcal·반 그릇 추정 기준(모두 200, 실제 Jev). API 직접 호출이라 식사·대화 기록을 저장하지 않았다. auth/start는 새 Origin의 동의 누락 요청 400, 옛 Origin 403으로 전환 경계 확인. 해당 배포의 최근 15분 error·warning·fatal 로그 0건(12:12 KST 조회), 부하·한도 초과 테스트는 하지 않았다.
+- 사용자 실제 확인: 새 주소에서 **Google·카카오 모두 로그인 성공**했다고 이번 대화에서 답했다. Codex도 그 뒤 새 주소의 오늘 화면 정상 진입을 관찰했다. 공급자 두 번의 전체 인증 과정은 사용자가 수행한 확인이며 Codex가 직접 재현한 것으로 표시하지 않는다.
+- Wiki에는 도메인 전환 관찰을 proposed 상태로 남겼다. 최초 제안의 필수 claim 누락을 이번에 생성한 inbox 노트에서 바로잡았고 최종 validate 오류 0·기존 경고 4를 확인했다. 소유자 승인이나 프로젝트 색인 확정으로 표시하지 않는다.
+- Phase 1 전환 완료. 다음 행동: Phase 2 사진 모델·비용 상한을 정한 뒤 기능 스위치 off 상태로 구현·검증. 사진 기능·커버리지 개선은 아직 구현하지 않았다. 이 배포 후 상태·운영 메모 갱신은 로컬 문서 변경이며 추가 커밋·push하지 않았다(문서 때문에 production 배포를 반복하지 않음). 문서 내용·링크·diff를 확인했고 코드 변경이 없어 앱 검증은 반복하지 않았다.
 
 ## 2026-11-10 Claude Code — 도메인 이전·사진 인식·입력 품질 계획 (문서만)
 

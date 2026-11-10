@@ -34,5 +34,8 @@ export const usageLimits = createUsageLimits(createLimiter(), {
   RESOLVE_PER_MINUTE: env.RATE_LIMIT_RESOLVE_PER_MINUTE,
   RESOLVE_PER_DAY: env.RATE_LIMIT_RESOLVE_PER_DAY,
   JEV_CALLS_PER_DAY: env.JEV_CALLS_PER_DAY,
+  PHOTO_PER_MINUTE: env.RATE_LIMIT_PHOTO_PER_MINUTE,
+  PHOTO_PER_DAY: env.RATE_LIMIT_PHOTO_PER_DAY,
+  PHOTO_CALLS_PER_DAY: env.PHOTO_CALLS_PER_DAY,
 });
 export const requestIdentity = createRequestIdentity({ secret: env.RATE_LIMIT_SECRET, vercel: env.VERCEL === "1" });

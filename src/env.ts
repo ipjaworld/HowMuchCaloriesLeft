@@ -85,11 +85,27 @@ export const envSchema = z.object({
   KV_REST_API_TOKEN: optionalSecret,
 
   /**
-   * Anthropic — LLM *fallback* parser only, for food name + quantity
-   * extraction when the local dataset and Jev candidate selection both come up
-   * empty. It never produces calorie numbers. (Phase 5)
+   * Anthropic — reads food names and amount phrases out of a meal photo
+   * (`PHOTO_INPUT`). It never produces calorie numbers: what it reads becomes
+   * a sentence the user confirms, and the sentence goes through the same
+   * judgment and lookup as typed text.
    */
   ANTHROPIC_API_KEY: optionalSecret,
+
+  /**
+   * Photo input. `off` is the app exactly as it was: no button, and
+   * `/api/photo` answers 404. `on` also needs `ANTHROPIC_API_KEY`
+   * (`photoInputEnabled`).
+   */
+  PHOTO_INPUT: blankAsUnset(z.enum(["off", "on"]).default("off")),
+  PHOTO_MODEL: blankAsUnset(z.string().min(1).default("claude-opus-5-5")),
+  /** One attempt plus one retry, each bounded by this. */
+  PHOTO_TIMEOUT_MS: blankAsUnset(z.coerce.number().int().positive().default(30_000)),
+  // A photo costs far more than a sentence, so its limits are its own and
+  // small. Per browser identity, then one cap for the whole service per day.
+  RATE_LIMIT_PHOTO_PER_MINUTE: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(3)),
+  RATE_LIMIT_PHOTO_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(20)),
+  PHOTO_CALLS_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(200)),
 
   /**
    * Ministry of Food and Drug Safety (식약처) open API — the food
@@ -144,6 +160,9 @@ export const hasTypeSafeKey = env.TYPESAFE_API_KEY !== undefined;
 
 /** The LLM fallback parser is available; otherwise resolution stops at "unknown". */
 export const hasLlmFallbackKey = env.ANTHROPIC_API_KEY !== undefined;
+
+/** Photo input is switched on and has the key it needs. */
+export const photoInputEnabled = env.PHOTO_INPUT === "on" && env.ANTHROPIC_API_KEY !== undefined;
 
 /** The nutrition dataset can be re-synced from the MFDS open API. */
 export const hasMfdsKey = env.MFDS_FOOD_NUTRITION_API_KEY !== undefined;

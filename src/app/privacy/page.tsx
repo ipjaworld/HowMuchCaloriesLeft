@@ -22,8 +22,19 @@ const TRANSFERS: {
   refuse: string;
   contact: { label: string; href: string };
   /** Shown only while the feature that sends it is on. */
-  only?: "account" | "sharedLimits";
+  only?: "account" | "sharedLimits" | "photo";
 }[] = [
+  {
+    recipient: "Anthropic, PBC",
+    country: "미국",
+    task: "식사 사진에서 음식 이름과 양 읽기",
+    items: "이용자가 고른 사진을 기기에서 줄여 다시 만든 이미지(촬영 위치·시각 등 사진 부가정보 제외)",
+    when: "사진으로 입력을 누르고 사진을 고를 때마다 암호화된 통신(HTTPS)으로 전송",
+    retention: "앱은 사진을 저장하지 않음. 제공자 보관은 제공자 정책을 따름",
+    refuse: "사진을 고르지 않으면 전송되지 않으며, 글로 입력해 같은 기능을 쓸 수 있습니다",
+    contact: { label: "privacy@anthropic.com", href: "mailto:privacy@anthropic.com" },
+    only: "photo",
+  },
   {
     recipient: "TypeSafe AI, Inc.",
     country: "미국",
@@ -70,7 +81,8 @@ const TRANSFERS: {
 
 export default function PrivacyPage() {
   const account = accountConfigured();
-  const shown = { account, sharedLimits: sharedRateLimitConfigured() };
+  const photo = env.PHOTO_INPUT === "on" && env.ANTHROPIC_API_KEY !== undefined;
+  const shown = { account, sharedLimits: sharedRateLimitConfigured(), photo };
   const operator = env.PRIVACY_OPERATOR ?? "이건하";
   const contact = env.PRIVACY_CONTACT_EMAIL ?? "this_is_laugh@naver.com";
   return (
@@ -90,6 +102,15 @@ export default function PrivacyPage() {
         위해 TypeSafe AI(Jev)에 필요한 문장과 음식 맥락을 전달합니다. 계산기
         입력값은 이 판단 요청에 넣지 않습니다.
       </p>
+      {photo && (
+        <p>
+          <strong>사진으로 입력할 때(선택).</strong> 고른 사진은 기기에서 줄여 다시
+          만든 뒤 앱 API로 보내고, 음식 이름과 양을 읽기 위해 Anthropic에
+          전달합니다. 앱은 사진을 저장하지 않으며, 읽은 내용은 입력창에 채워져
+          이용자가 확인한 뒤에만 기록됩니다. 사진을 쓰지 않아도 모든 기능을 글로
+          사용할 수 있습니다.
+        </p>
+      )}
       <p>
         <strong>계정을 사용할 때.</strong> 로그인 제공자의 계정 식별자와 제공되는
         이메일·이름, 로그인 세션, 동의 시각을 인증 및 계정 관리에 사용합니다.

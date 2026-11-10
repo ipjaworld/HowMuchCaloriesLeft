@@ -3,6 +3,7 @@ import { TodayScreen } from "@/components/TodayScreen";
 import { AccountBoundary } from "@/components/AccountBoundary";
 import type { Metadata } from "next";
 import { accountConfigured } from "@/infrastructure/accountAuth";
+import { photoInputEnabled } from "@/env";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 export default function Home() {
   return (
     <main className="app-shell">
-      {accountConfigured() ? <AccountBoundary /> : <><AppNavigation current="today" accountEnabled={false} /><TodayScreen /></>}
+      {accountConfigured() ? <AccountBoundary photoEnabled={photoInputEnabled} /> : <><AppNavigation current="today" accountEnabled={false} /><TodayScreen photoEnabled={photoInputEnabled} /></>}
     </main>
   );
 }

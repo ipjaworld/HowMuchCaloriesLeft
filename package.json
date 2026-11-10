@@ -23,6 +23,7 @@
     "candidates:mfds": "vitest run --config vitest.candidates.mts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",
     "@typesafe-ai/sdk": "^0.6.0",

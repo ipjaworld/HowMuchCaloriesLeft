@@ -159,7 +159,7 @@ describe("there is nowhere else for it to go", () => {
       dependencies: Record<string, string>;
     };
     expect(Object.keys(pkg.dependencies).sort()).toEqual(
-      ["@supabase/ssr", "@supabase/supabase-js", "@typesafe-ai/sdk", "next", "react", "react-dom", "zod"].sort(),
+      ["@anthropic-ai/sdk", "@supabase/ssr", "@supabase/supabase-js", "@typesafe-ai/sdk", "next", "react", "react-dom", "zod"].sort(),
     );
   });
 
@@ -174,6 +174,17 @@ describe("there is nowhere else for it to go", () => {
     const fetched = sourceFiles(join(SRC, "components")).flatMap((file) =>
       [...readFileSync(file, "utf8").matchAll(/fetch\(\s*"([^"]+)"/g)].map((m) => m[1]),
     );
-    expect([...new Set(fetched)].sort()).toEqual(["/api/account", "/api/account/profile", "/api/account/recovery", "/api/chat", "/api/resolve"]);
+    expect([...new Set(fetched)].sort()).toEqual(["/api/account", "/api/account/profile", "/api/account/recovery", "/api/chat", "/api/photo", "/api/resolve"]);
+  });
+
+  it("gives a photo reading nowhere to carry a profile or a record", () => {
+    const text = readFileSync(join(SRC, "components", "photoInput.ts"), "utf8");
+    // The request body is the redrawn photo and nothing else.
+    expect(text).toMatch(/body: photo,/);
+    expect(text).not.toMatch(/localStorage|getBrowserStorage|JSON\.stringify/);
+    const route = [...reachableFrom(join(SRC, "app", "api", "photo", "route.ts"))].map((file) =>
+      relative(SRC, file).replaceAll("\\", "/"),
+    );
+    for (const file of route) expect(file).not.toMatch(/Repository|accountAuth|remoteRepositories/);
   });
 });

@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-const state = vi.hoisted(() => ({ account: false, shared: false, recovery: "off" }));
+const state = vi.hoisted(() => ({ account: false, shared: false, recovery: "off", photo: "off", photoKey: undefined as string | undefined }));
 vi.mock("@/env", () => ({
   env: {
+    get PHOTO_INPUT() { return state.photo; },
+    get ANTHROPIC_API_KEY() { return state.photoKey; },
     PRIVACY_OPERATOR: "운영자",
     PRIVACY_CONTACT_EMAIL: "ops@example.test",
     get ACCOUNT_RECOVERY_ENABLED() { return state.recovery; },
@@ -15,7 +17,7 @@ vi.mock("@/infrastructure/serverUsageLimits", () => ({ sharedRateLimitConfigured
 const { default: PrivacyPage } = await import("./page");
 const render = () => renderToStaticMarkup(PrivacyPage());
 
-beforeEach(() => Object.assign(state, { account: false, shared: false, recovery: "off" }));
+beforeEach(() => Object.assign(state, { account: false, shared: false, recovery: "off", photo: "off", photoKey: undefined }));
 
 describe("privacy policy lists only what is actually sent", () => {
   it("names TypeSafe and Vercel for everyone, and nothing account-only while accounts are off", () => {
@@ -43,6 +45,16 @@ describe("privacy policy lists only what is actually sent", () => {
     expect(render()).not.toContain("7일(168시간)");
     state.recovery = "on";
     expect(render()).toContain("7일(168시간)");
+  });
+  it("names Anthropic and the photo only while photo input is on and has its key", () => {
+    expect(render()).not.toContain("Anthropic");
+    state.photo = "on";
+    expect(render()).not.toContain("Anthropic");
+    state.photoKey = "key";
+    const html = render();
+    expect(html).toContain("Anthropic, PBC");
+    expect(html).toContain("사진으로 입력할 때(선택)");
+    expect(html).toContain("앱은 사진을 저장하지 않음");
   });
   it("tells every overseas recipient's country, items, timing, retention, refusal and contact", () => {
     Object.assign(state, { account: true, shared: true });

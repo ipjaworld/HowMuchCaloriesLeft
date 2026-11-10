@@ -116,7 +116,7 @@ type PendingClarification = {
  * storage and fills it in. One frame, no `suppressHydrationWarning`, and
  * nothing above this component has to become a client component.
  */
-export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
+export function TodayScreen({accountId=null,photoEnabled=false}:{accountId?:string|null;photoEnabled?:boolean} = {}) {
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
   const turnReply = useRef<{ reply: Reply; outcome: ConversationTurn["outcome"] } | null>(null);
   const turnBusy = useRef(false);
@@ -976,6 +976,7 @@ export function TodayScreen({accountId=null}:{accountId?:string|null} = {}) {
         // is empty, and a delete or a status question answered against an
         // empty day is a wrong answer rather than a slow one.
         isPending={isPending || isLoading}
+        photoEnabled={photoEnabled}
       />
 
       <GoalCalculatorDialog
