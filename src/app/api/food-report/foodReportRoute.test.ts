@@ -142,6 +142,13 @@ describe("the question after a report", () => {
     expect(sent.text).not.toMatch(/빠른|곧|반영하겠/);
   });
 
+  it("keeps the button when this browser is only being slowed down", () => {
+    const busy = describeReported(withReportOption(question), "busy");
+    expect(busy.kind === "question" && busy.options.map((option) => option.id)).toEqual(["skip", REPORT_FOOD]);
+    expect(busy.text).toContain("잠시 후 다시");
+    expect(busy.text).not.toContain("오늘은");
+  });
+
   it("keeps the button after a failed send and removes it at the daily limit", () => {
     const failed = describeReported(withReportOption(question), "failed");
     expect(failed.kind === "question" && failed.options.map((option) => option.id)).toEqual(["skip", REPORT_FOOD]);

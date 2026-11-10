@@ -187,13 +187,15 @@ export function withReportOption(reply: Reply): Reply {
  * the report button. No promise of a date — some foods cannot be added, and
  * the user is owed that honesty more than a comforting line.
  */
-export function describeReported(question: Reply, result: "sent" | "failed" | "limited"): Reply {
+export function describeReported(question: Reply, result: "sent" | "failed" | "busy" | "limited"): Reply {
   const said =
     result === "sent"
       ? "제보했어요. 추가할 수 있는지 확인해 볼게요."
       : result === "limited"
         ? "오늘은 제보를 더 받을 수 없어요."
-        : "제보를 보내지 못했어요. 잠시 후 다시 눌러 주세요.";
+        : result === "busy"
+          ? "제보가 많아요. 잠시 후 다시 눌러 주세요."
+          : "제보를 보내지 못했어요. 잠시 후 다시 눌러 주세요.";
   if (question.kind !== "question") return { kind: "statement", text: said };
   const options = question.options.filter((option) => option.id !== REPORT_FOOD);
   const marker = "아직 정보가 없어요. ";
@@ -202,8 +204,8 @@ export function describeReported(question: Reply, result: "sent" | "failed" | "l
   return {
     kind: "question",
     text: `${said} ${rest}`,
-    // A failed send keeps the button so it can be pressed again.
-    options: result === "failed" ? [...options, { id: REPORT_FOOD, label: "제보하기" }] : options,
+    // A send that did not go through keeps the button so it can be pressed again.
+    options: result === "failed" || result === "busy" ? [...options, { id: REPORT_FOOD, label: "제보하기" }] : options,
   };
 }
 

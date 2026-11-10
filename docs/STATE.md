@@ -1,10 +1,22 @@
 # 현재 상태 — 공통 인수인계
 
-최종 갱신: 2026-11-10 (KST) 음식 제보 버튼 구현(스위치 off, 미커밋). 사진·Phase 3 묶음 1은 로컬 커밋 `1ca36a9`까지 · Codex / Claude Code 공용
+최종 갱신: 2026-11-10 (KST) Codex 후속 확인·Production 환경변수 3개 저장 완료(배포 전). 로컬 `main` HEAD `0cb557f`, `origin/main`보다 8개 앞섬 · Codex / Claude Code 공용
 
 이 파일은 현재 작업의 진입점이다. 확정 원칙은 [DECISIONS](DECISIONS.md), 실행 규칙은 [AGENTS](../AGENTS.md)를 읽는다. 날짜별 문서는 과거 근거이며, 그 안의 상태·테스트 수·명령·승인 범위가 지금도 유효하다고 가정하지 않는다.
 
-## 2026-11-10 Claude Code — 못 찾은 음식 제보 버튼 (스위치 off, 미커밋)
+## 2026-11-10 Codex — 후속 확인·운영 환경변수 저장 (배포 전)
+
+- 시작 상태 직접 확인: `main` HEAD `0cb557f`, `origin/main`보다 8개 앞섬, 작업 트리 깨끗함. 사진 입력 `bf8baa6`, Phase 3 묶음 1 `c25cf9d`, 사진 수량 안내·계측 `4cb0c3f`, 인계 문서 `1ca36a9`, 제보 기능 `0cb557f`는 모두 로컬 커밋되어 있다. 아래 과거 실행 시점의 미커밋 표기는 이 Git 확인으로 갱신한다. 이번 push·배포는 하지 않았다.
+- 이번 직접 재검증: typecheck·lint·72파일 1,845개 테스트 통과. 오프라인 coverage 195/206(94.7%), silent wrong/drop 0/0, 불필요한 질문 11, 수식어 66/66·경계 13/16(기존 한계 3) 확인. build·실제 API·브라우저·실제 Upstash 쓰기는 아직 실행하지 않았다.
+- 사용자 지시: 운영 환경변수를 브라우저에서 입력할 수 있도록 준비하고 저장 직전에만 확인받는다. 준비한 3개 항목에 대해 후속 메시지 "응, 3개 저장해 줘"로 저장을 승인했다. 커밋·push·배포는 이 요청으로 승인된 것으로 해석하지 않는다.
+- 브라우저 직접 준비 완료: Vercel `how-much-calories-left` → Environment Variables → Add Environment Variable에서 Production만 선택, `ANTHROPIC_API_KEY`(기존 `.env.local` 키를 Secret 입력, 값 출력·문서 복사 없음), `PHOTO_INPUT=on`, `FOOD_REPORT=on` 3개를 채웠다. Save는 누르지 않았으며 입력 화면을 승인 대기 탭으로 유지했다. 기존 `KV_REST_API_URL`·`KV_REST_API_TOKEN`·`RATE_LIMIT_STORE` Production 항목 존재를 확인했다. RATE_LIMIT_STORE 값 확인은 이메일 재인증을 요구해 취소했고 기존 값을 읽었다고 보고하지 않는다.
+- 저장 직접 확인: 사용자 승인 후 브라우저 Save를 눌렀다. Production 목록에 `ANTHROPIC_API_KEY`·`PHOTO_INPUT`·`FOOD_REPORT` 3개가 모두 Secret·Added just now로 표시되고 "Added Environment Variable successfully. A new deployment is needed for changes to take effect." 성공 알림을 확인했다. 승인 시 입력값은 키·`on`·`on`이며 저장 뒤 비밀값을 다시 읽지 않았다. 저장 결과 화면을 탭으로 남겼다.
+- 운영 배포 직접 확인(저장 전): Vercel Production은 `22fbbe8` / `dpl_C922TBWNY1kAkqBaj33oaTYG9BeF` Ready였다. 저장 뒤 Redeploy를 누르거나 push하지 않았다. 환경변수는 다음 배포부터 적용되므로 기능 활성화 완료로 보고하지 않는다. 다음 행동: 기능 코드·방침 시행일·모델/한도를 검토한 뒤 배포 승인 범위 확인 및 실제 smoke. 모델·한도는 기존 코드의 잠정 기본값이며 이번에 별도 변수를 추가하지 않았다.
+- 이번 저장 후에는 STATE만 갱신했다. 문서 diff를 확인하고, 앱 코드 변경이 없어 앞서 통과한 앱 검증을 반복하지 않았다. `.env.local`·기존 사용자 변경은 보존했다.
+- 점검 중 발견한 후속 확인: 제보 UI가 모든 429를 하루 제한으로 표시하고 제보한 음식처럼 버튼을 숨긴다(분당 제한과 구분 필요). 아직 코드 수정하지 않았고 사용자 지시에 따라 운영 UI 준비를 우선한다. 이전에 미검증인 한글 제보 목록 출력도 아직 추가 확인하지 않았다.
+- Wiki studio·calories brief 조회 완료. 프로젝트 브리프는 10월 18일 기준 proposed이며 현재 저장소보다 오래돼 운영 상태 근거로 사용하지 않는다.
+
+## 2026-11-10 Claude Code — 못 찾은 음식 제보 버튼 (로컬 커밋 `0cb557f`, 운영 활성화 미확인)
 
 - 사용자 현재 요청: 못 찾은 음식을 버튼으로 운영자에게 제보하는 UI를 제안하고 "구현해". 저장 위치는 Upstash로 확정. 원칙은 [D11](DECISIONS.md#d11-못-찾은-음식은-사용자가-눌러서-제보한다). 시작 HEAD `1ca36a9`, 작업 트리 깨끗한 상태에서 시작.
 - 구현(미커밋): [/api/food-report](../src/app/api/food-report/route.ts), [foodReport](../src/application/foodReport.ts)(이름 정규화·검증), [foodReportStore](../src/infrastructure/foodReportStore.ts)(Upstash `ZINCRBY`+`HSET`), 사용 한도에 report 추가, [replyText](../src/components/replyText.ts)의 `제보하기` 선택지와 제보 뒤 답장, [TodayScreen](../src/components/TodayScreen.tsx) 연결, 개인정보처리방침 조건부 문구, 운영자용 [목록 스크립트](../scripts/ops/list-food-reports.mjs). env `FOOD_REPORT`(기본 off, `RATE_LIMIT_STORE=upstash`도 있어야 켜짐), `RATE_LIMIT_REPORT_PER_MINUTE`(3)·`_PER_DAY`(10), `FOOD_REPORTS_PER_DAY`(300). 한도 값은 구현자가 정한 잠정값이다.

@@ -520,7 +520,7 @@ export function TodayScreen({accountId=null,photoEnabled=false,reportEnabled=fal
   }
 
   /** Sends one food name to the operator's list. Nothing else leaves with it. */
-  async function reportFood(name: string): Promise<"sent" | "failed" | "limited"> {
+  async function reportFood(name: string): Promise<"sent" | "failed" | "busy" | "limited"> {
     try {
       const response = await fetch("/api/food-report", {
         method: "POST",
@@ -528,7 +528,10 @@ export function TodayScreen({accountId=null,photoEnabled=false,reportEnabled=fal
         body: JSON.stringify({ name }),
       });
       if (response.ok) return "sent";
-      return response.status === 429 ? "limited" : "failed";
+      if (response.status !== 429) return "failed";
+      // The service's daily cap is over for today; this browser's own limit passes.
+      const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+      return body?.error === "report_daily_limit" ? "limited" : "busy";
     } catch {
       return "failed";
     }
@@ -912,7 +915,7 @@ export function TodayScreen({accountId=null,photoEnabled=false,reportEnabled=fal
           // same question comes back with what happened to the report.
           const name = pendingAdd.parts[question.partIndex]?.phraseName ?? "";
           const result = await reportFood(name);
-          if (result !== "failed") reportedFoods.current.add(name);
+          if (result === "sent" || result === "limited") reportedFoods.current.add(name);
           showReply(describeReported(withReportOption(describeQuestion(question)), result));
           return;
         }

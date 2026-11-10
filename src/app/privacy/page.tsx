@@ -4,8 +4,8 @@ import { accountConfigured } from "@/infrastructure/accountAuth";
 import { sharedRateLimitConfigured } from "@/infrastructure/serverUsageLimits";
 
 /** Set to the day this version is published; the previous version stays listed. */
-const EFFECTIVE_DATE = "2026년 10월 26일";
-const PREVIOUS_VERSIONS = ["2026년 10월 7일"];
+const EFFECTIVE_DATE = "2026년 11월 10일";
+const PREVIOUS_VERSIONS = ["2026년 10월 26일", "2026년 10월 7일"];
 
 /**
  * Overseas processing as 개인정보 보호법 제28조의8 제2항 asks it to be told:
