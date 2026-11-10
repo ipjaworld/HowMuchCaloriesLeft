@@ -325,9 +325,14 @@ export function AccountScreen({
           </details>
       )}
       <footer className="flex flex-wrap items-center justify-between gap-4 text-xs text-ink-soft">
-        <Link href="/privacy" className="underline">
-          개인정보처리방침
-        </Link>
+        <div className="flex flex-wrap items-center gap-4">
+          <Link href="/privacy" className="underline">
+            개인정보처리방침
+          </Link>
+          <a href="https://hetrich.com/?ref=calories" className="underline">
+            만든 사람
+          </a>
+        </div>
         {userId && !suspended && <button className="min-h-11 px-2" disabled={busy}
           onClick={() => void perform(() => leave(false))}>로그아웃</button>}
       </footer>
