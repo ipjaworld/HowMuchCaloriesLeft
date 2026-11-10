@@ -1,8 +1,19 @@
 # 현재 상태 — 공통 인수인계
 
-최종 갱신: 2026-11-10 (KST) Codex 후속 확인·Production 환경변수 3개 저장 완료(배포 전). 로컬 `main` HEAD `0cb557f`, `origin/main`보다 8개 앞섬 · Codex / Claude Code 공용
+최종 갱신: 2026-11-10 (KST) 사진 입력·음식 제보 운영 배포(`364d989`, `dpl_HNhzpWVKL4Z1ZkmpAGfvm5nUTryd`)와 smoke 완료 · Codex / Claude Code 공용
 
 이 파일은 현재 작업의 진입점이다. 확정 원칙은 [DECISIONS](DECISIONS.md), 실행 규칙은 [AGENTS](../AGENTS.md)를 읽는다. 날짜별 문서는 과거 근거이며, 그 안의 상태·테스트 수·명령·승인 범위가 지금도 유효하다고 가정하지 않는다.
+
+## 2026-11-10 Claude Code — 사진 입력·음식 제보 운영 배포와 smoke
+
+- 사용자 현재 요청: "운영에 환경변수 세팅했거든 푸쉬하면 될듯?" → 이번 push·배포 승인으로 진행했다. 시작 HEAD `0cb557f`(원격 `22fbbe8`보다 8개 앞섬), 작업 트리에는 아래 Codex 기록(STATE·DECISIONS)만 있었고 함께 커밋했다.
+- push 전 직접 확인: Vercel Production에 `ANTHROPIC_API_KEY`·`PHOTO_INPUT`·`FOOD_REPORT`(2분 전 생성, 값은 읽지 않음)와 기존 `RATE_LIMIT_STORE`·`KV_REST_API_*`·`FOOD_CANDIDATE_FILTER` 존재.
+- push 전 변경(`364d989`): 개인정보처리방침 시행일을 2026-11-10으로 갱신(이전 버전에 10월 26일 추가). 아래 Codex가 찾은 제보 429 문제 수정 — 브라우저 한도(`rate_limited`)는 "제보가 많아요. 잠시 후 다시 눌러 주세요."로 안내하고 버튼을 남기며, 서비스 일간 상한(`report_daily_limit`)만 "오늘은 더 받을 수 없어요"로 끝낸다. typecheck·lint·72파일 1,846개 테스트·build 통과.
+- 배포: `22fbbe8..364d989` main push. production `dpl_HNhzpWVKL4Z1ZkmpAGfvm5nUTryd` Ready. **되돌릴 배포는 `dpl_C922TBWNY1kAkqBaj33oaTYG9BeF` / `22fbbe8`**. 되돌릴 때 기능만 끄려면 `PHOTO_INPUT`·`FOOD_REPORT`를 off로 바꾸고 재배포하면 된다(홈은 빌드 시점 값으로 버튼을 정한다).
+- 운영 smoke(이번 직접 실행, 앱 내장 브라우저의 빈 프로필, 저장 없음): `/`·`/account`·`/privacy`·`/import`·`/history` 200. 방침에 시행일 2026년 11월 10일·Anthropic 행·음식 제보 문구 표시. 오늘 화면에 사진 버튼 표시. `/api/chat` 2건(실제 Jev, 음식별 필터 `no_questions`): `김밥 먹었는데 너무 맛있었어` → 김밥 322kcal만, `아침 굶고 점심에 김치찌개 먹었어` → 김치찌개 90kcal만(묶음 1 반영 확인). `/api/photo` 1건: 그린 그림 → 200·약 3초·`바나나 1개, 콜라 355ml`. `/api/food-report`: 잘못된 이름 400, `파김치` 200(`reported: true`) — **실제 Upstash 쓰기 경로가 운영에서 성공을 반환**했다. 옛 주소 `/`는 이전 안내 유지. 25초간 본 배포 로그에 error·warn 줄 없음(짧은 관찰).
+- 운영에 남긴 것: 제보 목록에 `파김치` 1건(사진 시험에서 실제로 못 찾은 음식). 식사·대화 기록은 만들지 않았다.
+- 미검증: 운영 UI에서 사진 고르기 → 입력창 채움 → 기록까지의 전체 흐름과 `제보하기` 버튼 클릭(API만 확인), 실제 휴대폰 카메라·Safari·HEIC, 로그인 상태, 제보 목록 스크립트의 운영 조회(로컬에 운영 저장소 자격이 없음), 운영 한도 초과. 사진 품질 근거는 여전히 로컬의 10장이다.
+- 남은 일: Phase 3 묶음 2(문자 경로의 `장`·`접시` 단위, `양배추 샐러드`→코울슬로, 미지원 음식, "말씀하신 음식" 문구, 전체 미지원 답장의 제보 버튼), 모델·한도 잠정값 확정, Anthropic 보관 조건 문구 확인, 제보 목록 운영 조회 방법 정하기. 이 STATE 갱신은 로컬 커밋이며 push하지 않았다(문서만으로 재배포하지 않음).
 
 ## 2026-11-10 Codex — 후속 확인·운영 환경변수 저장 (배포 전)
 
