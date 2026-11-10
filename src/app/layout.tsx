@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { env } from "@/env";
 
 /**
  * Latin only, on purpose. Inter supplies the figures — which are the loudest
@@ -14,6 +15,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  // Absolute URLs for canonical and share links follow the configured address.
+  metadataBase: env.APP_ORIGIN ? new URL(env.APP_ORIGIN) : undefined,
   title: "오늘 얼마 먹어도 돼?",
   description: "먹은 걸 말하면 오늘 얼마나 더 먹을 수 있는지 바로 알려줍니다.",
 };

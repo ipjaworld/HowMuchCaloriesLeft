@@ -1,7 +1,10 @@
 import { AppNavigation } from "@/components/AppNavigation";
 import { TodayScreen } from "@/components/TodayScreen";
 import { AccountBoundary } from "@/components/AccountBoundary";
+import type { Metadata } from "next";
 import { accountConfigured } from "@/infrastructure/accountAuth";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 /**
  * Server component: it renders the shell and nothing else. All state lives in

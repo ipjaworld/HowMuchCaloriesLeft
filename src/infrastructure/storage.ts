@@ -80,6 +80,8 @@ export const STORAGE_KEYS = {
   dietProfile: "hmcl.v1.dietProfile",
   /** Whether the first-visit calculator prompt has been answered. */
   onboarding: "hmcl.v1.onboarding",
+  /** Old address only: when its records were handed to the new address. */
+  originMove: "hmcl.v1.originMove",
 } as const;
 
 export const STORAGE_VERSION = 1;

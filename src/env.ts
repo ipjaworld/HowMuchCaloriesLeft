@@ -47,6 +47,13 @@ export const envSchema = z.object({
   SUPABASE_URL: blankAsUnset(z.url().optional()),
   SUPABASE_PUBLISHABLE_KEY: optionalSecret,
   APP_ORIGIN: blankAsUnset(z.url().optional()),
+  /**
+   * Hosts the app has moved away from, comma-separated (`old.example.app`).
+   * A page request to one of them gets the "moved" page, which can carry the
+   * browser's records to `APP_ORIGIN`. Read by `proxy.ts`; unset changes
+   * nothing.
+   */
+  LEGACY_HOSTS: optionalSecret,
   ACCOUNT_PROVIDERS: blankAsUnset(z.enum(["google", "kakao", "google,kakao"]).default("google,kakao")),
   PRIVACY_OPERATOR: optionalSecret,
   PRIVACY_CONTACT_EMAIL: blankAsUnset(z.email().optional()),

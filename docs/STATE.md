@@ -1,8 +1,35 @@
 # 현재 상태 — 공통 인수인계
 
-최종 갱신: 2026-11-08 (KST) 브라우저 QA 5건 대응·배포 · Codex / Claude Code 공용
+최종 갱신: 2026-11-10 (KST) 도메인 이전 운영 설정·배포 준비 · Codex / Claude Code 공용
 
 이 파일은 현재 작업의 진입점이다. 확정 원칙은 [DECISIONS](DECISIONS.md), 실행 규칙은 [AGENTS](../AGENTS.md)를 읽는다. 날짜별 문서는 과거 근거이며, 그 안의 상태·테스트 수·명령·승인 범위가 지금도 유효하다고 가정하지 않는다.
+
+## 2026-11-10 Codex — 도메인 이전 운영 설정·전환 배포
+
+- 사용자 현재 요청으로 이전 로그의 남은 작업을 이어받았다. 시작 브랜치 `main`, HEAD·원격 `a2dc622`. 기존 미커밋 변경은 보존한다. Wiki studio·calories brief를 조회했으며 오래된 운영 상태보다 저장소 정본과 이번 직접 조회를 우선했다.
+- 가비아 로그인 세션에서 `hetrich.com`에 `CNAME calories → b6432e89f07c4a81.vercel-dns-017.com.`(TTL 600) 하나를 추가하고 저장 완료·4개 레코드를 확인했다. 기존 `@`·`www`·`rooftop` 유지. 권한 DNS 응답과 Vercel `domains verify`의 `configured_correctly`를 직접 확인했다.
+- 새 도메인을 기존 production `dpl_BJkZzDd9BC4ybgey6uVAwBN4fHBQ`에 alias로 연결했다. 인증서 `cert_82wKPPZCxveucOA2SF34Afsw` 발급, `https://calories.hetrich.com/` 200과 `/api/account`의 configured=true 확인. 이 시점에는 새 주소와 옛 주소가 기존 앱을 함께 제공하며, 로그인 origin은 아직 옛 주소다.
+- 사용자가 Supabase 대시보드에 로그인한 뒤 Site URL을 `https://calories.hetrich.com`으로, Redirect URLs에 `https://calories.hetrich.com/api/auth/callback`을 추가·저장했다. 기존 운영·localhost 콜백은 유지했다. DB·공급자 비밀값·계정 데이터는 변경하지 않았다. Vercel MCP 팀 권한 403은 기존 CLI 인증으로 대체했으며 연결 권한을 확대하지 않았다.
+- 이번 직접 재검증: typecheck·lint·69파일 1,772개 테스트·production build·diff check 통과. 기존 로컬 두 주소 브라우저 검증은 아래 Claude 기록이며 이번 재실행으로 표시하지 않는다.
+- 사용자에게 구체적인 전환 내용(`APP_ORIGIN`·`LEGACY_HOSTS`, 커밋·main push, 옛 주소 안내)을 제시했고 **이번 대화에서 전환 배포까지 승인받았다**. 도메인 이전 파일과 관련 문서만 커밋한다. 만든 사람 링크, 운영 체크리스트, 도구 설정·설치 파일은 제외한다.
+- 전환 직전 되돌릴 배포: `dpl_BJkZzDd9BC4ybgey6uVAwBN4fHBQ` / `a2dc622`. 이전 `APP_ORIGIN=https://how-much-calories-left.vercel.app`, `LEGACY_HOSTS` 미설정. 롤백할 때 환경변수도 복원해야 이후 재배포에서 다시 전환되지 않는다.
+- 다음 행동: production 환경변수 변경 → 승인된 파일 커밋·push → 새 배포 Ready·alias와 새 주소 기록/API·옛 주소 안내 확인. Google·카카오 실제 로그인 완료는 사용자 확인 필요. 사진 기능·커버리지 개선은 아직 구현하지 않았고 모델·비용 결정은 후속 단계다.
+
+## 2026-11-10 Claude Code — 도메인 이전·사진 인식·입력 품질 계획 (문서만)
+
+- 사용자 요청: 주소를 `calories.hetrich.com`으로 변경, 사진 인식 추가(적당한 완성도), 문자 입력 유지하며 예외 케이스·음식 커버리지 확대. 페이즈별 진행 허용. [페이즈 계획](product/roadmap-2026-11-10.md)을 작성했다. 기준 HEAD `a2dc622`.
+- 읽기 전용 조사로 확인: `hetrich.com`은 같은 Vercel 팀에 있고 네임서버는 가비아, `calories.hetrich.com` DNS 레코드 없음. 로그인은 `APP_ORIGIN` 한 주소에만 묶임. 비로그인 기록은 origin별 localStorage라 옛 주소를 바로 넘기면 새 주소에서 보이지 않음. production에 `ANTHROPIC_API_KEY` 없음, TypeSafe SDK에 이미지 입력 없음.
+- 코드·운영 설정·DNS는 바꾸지 않았다. 문서만 추가·갱신해 링크와 diff만 확인했고 앱 검증은 실행하지 않았다. 커밋·push 없음. 기존 미커밋 변경 보존.
+- 다음 행동: 사용자가 계획의 결정 ①(옛 주소 처리)·②(사진 모델·키) 답 → Phase 1부터 진행.
+
+### 후속: Phase 1 구현 (같은 날, 미커밋)
+
+- 사용자 결정: 옛 주소는 살려 두고 안내 + 기록 옮기기.
+- 운영 변경 1건: Vercel 프로젝트에 `calories.hetrich.com`을 추가했다. 가비아에 `CNAME calories → b6432e89f07c4a81.vercel-dns-017.com.`이 필요하며 아직 없다(사용자). 환경변수·배포·Supabase 설정은 바꾸지 않았다. 지금 운영 동작은 이전과 같다.
+- 코드(미커밋): [proxy](../src/proxy.ts)·[legacyHost](../src/application/legacyHost.ts)(`LEGACY_HOSTS`의 host는 모든 페이지를 `/moved`로), [originMove](../src/application/originMove.ts)·[localMove](../src/infrastructure/localMove.ts)(기록을 URL `#` 뒤에 묶기·검증·합치기), [MovedScreen](../src/components/MovedScreen.tsx), [ImportScreen](../src/components/ImportScreen.tsx), `/moved`·`/import` 페이지, env `LEGACY_HOSTS`, `metadataBase`·홈 canonical. 계산기 신체정보는 옮기지 않는다. 상세는 [계획 문서](product/roadmap-2026-11-10.md#옛-주소-처리-구현).
+- 검증: typecheck·lint 통과, 69파일 1,772개 테스트 통과(새 17개), production build 통과. 3211 로컬 production 빌드를 `localhost`(새 주소 역할)·`127.0.0.1`(옛 주소 역할)로 열어 확인: 옛 주소의 `/`·`/history`·`/account`가 안내로 바뀜, 옮기기 → 새 주소에서 건수 확인 → 가져오기 → 오늘 화면에 기록 표시, 주소창 `#` 제거, 원본 유지, 신체정보 미전달, 깨진 링크는 저장 없이 안내, 375px 가로 넘침 없음, 콘솔·서버 오류 없음. 테스트 데이터는 지웠다. 실제 도메인·로그인·Safari는 확인하지 않았다.
+- `.claude/launch.json`(미추적)에 `verify-move`(3211, 두 환경변수 지정)를 추가했다.
+- 남은 순서: 사용자 가비아 CNAME·Supabase URL 설정 → `APP_ORIGIN`·`LEGACY_HOSTS` 설정과 커밋·push를 한 번에(승인 필요, 먼저 하면 로그인이 끊김) → 새 주소 smoke와 실제 로그인. 커밋·push 없음.
 
 ## 2026-11-08 Claude Code — 브라우저 QA 5건 대응
 
@@ -13,7 +40,9 @@
 - QA-04 `한 봉지 끓였는데 반만 먹었어` → 미등록 음식: 끓였는데·시켰는데·샀는데·데워서 등 음식을 바꾸지 않는 준비 동사 뒤에 양만 오면 앞 음식의 그 양으로 읽는다(`라면 반 봉지` → QA-01 경로). 앞 양의 비율로 계산(`두 줄 … 반만` → 1줄), `다 먹었어`는 전량, `반은 남겼어`는 뺄셈. 구워서·삶아서는 다른 음식이 되므로 제외(기존 L10·L11 fixture 유지). [foodPhrases](../src/ai/nutrition/foodPhrases.ts).
 - QA-05 `내일 떡볶이 먹을 거야` → 일반 안내: `내일` 등이 음식명에 붙어 조회가 실패했다. 시간어를 떼고, 먹을 계획은 계획으로 답한다(다른 날이면 남은 양 없이 "아직 드시기 전이라 기록하지 않았어요"). `먹을 거야/예정/먹을게`는 파서에서도 섭취로 읽지 않는다.
 - 검증: 68파일 1,755개 테스트(새 [QA 회귀 테스트](../src/application/qa20261108.test.ts) 포함), typecheck, lint, production build 통과. 3210 로컬 production 빌드에서 실제 Jev로 QA 문장 5건과 대조 문장(`라면 반 그릇`, `김밥 먹었어`, `바나나 지워줘`) API 확인, 화면에서 QA-01·02·03 흐름과 답장 확인, 서버 오류 없음. 테스트 기록은 인앱 브라우저 localhost 저장소에만 생겼다.
-- 미커밋 상태로 두는 것: [AccountScreen](../src/components/AccountScreen.tsx) 만든 사람 링크(10-31, 결정 대기), 운영 체크리스트 diff, `.agents/`·`skills-lock.json`·`.claude/launch.json`. 배포 결과와 운영 재확인은 아래 후속에 적는다.
+- 미커밋 상태로 두는 것: [AccountScreen](../src/components/AccountScreen.tsx) 만든 사람 링크(10-31, 결정 대기), 운영 체크리스트 diff, `.agents/`·`skills-lock.json`·`.claude/launch.json`.
+- 배포: 사용자 요청으로 `a2dc622`를 main push. production `dpl_BJkZzDd9BC4ybgey6uVAwBN4fHBQ` Ready(18:59 KST) 및 운영 alias 반영 확인. 되돌릴 대상은 `dpl_E5fALeZ2g4HaSCw38EXjHX5Je5Gv` / `ad5b344`.
+- 운영 재확인: 운영 `/api/chat`에 QA 문장 5건과 대조 문장 4건을 직접 보내 로컬과 같은 결과를 확인했다(모두 200, 실제 Jev). API 직접 호출이라 사용자 기록은 생기지 않는다. 운영 화면에서의 `먹었어` 이어받기는 로컬 production 빌드 화면으로만 확인했고 운영 화면 재확인은 하지 않았다. 이 STATE 갱신은 배포 뒤 로컬 문서 변경이며 커밋하지 않았다.
 
 ## 2026-11-08 Codex — 운영 페이지 브라우저 QA 인계
 
