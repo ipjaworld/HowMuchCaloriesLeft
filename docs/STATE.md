@@ -1,8 +1,15 @@
 # 현재 상태 — 공통 인수인계
 
-최종 갱신: 2026-11-10 (KST) 사진 입력·음식 제보 운영 배포(`364d989`, `dpl_HNhzpWVKL4Z1ZkmpAGfvm5nUTryd`)와 smoke 완료 · Codex / Claude Code 공용
+최종 갱신: 2026-11-10 (KST) 사진 하루 한도 기본값 20 → 10(미커밋, 운영 미반영). 운영은 `364d989`, `dpl_HNhzpWVKL4Z1ZkmpAGfvm5nUTryd` · Codex / Claude Code 공용
 
 이 파일은 현재 작업의 진입점이다. 확정 원칙은 [DECISIONS](DECISIONS.md), 실행 규칙은 [AGENTS](../AGENTS.md)를 읽는다. 날짜별 문서는 과거 근거이며, 그 안의 상태·테스트 수·명령·승인 범위가 지금도 유효하다고 가정하지 않는다.
+
+## 2026-11-10 Claude Code — 사진 하루 한도 20 → 10 (미커밋, 운영 미반영)
+
+- 사용자 현재 요청: "하루 한도 10장으로 줄여". 브라우저(사람)당 하루 한도로 해석해 [env](../src/env.ts)의 `RATE_LIMIT_PHOTO_PER_DAY` 기본값을 20 → 10으로 바꿨다. 분당 3회와 서비스 전체 하루 200회(`PHOTO_CALLS_PER_DAY`)는 그대로다.
+- 검증(이번 직접 실행): typecheck, 사진 라우트 테스트 15개 통과(기본값 단언을 10으로 갱신). 화면에 숫자가 나오지 않는 서버 설정이라 브라우저 확인은 생략했다.
+- **운영은 아직 20이다.** 반영하려면 이 변경을 커밋·push(재배포)하거나, Vercel Production에 `RATE_LIMIT_PHOTO_PER_DAY=10`을 넣고 재배포해야 한다. Vercel에 이 변수가 따로 설정되어 있는지는 이번에 확인하지 않았다(설정되어 있으면 그 값이 기본값보다 우선한다). 커밋·push 승인 없음.
+- 과거 문서([사진 테스트 인계](product/photo-input-test-handoff-2026-11-10.md))의 "하루 20회"는 당시 기록이라 고치지 않았다.
 
 ## 2026-11-10 Claude Code — 사진 입력·음식 제보 운영 배포와 smoke
 

@@ -206,7 +206,7 @@ describe("photo limits", () => {
     const parsed = envSchema.parse({});
     expect(parsed.PHOTO_INPUT).toBe("off");
     expect(parsed.PHOTO_MODEL).toBe("claude-opus-5-5");
-    expect([parsed.RATE_LIMIT_PHOTO_PER_MINUTE, parsed.RATE_LIMIT_PHOTO_PER_DAY, parsed.PHOTO_CALLS_PER_DAY]).toEqual([3, 20, 200]);
+    expect([parsed.RATE_LIMIT_PHOTO_PER_MINUTE, parsed.RATE_LIMIT_PHOTO_PER_DAY, parsed.PHOTO_CALLS_PER_DAY]).toEqual([3, 10, 200]);
     expect(envSchema.safeParse({ PHOTO_INPUT: "yes" }).success).toBe(false);
   });
 });

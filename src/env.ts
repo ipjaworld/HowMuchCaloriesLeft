@@ -116,7 +116,7 @@ export const envSchema = z.object({
   // A photo costs far more than a sentence, so its limits are its own and
   // small. Per browser identity, then one cap for the whole service per day.
   RATE_LIMIT_PHOTO_PER_MINUTE: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(3)),
-  RATE_LIMIT_PHOTO_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(20)),
+  RATE_LIMIT_PHOTO_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(10)),
   PHOTO_CALLS_PER_DAY: blankAsUnset(z.coerce.number().int().positive().max(1_000_000).default(200)),
 
   /**
