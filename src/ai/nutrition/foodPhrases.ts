@@ -355,12 +355,13 @@ type Clause = {
 };
 
 /** Words after the eating verb that do not change it: "먹은 거였어", "먹은 거야". */
-const AFTER_VERB = /^(?:거였어|거야|거예요|건데|거였음|것|거)[.!?~]*$/;
+const AFTER_VERB = /^(?:거였어|거야|거예요|건데|거였음|것|거|중|중이야|중이에요|중임|중이다)[.!?~]*$/;
 
 /** Said between a food and the eating verb, about how it was got: 사, 시켜, 데워. */
 const SERVING_VERBS = new Set([
   "사", "사서", "사다", "시켜", "시켜서", "배달시켜", "포장해", "포장해서",
   "해", "해서", "데워", "데워서", "끓여", "끓여서", "구워", "구워서",
+  "배달시켜서", "주문해", "주문해서", "사와서", "사다가",
 ]);
 
 /** A clause-final desire or intent: 먹고 싶다, 먹을까, 마실래, 먹어야지. */
@@ -452,6 +453,10 @@ function splitClauses(text: string): Clause[] {
   } else if (verbless !== null) {
     const negated = tail.at(-2) === "안" || tail.at(-2) === "못";
     let words = negated ? verbless.slice(0, -1) : verbless;
+    // "치킨 배달시켜서 동생이랑 같이 먹었어": who it was eaten with, said
+    // right before the verb. Only a person from the list, so "밥이랑" stays.
+    if (words.length > 1 && /^(?:같이|함께)$/.test(words.at(-1) ?? "")) words = words.slice(0, -1);
+    if (words.length > 1 && isCompany(words.at(-1) ?? "")) words = words.slice(0, -1);
     // "바나나 사 먹었어", "떡볶이 시켜 먹었어": how it was got, not what.
     while (words.length > 1 && SERVING_VERBS.has(words.at(-1) ?? "")) words = words.slice(0, -1);
     clauses.push({ words, eaten: !negated });
@@ -474,7 +479,14 @@ const PEOPLE = new Set([
   "남친", "여친", "남자친구", "여자친구", "애인", "남편", "아내", "와이프", "딸", "아들",
   "아이", "애들", "동료", "동료들", "사람들", "선배", "후배", "대리", "과장", "부장",
   "팀장", "차장", "사장", "선생님", "교수님", "할머니", "할아버지", "룸메", "룸메이트",
+  "팀원", "팀원들", "직원", "직원들", "부모님", "식구", "식구들", "애기", "아기",
 ]);
+
+/** "동생이랑", "친구들하고": a person and the particle for "with", as one word. */
+function isCompany(word: string): boolean {
+  const person = /^(.+?)(?:이랑|랑|하고|과|와)$/.exec(word)?.[1];
+  return person !== undefined && (PEOPLE.has(person) || PEOPLE.has(person.replace(/(?:님|들)$/, "")));
+}
 
 /** What someone did before eating: "퇴근하고", "운동하고". Only before 하고. */
 const ACTIVITIES = new Set([

@@ -105,21 +105,21 @@ describe("runChat with the filter", () => {
     recentItems,
   });
 
-  it("drops the question about 팀원들 and keeps 삼겹살", async () => {
-    const result = await runChat(input("팀원들이랑 회식에서 삼겹살 먹었어"), undefined, {
+  it("drops the question about a name the parser cannot know and keeps 떡볶이", async () => {
+    const result = await runChat(input("민수랑 떡볶이 먹었어"), undefined, {
       judge: fixedJudge(judgment("add_food")),
       resolver: koreanFoodResolver,
-      candidateJudge: tableJudge({ 팀원들: 0.02 }),
+      candidateJudge: tableJudge({ 민수: 0.02 }),
     });
     expect(result.command.type).toBe("add");
     if (result.command.type !== "add") return;
-    expect(result.command.parts.map(describePart)).toEqual(['resolved 삼겹살구이 (1인분) ← "회식에서 삼겹살"']);
-    expect(result.candidateFilter).toMatchObject({ status: "applied", dropped: ["팀원들"] });
+    expect(result.command.parts.map(describePart)).toEqual(['resolved 떡볶이 (1인분) ← "떡볶이"']);
+    expect(result.candidateFilter).toMatchObject({ status: "applied", dropped: ["민수"] });
   });
 
   it("asks as before when the filter fails", async () => {
-    const before = await resolveAddParts("팀원들이랑 회식에서 삼겹살 먹었어", koreanFoodResolver);
-    const result = await runChat(input("팀원들이랑 회식에서 삼겹살 먹었어"), undefined, {
+    const before = await resolveAddParts("민수랑 떡볶이 먹었어", koreanFoodResolver);
+    const result = await runChat(input("민수랑 떡볶이 먹었어"), undefined, {
       judge: fixedJudge(judgment("add_food")),
       resolver: koreanFoodResolver,
       candidateJudge: { judgeEaten: () => Promise.reject(new Error("down")) },

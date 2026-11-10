@@ -1,4 +1,5 @@
 import { segmentFoods, toFoodPhrase } from "@/ai/nutrition/foodPhrases";
+import { isNonFoodPhrase } from "@/ai/nutrition/nonFood";
 import {
   UNNAMED_FOOD_LABEL,
   cleanFoodLabel,
@@ -177,7 +178,7 @@ function representativeFor(
   phrase: ParsedFoodPhrase,
   candidates: AddCandidate[],
 ): { candidate: AddCandidate; example: string } | undefined {
-  const reading = REPRESENTATIVES[phrase.name.replace(/s+/g, "")];
+  const reading = REPRESENTATIVES[phrase.name.replace(/\s+/g, "")];
   if (reading === undefined) return undefined;
   if (reading.needsAmount && phrase.quantity.assumed) return undefined;
   const candidate = candidates.find((option) => option.name === reading.name);
@@ -326,7 +327,12 @@ export async function resolveAddParts(
 
   return lastSayWins(
     segments.flatMap((segment, index) =>
-      (resolved[index] ?? []).map((said) => ({ ...said, clause: segment.clause })),
+      (resolved[index] ?? [])
+        // Talk around the meal that the dataset could not place ("너무
+        // 맛있었어") is not a food to ask the calories of. Only an unknown
+        // slice with no amount of its own: a known food never gets here.
+        .filter(({ part }) => !(part.status === "unknown" && part.amount === undefined && isNonFoodPhrase(part.phraseName)))
+        .map((said) => ({ ...said, clause: segment.clause })),
     ),
   );
 }

@@ -461,10 +461,8 @@
     },
     {
       "id": "homo-neg-02",
-      "verdict": "spurious_ask",
-      "actual": [
-        "unknown ← \"진짜 죽겠다\""
-      ]
+      "verdict": "correct_not_consumed",
+      "actual": []
     },
     {
       "id": "homo-neg-03",
@@ -503,10 +501,8 @@
     },
     {
       "id": "homo-neg-08",
-      "verdict": "spurious_ask",
-      "actual": [
-        "unknown ← \"배불러 죽겠다\""
-      ]
+      "verdict": "correct_not_consumed",
+      "actual": []
     },
     {
       "id": "homo-neg-09",
@@ -625,17 +621,13 @@
     },
     {
       "id": "pol-07",
-      "verdict": "spurious_ask",
-      "actual": [
-        "unknown ← \"고민 중이야\""
-      ]
+      "verdict": "correct_not_consumed",
+      "actual": []
     },
     {
       "id": "pol-08",
-      "verdict": "spurious_ask",
-      "actual": [
-        "unknown ← \"그냥 굶었어\""
-      ]
+      "verdict": "correct_not_consumed",
+      "actual": []
     },
     {
       "id": "qty-01",
@@ -829,10 +821,9 @@
     },
     {
       "id": "narr-20",
-      "verdict": "spurious_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "resolved 김밥 (1줄) ← \"김밥\"",
-        "unknown ← \"운동했어\""
+        "resolved 김밥 (1줄) ← \"김밥\""
       ]
     },
     {
@@ -1183,9 +1174,8 @@
     },
     {
       "id": "blind-06",
-      "verdict": "spurious_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"헬스장 가기 전\"",
         "resolved 바나나 (1개) ← \"바나나\""
       ]
     },
@@ -1242,9 +1232,8 @@
     },
     {
       "id": "blind-14",
-      "verdict": "spurious_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"점심을 걸러서 저녁\"",
         "resolved 삼겹살구이 (2인분) ← \"삼겹살\""
       ]
     },
@@ -1264,10 +1253,9 @@
     },
     {
       "id": "blind-17",
-      "verdict": "spurious_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "resolved 김밥 (1줄) ← \"김밥\"",
-        "unknown ← \"너무 맛있었어\""
+        "resolved 김밥 (1줄) ← \"김밥\""
       ]
     },
     {
@@ -1307,11 +1295,8 @@
     },
     {
       "id": "blind-23",
-      "verdict": "spurious_ask",
-      "actual": [
-        "unknown ← \"다이어트 때문\"",
-        "unknown ← \"저녁은 굶었어\""
-      ]
+      "verdict": "correct_not_consumed",
+      "actual": []
     },
     {
       "id": "blind-24",
@@ -1330,9 +1315,8 @@
     },
     {
       "id": "blind-26",
-      "verdict": "spurious_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"동생이\"",
         "resolved 피자 (1인분) ← \"남긴 피자\""
       ]
     },
@@ -1346,16 +1330,14 @@
     },
     {
       "id": "blind-28",
-      "verdict": "spurious_ask",
-      "actual": [
-        "unknown ← \"참았어\""
-      ]
+      "verdict": "correct_not_consumed",
+      "actual": []
     },
     {
       "id": "review-01",
-      "verdict": "false_negative",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"치킨 배달시켜서 동생이랑\""
+        "resolved 치킨 (1인분) ← \"치킨\""
       ]
     },
     {
@@ -1363,8 +1345,7 @@
       "verdict": "partial_multi_food",
       "actual": [
         "unknown ← \"김밥 사서 집\"",
-        "resolved 라면 (1그릇) ← \"와서 라면\"",
-        "unknown ← \"같이\""
+        "resolved 라면 (1그릇) ← \"와서 라면이랑\""
       ]
     },
     {
@@ -1377,9 +1358,8 @@
     },
     {
       "id": "review-04",
-      "verdict": "spurious_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"팀원들\"",
         "resolved 삼겹살구이 (1인분) ← \"회식에서 삼겹살\""
       ]
     },
@@ -1428,9 +1408,8 @@
     },
     {
       "id": "review-11",
-      "verdict": "spurious_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"굶고 점심\"",
         "resolved 김밥 (1줄) ← \"김밥\""
       ]
     },
@@ -1443,25 +1422,23 @@
     },
     {
       "id": "review-13",
-      "verdict": "spurious_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "resolved 라면 (1그릇) ← \"라면\"",
-        "unknown ← \"나니까 배불러\""
+        "resolved 라면 (1그릇) ← \"라면\""
       ]
     },
     {
       "id": "review-14",
-      "verdict": "false_negative",
+      "verdict": "correct_resolved",
       "actual": [
-        "unknown ← \"김치찌개 먹는 중\""
+        "resolved 김치찌개 (1그릇) ← \"김치찌개\""
       ]
     },
     {
       "id": "review-15",
-      "verdict": "spurious_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "resolved 떡볶이 (1인분) ← \"떡볶이\"",
-        "unknown ← \"너무 매워\""
+        "resolved 떡볶이 (1인분) ← \"떡볶이\""
       ]
     },
     {
@@ -1496,10 +1473,9 @@
     },
     {
       "id": "review-20",
-      "verdict": "spurious_ask",
+      "verdict": "correct_resolved",
       "actual": [
-        "resolved 김밥 (1줄) ← \"김밥\"",
-        "unknown ← \"ㅎㅎ 맛있었다\""
+        "resolved 김밥 (1줄) ← \"김밥\""
       ]
     }
   ]
