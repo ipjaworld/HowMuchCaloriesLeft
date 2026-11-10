@@ -13,7 +13,7 @@ import { PHOTO_MAX_BYTES, type PhotoResult } from "@/application/photoCandidates
 const LONG_EDGE = 1280;
 
 export type PhotoOutcome =
-  | { kind: "filled"; sentence: string }
+  | { kind: "filled"; sentence: string; note: string }
   | { kind: "notice"; text: string };
 
 export const PHOTO_NOTICE = {
@@ -25,6 +25,14 @@ export const PHOTO_NOTICE = {
   failed: "사진을 읽지 못했어요. 다시 하거나 글로 적어 주세요.",
   notImage: "이 파일은 열 수 없어요. 다른 사진을 골라 주세요.",
 } as const;
+
+/**
+ * A box of macarons, a shared pot: the photo shows several and cannot show
+ * how many were eaten, so one was written. Says so, and what to change.
+ */
+export function assumedOneNotice(names: string[]): string {
+  return `사진으로는 먹은 양을 알 수 없어 하나만 적었어요: ${names.join(", ")}. 먹은 만큼 숫자를 고친 뒤 기록을 눌러 주세요.`;
+}
 
 async function decode(file: Blob): Promise<{ source: CanvasImageSource; width: number; height: number; close: () => void }> {
   if (typeof createImageBitmap === "function") {
@@ -79,8 +87,12 @@ export async function shrinkPhoto(file: Blob): Promise<Blob | null> {
 export function photoOutcome(status: number, body: unknown): PhotoOutcome {
   if (status === 200 && typeof body === "object" && body !== null) {
     const result = body as PhotoResult;
-    if (result.kind === "food" && typeof result.sentence === "string" && result.sentence !== "")
-      return { kind: "filled", sentence: result.sentence };
+    if (result.kind === "food" && typeof result.sentence === "string" && result.sentence !== "") {
+      const several = Array.isArray(result.assumedOne)
+        ? result.assumedOne.filter((name): name is string => typeof name === "string" && name !== "")
+        : [];
+      return { kind: "filled", sentence: result.sentence, note: several.length === 0 ? PHOTO_NOTICE.read : assumedOneNotice(several) };
+    }
     if (result.kind === "not_food") return { kind: "notice", text: PHOTO_NOTICE.notFood };
     if (result.kind === "unreadable") return { kind: "notice", text: PHOTO_NOTICE.unreadable };
   }

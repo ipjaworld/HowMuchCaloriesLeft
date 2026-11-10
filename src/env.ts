@@ -99,6 +99,8 @@ export const envSchema = z.object({
    */
   PHOTO_INPUT: blankAsUnset(z.enum(["off", "on"]).default("off")),
   PHOTO_MODEL: blankAsUnset(z.string().min(1).default("claude-opus-5-5")),
+  /** `on` logs the answering model and token counts per reading. No content. */
+  PHOTO_USAGE_LOG: blankAsUnset(z.enum(["off", "on"]).default("off")),
   /** One attempt plus one retry, each bounded by this. */
   PHOTO_TIMEOUT_MS: blankAsUnset(z.coerce.number().int().positive().default(30_000)),
   // A photo costs far more than a sentence, so its limits are its own and

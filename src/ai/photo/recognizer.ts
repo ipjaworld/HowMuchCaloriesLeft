@@ -15,8 +15,9 @@ export type PhotoRecognizer = (jpegBase64: string) => Promise<PhotoReading>;
 const SYSTEM = `You read meal photos for a Korean calorie-logging app. The user will see what you read as an editable sentence and confirm it before anything is recorded, so name what is plainly there and leave out what you would have to guess.
 
 Return the foods and drinks in the photo that a person would eat as part of this meal.
-- name: the everyday Korean name someone would type, such as 김치찌개, 쌀밥, 제육볶음, 아메리카노. For a packaged product whose label is legible, use the product name as printed. One entry per distinct food; shared side dishes (반찬) only when they are clearly identifiable.
-- amount: a short Korean phrase for how much is visible, such as 1그릇, 1공기, 2조각, 반 접시, 1캔, 1잔. Use a printed volume or weight (355ml, 210g) only when it is legible on the package. Use an empty string when the amount cannot be told from the photo.
+- name: the everyday Korean name someone would type, such as 김치찌개, 쌀밥, 제육볶음, 아메리카노. For a packaged product whose label is legible, use the product name as printed. One entry per distinct food; shared side dishes (반찬) only when they are clearly identifiable. Leave out sauces, dips, condiments and garnish: they are not logged as foods of their own.
+- amount: a short Korean phrase for how much one person would have eaten of it, in a counter the app can read: 그릇, 공기, 접시, 인분, 개, 조각, 장, 줄, 잔, 컵, 캔, 병, 봉지. Not the vessel it happens to be in (팬, 뚝배기, 상자, 통, 종지). Use a printed volume or weight (355ml, 210g) only when it is legible on the package. Use an empty string when the amount cannot be told from the photo, and for small side dishes.
+- one_of_several: the photo cannot show how much of a shared or multi-piece food this person ate. When the photo shows a box, bag or tray holding several pieces of the same item (a box of macarons, a pack of dumplings), or a pot, pan or delivery container that is plainly more than one person's portion, write the amount of the smallest unit someone eats — 1개, 1조각, 1인분 — and set one_of_several to true. The app then tells the user that one was written and asks them to change the number to what they ate. Set it to false for a single serving: one bowl, one plate set for one person, one cup, one can.
 - Never give calories, nutrients, or a weight you estimated by eye. The app looks those up itself.
 
 Set kind to "not_food" when the photo shows no food or drink, and "unreadable" when it is too dark, blurred or cropped to name anything; items is empty in both cases. Otherwise kind is "food".
@@ -27,6 +28,12 @@ export function createPhotoRecognizer(options: {
   apiKey: string;
   model: string;
   timeoutMs: number;
+  /**
+   * Log which model answered and the token counts of each reading — the
+   * numbers a cost is worked out from, and nothing about the photo or what
+   * was read from it.
+   */
+  logUsage?: boolean;
 }): PhotoRecognizer {
   const client = new Anthropic({ apiKey: options.apiKey });
 
@@ -53,6 +60,21 @@ export function createPhotoRecognizer(options: {
       },
       { timeout: options.timeoutMs, maxRetries: 1 },
     );
+
+    if (options.logUsage === true) {
+      console.info(
+        "[photo] usage",
+        JSON.stringify({
+          requested: options.model,
+          model: response.model,
+          stop: response.stop_reason,
+          input: response.usage.input_tokens,
+          output: response.usage.output_tokens,
+          cacheWrite: response.usage.cache_creation_input_tokens ?? 0,
+          cacheRead: response.usage.cache_read_input_tokens ?? 0,
+        }),
+      );
+    }
 
     if (response.stop_reason === "refusal" || response.parsed_output === null)
       return { kind: "unreadable", items: [] };

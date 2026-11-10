@@ -14,13 +14,36 @@ import { z } from "zod";
 /** The shape asked of the model. Bounds are enforced below, not in the schema. */
 export const photoReadingSchema = z.object({
   kind: z.enum(["food", "not_food", "unreadable"]),
-  items: z.array(z.object({ name: z.string(), amount: z.string() })),
+  items: z.array(
+    z.object({
+      name: z.string(),
+      amount: z.string(),
+      /**
+       * Several of this were in the photo — a box of macarons, a shared pot —
+       * and the amount written is one of them, because a photo cannot say how
+       * many this person ate (2026-11-10 user decision, D10).
+       */
+      one_of_several: z.boolean(),
+    }),
+  ),
 });
 
-export type PhotoReading = z.infer<typeof photoReadingSchema>;
+type ModelReading = z.infer<typeof photoReadingSchema>;
+
+/** A reading as code handles it: the flag may be absent, and absent means no. */
+export type PhotoReading = {
+  kind: ModelReading["kind"];
+  items: { name: string; amount: string; one_of_several?: boolean }[];
+};
 
 export type PhotoResult =
-  | { kind: "food"; sentence: string; count: number }
+  | {
+      kind: "food";
+      sentence: string;
+      count: number;
+      /** Foods written as one of several, by name, so the user is told to set the number. */
+      assumedOne: string[];
+    }
   | { kind: "not_food" }
   | { kind: "unreadable" };
 
@@ -42,6 +65,7 @@ export function photoResult(reading: PhotoReading): PhotoResult {
 
   const seen = new Set<string>();
   const parts: string[] = [];
+  const assumedOne: string[] = [];
   for (const item of reading.items) {
     const name = tidy(item.name);
     if (name === "" || name.length > NAME_MAX || NUTRITION.test(name)) continue;
@@ -51,12 +75,13 @@ export function photoResult(reading: PhotoReading): PhotoResult {
     if (seen.has(part)) continue;
     seen.add(part);
     parts.push(part);
+    if (item.one_of_several === true) assumedOne.push(name);
     if (parts.length === PHOTO_MAX_ITEMS) break;
   }
 
   // "Food" with nothing usable in it is a photo that could not be read.
   if (parts.length === 0) return { kind: "unreadable" };
-  return { kind: "food", sentence: parts.join(", "), count: parts.length };
+  return { kind: "food", sentence: parts.join(", "), count: parts.length, assumedOne };
 }
 
 /** JPEG only: the browser re-encodes every photo to one before sending it. */

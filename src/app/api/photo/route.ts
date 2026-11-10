@@ -20,6 +20,7 @@ function photoRecognizer(): PhotoRecognizer {
     apiKey: env.ANTHROPIC_API_KEY!,
     model: env.PHOTO_MODEL,
     timeoutMs: env.PHOTO_TIMEOUT_MS,
+    logUsage: env.PHOTO_USAGE_LOG === "on",
   });
   return recognizer;
 }

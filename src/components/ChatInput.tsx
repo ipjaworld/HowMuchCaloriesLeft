@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 
 import { getBrowserStorage, readJson, STORAGE_KEYS, writeJson } from "@/infrastructure/storage";
-import { PHOTO_NOTICE, readPhoto } from "./photoInput";
+import { readPhoto } from "./photoInput";
 import { replyText, type ClarifyOption, type Reply } from "./replyText";
 
 type Props = {
@@ -86,7 +86,7 @@ export function ChatInput({
       const outcome = await readPhoto(file);
       if (outcome.kind === "filled") {
         setText((current) => (current.trim() === "" ? outcome.sentence : `${current.trim()}, ${outcome.sentence}`));
-        setPhotoNote(PHOTO_NOTICE.read);
+        setPhotoNote(outcome.note);
         // After the re-render that enables the box again.
         setTimeout(() => textInput.current?.focus(), 0);
       } else {

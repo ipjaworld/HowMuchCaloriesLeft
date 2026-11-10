@@ -51,7 +51,7 @@ describe("/api/photo", () => {
   it("turns a reading into one sentence and nothing else", async () => {
     const response = await post(JPEG);
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ kind: "food", sentence: "김치찌개 1그릇, 쌀밥 1공기", count: 2 });
+    expect(await response.json()).toEqual({ kind: "food", sentence: "김치찌개 1그릇, 쌀밥 1공기", count: 2, assumedOne: [] });
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(mocks.checkRequest).toHaveBeenCalledWith("photo", "hashed");
     expect(mocks.recognize).toHaveBeenCalledWith(Buffer.from(JPEG).toString("base64"));
@@ -117,7 +117,7 @@ describe("what a reading may become", () => {
         { name: "닭가슴살", amount: "단백질 23g" },
       ],
     });
-    expect(result).toEqual({ kind: "food", sentence: "라면, 김밥, 닭가슴살", count: 3 });
+    expect(result).toEqual({ kind: "food", sentence: "라면, 김밥, 닭가슴살", count: 3, assumedOne: [] });
   });
 
   it("keeps a printed volume, drops separators, duplicates, blanks and overlong text", () => {
@@ -132,7 +132,19 @@ describe("what a reading may become", () => {
         { name: "빵", amount: "아주 길게 늘어놓은 설명이라서 양이라고 볼 수 없는 문장" },
       ],
     });
-    expect(result).toEqual({ kind: "food", sentence: "제로 콜라 355ml, 샐러드 드레싱, 빵", count: 3 });
+    expect(result).toEqual({ kind: "food", sentence: "제로 콜라 355ml, 샐러드 드레싱, 빵", count: 3, assumedOne: [] });
+  });
+
+  it("names the foods written as one of several, and only those that made it into the sentence", () => {
+    const result = photoResult({
+      kind: "food",
+      items: [
+        { name: "뚱카롱", amount: "1개", one_of_several: true },
+        { name: "아메리카노", amount: "1잔", one_of_several: false },
+        { name: "500kcal 케이크", amount: "1조각", one_of_several: true },
+      ],
+    });
+    expect(result).toEqual({ kind: "food", sentence: "뚱카롱 1개, 아메리카노 1잔", count: 2, assumedOne: ["뚱카롱"] });
   });
 
   it("caps the number of foods and treats an empty food reading as unreadable", () => {
@@ -155,7 +167,11 @@ describe("what a reading may become", () => {
 
 describe("what the browser says about each answer", () => {
   it("fills the box only for a food sentence", () => {
-    expect(photoOutcome(200, { kind: "food", sentence: "김밥 1줄", count: 1 })).toEqual({ kind: "filled", sentence: "김밥 1줄" });
+    expect(photoOutcome(200, { kind: "food", sentence: "김밥 1줄", count: 1 })).toEqual({ kind: "filled", sentence: "김밥 1줄", note: PHOTO_NOTICE.read });
+    expect(photoOutcome(200, { kind: "food", sentence: "김밥 1줄", count: 1, assumedOne: [] })).toEqual({ kind: "filled", sentence: "김밥 1줄", note: PHOTO_NOTICE.read });
+    // Several were in the photo: the note says one was written and to set the number.
+    const several = photoOutcome(200, { kind: "food", sentence: "뚱카롱 1개", count: 1, assumedOne: ["뚱카롱"] });
+    expect(several).toEqual({ kind: "filled", sentence: "뚱카롱 1개", note: "사진으로는 먹은 양을 알 수 없어 하나만 적었어요: 뚱카롱. 먹은 만큼 숫자를 고친 뒤 기록을 눌러 주세요." });
     expect(photoOutcome(200, { kind: "food", sentence: "" })).toEqual({ kind: "notice", text: PHOTO_NOTICE.failed });
     expect(photoOutcome(200, { kind: "not_food" })).toEqual({ kind: "notice", text: PHOTO_NOTICE.notFood });
     expect(photoOutcome(200, { kind: "unreadable" })).toEqual({ kind: "notice", text: PHOTO_NOTICE.unreadable });
