@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "port": 3000
+    },
+    {
+      "name": "verify-start",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["start", "--port", "3210"],
+      "port": 3210
+    },
+    {
+      "name": "verify-move",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set APP_ORIGIN=http://localhost:3211&& set LEGACY_HOSTS=127.0.0.1:3211&& pnpm start --port 3211"],
+      "port": 3211
+    },
+    {
+      "name": "verify-photo",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set PHOTO_INPUT=on&& set ANTHROPIC_API_KEY=invalid-local-test-key&& set ACCOUNT_ENABLED=off&& pnpm start --port 3212"],
+      "port": 3212
+    }
+  ]
+}
