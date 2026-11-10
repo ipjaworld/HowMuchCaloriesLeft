@@ -37,3 +37,9 @@ pnpm-debug.log*
 
 # local LLM eval output (docs/local-llm.md)
 /eval-results/
+
+# local photo QA inputs — keep only instructions and empty templates in git
+/photo-samples/*
+!/photo-samples/README.md
+!/photo-samples/manifest.example.csv
+!/photo-samples/results.example.csv
