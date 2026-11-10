@@ -1,5 +1,17 @@
 # Claude 작업 인계 후 운영 잔업
 
+## 최신 실행 결과 (2026-10-26 22시 KST)
+
+아래 기존 계획의 승인 대기 설명은 당시 상태다. 사용자가 이번 대화에서 기본 앱·A1 → Upstash → 카카오 운영 적용을 요청했다.
+
+- [x] 1차 배포: 6개 로컬 커밋을 `ad5b344`까지 main push. `dpl_CZVKF82V4UspGACZ2R9cE9u2n1Fs` Ready 및 운영 alias 확인. 직전 배포 `dpl_BfCvZwnGyijeF7xjqSh627wfrvAF` / `67a33f5`. 계정 on, Upstash 미설정(memory), 복구 미설정(off).
+- [x] 배포 전 테스트 1,711개·typecheck·lint·build 통과. 실제 사용자 로그인 후 테스트 턴 저장 POST 1회·200, 해당 계정 revision 42→43, 새로고침 유지 확인. batch 본문은 배포 코드·테스트 확인이며 운영 본문 캡처는 아님. 테스트 식사는 UI에서 정리, 대화 유지.
+- [x] 실제 `/privacy` 게시일 2026-10-26과 백업 안내 확인.
+- [x] Upstash: 사용자 약관 동의 후 Free·미국 동부 iad1·자동 유료 전환 off 지정·production만·env pull 없이 생성·연결. `RATE_LIMIT_STORE=upstash`, 2차 배포 `dpl_E5fALeZ2g4HaSCw38EXjHX5Je5Gv` Ready. 실제 요청 뒤 Redis 제한 키·TTL, 경고 없음, 처리방침 Upstash 문구 확인. 직전 배포는 `dpl_CZVKF82V4UspGACZ2R9cE9u2n1Fs`.
+- [ ] 카카오: migration 도구가 두 번 `Invalid or expired requestState`로 실패. 재조회로 lifecycle/recovery 테이블 부재 확인. migration·함수·웹훅·앱 recovery 플래그 미적용. 도구 오류 해결 후 DB 적용과 실제 스키마 검증부터 재개.
+
+자세한 최신 검증과 다음 행동은 [STATE](../STATE.md#2026-10-26-codex--운영-순차-적용-진행)를 따른다.
+
 기준: 2026-10-26 KST, Codex 직접 재확인. 로컬 `main` HEAD `83bdbc0`, 추적 중인 `origin/main` `67a33f5`. 기존 `.claude/launch.json`은 미추적 상태로 보존했다. 현재 요청은 첨부 작업 내역의 잔업 정리·진행이며, 과거 커밋·push 승인을 재사용하지 않는다.
 
 ## 완료

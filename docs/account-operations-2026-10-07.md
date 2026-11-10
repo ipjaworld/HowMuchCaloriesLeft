@@ -4,6 +4,8 @@
 
 > **2026-10-26 갱신:** 운영 production의 `ACCOUNT_ENABLED`는 `on`이며, 사용자가 의도한 것으로 확인하고 유지하기로 했다([DECISIONS D06](DECISIONS.md#d06-구현과-계정-기능-공개운영-활성화를-구분한다)). 아래 `off` 기록과 "`on`으로 바꾸지 않는다"는 2026-10-07 당시 기준이다. [공개 전 남은 운영 확인](#공개-전-남은-운영-확인)의 항목은 운영 중 해결할 과제로 남는다. 복구 기능(`ACCOUNT_RECOVERY_ENABLED`)과 카카오 해제 운영 적용은 이 갱신에 포함되지 않는다.
 
+> **2026-11-10 도메인 이전:** `22fbbe8` / production `dpl_C922TBWNY1kAkqBaj33oaTYG9BeF`에서 운영 주소를 `https://calories.hetrich.com`으로 전환했다. Supabase Site URL·앱 콜백과 APP_ORIGIN을 새 주소로 맞췄으며, 옛 주소는 안내·기록 옮기기로 유지한다. 아래는 이전 시점의 근거도 포함한다. 이번 실제 로그인 재확인 상태는 [STATE](STATE.md)를 따른다.
+
 ## 공개 상태
 
 1·2단계는 `22845aa`까지 main에 push했다. Vercel production의 `RATE_LIMIT_SECRET`은 암호학적 난수 32바이트(64자리 hex)로 설정했다. 이 값은 요청 횟수가 아니라 IP/계정 식별자를 HMAC하는 비밀키다. 제한 기본값은 chat 분당 20/하루 200, resolve 분당 60/하루 600, Jev 시도 하루 2,000이다. 계정 제한은 IP 제한에 추가된다.
@@ -19,7 +21,7 @@
 - Kakao: 오늘 얼마 먹어도 돼? / 앱 ID `1599886`. 닉네임 선택 동의, 이메일 미제공 허용. 기존 HIS 앱과 별개다.
 - Supabase에서 Google·Kakao를 활성화하고 사용하지 않는 Email 제공자는 비활성화했다. Google nonce 검증은 유지한다.
 - 공급자 콜백: `https://juqriefbvymiuespfslj.supabase.co/auth/v1/callback`.
-- 앱 콜백: `https://how-much-calories-left.vercel.app/api/auth/callback`.
+- 현재 앱 콜백: `https://calories.hetrich.com/api/auth/callback`. 옛 `https://how-much-calories-left.vercel.app/api/auth/callback`은 Supabase allowlist에 일단 유지했다. 공급자 콜백은 그대로다.
 - 로컬 검증 때만 `http://localhost:3202/api/auth/callback`을 허용한다. 검증 종료 후 삭제한다.
 - 기존 HETRICH 프로젝트/클라이언트와 HIS 앱의 이름·권한·리디렉션은 변경하지 않았다.
 
